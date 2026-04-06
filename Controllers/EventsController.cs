@@ -7,7 +7,8 @@ namespace CoreEvents.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class EventsController: ControllerBase
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public class EventsController : ControllerBase
     {
         private readonly IEventService _eventService;
 
@@ -16,89 +17,55 @@ namespace CoreEvents.Controllers
             _eventService = eventService;
         }
 
-       
-        [ProducesResponseType(typeof(ActionResult<IEnumerable<EventResponseDto>>), StatusCodes.Status200OK)]
-        [Produces("application/json")]
         [HttpGet]
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(IEnumerable<EventResponseDto>), StatusCodes.Status200OK)]
         public ActionResult<IEnumerable<EventResponseDto>> GetAll() => Ok(_eventService.GetEvents());
 
-        [ProducesResponseType(typeof(ActionResult<EventResponseDto>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(ActionResult<EventResponseDto>), StatusCodes.Status404NotFound)]
-        [Produces("application/json")]
         [HttpGet("{id:guid}")]
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(EventResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         public ActionResult<EventResponseDto> GetById(Guid id)
         {
-            try
-            {
-                _eventService.GetEventById(id);
-                return Ok(_eventService.GetEventById(id));
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(ex.Message);
-            }
+            var result = _eventService.GetEventById(id);
+            return Ok(result);
         }
 
-        [ProducesResponseType(typeof(ActionResult<EventResponseDto>), StatusCodes.Status201Created)]
-        [ProducesResponseType(typeof(ActionResult<EventResponseDto>), StatusCodes.Status400BadRequest)]
-        [Produces("application/json")]
         [HttpPost]
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(EventResponseDto), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
         public ActionResult<EventResponseDto> Create([FromBody] EventCreateDto entity)
         {
-            try
-            {
-                var createdEvent = _eventService.CreateEvent(entity);
+            var createdEvent = _eventService.CreateEvent(entity);
 
-                return CreatedAtAction(
-                    nameof(GetById),
-                    new { id = createdEvent.Id },
-                    createdEvent
-                );
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(ex.Message);
-            }
+            return CreatedAtAction(
+                nameof(GetById),
+                new { id = createdEvent.Id },
+                createdEvent
+            );
         }
 
-        [ProducesResponseType(typeof(IActionResult), StatusCodes.Status204NoContent)]
-        [ProducesResponseType(typeof(IActionResult), StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(typeof(IActionResult), StatusCodes.Status404NotFound)]
-        [Produces("application/json")]
         [HttpPut("{id:guid}")]
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(IActionResult), StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         public IActionResult Put(Guid id, [FromBody] EventCreateDto entity)
         {
-            try
-            {
-                _eventService.UpdateEvent(id, entity);
-                return NoContent();
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(ex.Message);
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(ex.Message);
-            }
+            _eventService.UpdateEvent(id, entity);
+            return NoContent();
         }
-
-
-        [ProducesResponseType(typeof(IActionResult), StatusCodes.Status204NoContent)]
-        [ProducesResponseType(typeof(IActionResult), StatusCodes.Status404NotFound)]
-        [Produces("application/json")]
+        
         [HttpDelete("{id:guid}")]
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(IActionResult), StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         public IActionResult Delete(Guid id)
         {
-            try
-            {
-                _eventService.DeleteEvent(id);
-                return NoContent();
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(ex.Message);
-            }
+            _eventService.DeleteEvent(id);
+            return NoContent();
         }
     }
 }

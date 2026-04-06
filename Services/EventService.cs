@@ -4,7 +4,7 @@ using CoreEvents.Models.DTOs;
 
 namespace CoreEvents.Services
 {
-    public class EventService: IEventService
+    public class EventService : IEventService
     {
         private readonly IRepository<EventEntity> _repository;
         public EventService(IRepository<EventEntity> repository)
@@ -12,13 +12,31 @@ namespace CoreEvents.Services
             _repository = repository;
         }
 
-        public IEnumerable<EventEntity> GetEvents() => _repository.GetAll();
-
-        public EventEntity? GetEventById(Guid id)
+        public IEnumerable<EventResponseDto> GetEvents()
         {
-            var existing = _repository.GetById(id);
-            if (existing == null) throw new KeyNotFoundException("Событие не найдено.");
-            return existing;
+            var entities = _repository.GetAll();
+            return entities.Select(entity => new EventResponseDto(
+                entity.Id,
+                entity.Title,
+                entity.Description,
+                entity.StartAt,
+                entity.EndAt
+            ));
+        }
+
+        public EventResponseDto? GetEventById(Guid id)
+        {
+            var entity = _repository.GetById(id);
+            if (entity == null) throw new KeyNotFoundException("Событие не найдено.");
+
+            return new EventResponseDto(
+                entity.Id,
+                entity.Title,
+                entity.Description,
+                entity.StartAt,
+                entity.EndAt
+                );
+
         }
 
         public EventResponseDto CreateEvent(EventCreateDto entityDto)
