@@ -12,7 +12,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Data\Repositiries\" />
     <Folder Include="Models\DTOs\" />
   </ItemGroup>
 
