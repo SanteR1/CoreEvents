@@ -13,7 +13,12 @@ namespace CoreEvents.Services
 
         public IEnumerable<EventEntity> GetEvents() => _repository.GetAll();
 
-        public EventEntity? GetEventById(Guid id) => _repository.GetById(id);
+        public EventEntity? GetEventById(Guid id)
+        {
+            var existing = _repository.GetById(id);
+            if (existing == null) throw new KeyNotFoundException("Событие не найдено.");
+            return existing;
+        }
 
         public void CreateEvent(EventEntity entity)
         {
