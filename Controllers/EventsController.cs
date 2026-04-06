@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace CoreEvents.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("[controller]")]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public class EventsController : ControllerBase
     {

@@ -24,10 +24,10 @@ namespace CoreEvents.Services
             ));
         }
 
-        public EventResponseDto? GetEventById(Guid id)
+        public EventResponseDto GetEventById(Guid id)
         {
             var entity = _repository.GetById(id);
-            if (entity == null) throw new KeyNotFoundException("Событие не найдено.");
+            if (entity == null) throw new KeyNotFoundException($"Событие с ID {id} не найдено.");
 
             return new EventResponseDto(
                 entity.Id,
