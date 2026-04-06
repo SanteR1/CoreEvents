@@ -1,4 +1,5 @@
 ﻿using CoreEvents.Models.Domain;
+using CoreEvents.Models.DTOs;
 using CoreEvents.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,16 +17,16 @@ namespace CoreEvents.Controllers
         }
 
        
-        [ProducesResponseType(typeof(ActionResult<IEnumerable<EventEntity>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ActionResult<IEnumerable<EventResponseDto>>), StatusCodes.Status200OK)]
         [Produces("application/json")]
         [HttpGet]
-        public ActionResult<IEnumerable<EventEntity>> GetAll() => Ok(_eventService.GetEvents());
+        public ActionResult<IEnumerable<EventResponseDto>> GetAll() => Ok(_eventService.GetEvents());
 
-        [ProducesResponseType(typeof(ActionResult<EventEntity>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(ActionResult<EventEntity>), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ActionResult<EventResponseDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ActionResult<EventResponseDto>), StatusCodes.Status404NotFound)]
         [Produces("application/json")]
         [HttpGet("{id:guid}")]
-        public ActionResult<EventEntity> GetById(Guid id)
+        public ActionResult<EventResponseDto> GetById(Guid id)
         {
             try
             {
@@ -38,16 +39,21 @@ namespace CoreEvents.Controllers
             }
         }
 
-        [ProducesResponseType(typeof(ActionResult<EventEntity>), StatusCodes.Status201Created)]
-        [ProducesResponseType(typeof(ActionResult<EventEntity>), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ActionResult<EventResponseDto>), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(ActionResult<EventResponseDto>), StatusCodes.Status400BadRequest)]
         [Produces("application/json")]
         [HttpPost]
-        public ActionResult<EventEntity> Create([FromBody] EventEntity entity)
+        public ActionResult<EventResponseDto> Create([FromBody] EventCreateDto entity)
         {
             try
             {
-                _eventService.CreateEvent(entity);
-                return CreatedAtAction(nameof(GetById), new { id = entity.Id }, entity);
+                var createdEvent = _eventService.CreateEvent(entity);
+
+                return CreatedAtAction(
+                    nameof(GetById),
+                    new { id = createdEvent.Id },
+                    createdEvent
+                );
             }
             catch (ArgumentException ex)
             {
@@ -55,12 +61,12 @@ namespace CoreEvents.Controllers
             }
         }
 
-        [ProducesResponseType(typeof(ActionResult<EventEntity>), StatusCodes.Status204NoContent)]
-        [ProducesResponseType(typeof(ActionResult<EventEntity>), StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(typeof(ActionResult<EventEntity>), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(IActionResult), StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(IActionResult), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(IActionResult), StatusCodes.Status404NotFound)]
         [Produces("application/json")]
         [HttpPut("{id:guid}")]
-        public ActionResult<EventEntity> Put(Guid id, [FromBody] EventEntity entity)
+        public IActionResult Put(Guid id, [FromBody] EventCreateDto entity)
         {
             try
             {
@@ -78,11 +84,11 @@ namespace CoreEvents.Controllers
         }
 
 
-        [ProducesResponseType(typeof(ActionResult<EventEntity>), StatusCodes.Status204NoContent)]
-        [ProducesResponseType(typeof(ActionResult<EventEntity>), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(IActionResult), StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(IActionResult), StatusCodes.Status404NotFound)]
         [Produces("application/json")]
         [HttpDelete("{id:guid}")]
-        public ActionResult<EventEntity> Delete(Guid id)
+        public IActionResult Delete(Guid id)
         {
             try
             {

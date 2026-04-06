@@ -1,4 +1,5 @@
 ﻿using CoreEvents.Models.Domain;
+using CoreEvents.Models.DTOs;
 
 namespace CoreEvents.Services
 {
@@ -6,8 +7,8 @@ namespace CoreEvents.Services
     {
         IEnumerable<EventEntity> GetEvents();
         EventEntity? GetEventById(Guid id);
-        void CreateEvent(EventEntity entity);
-        void UpdateEvent(Guid id, EventEntity entity);
+        EventResponseDto CreateEvent(EventCreateDto entityDto);
+        void UpdateEvent(Guid id, EventCreateDto entityDto);
         void DeleteEvent(Guid id);
     }
 }

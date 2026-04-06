@@ -1,5 +1,6 @@
 ﻿using CoreEvents.Data.Repositories;
 using CoreEvents.Models.Domain;
+using CoreEvents.Models.DTOs;
 
 namespace CoreEvents.Services
 {
@@ -20,25 +21,42 @@ namespace CoreEvents.Services
             return existing;
         }
 
-        public void CreateEvent(EventEntity entity)
+        public EventResponseDto CreateEvent(EventCreateDto entityDto)
         {
-            if (entity.EndAt <= entity.StartAt)
+            if (entityDto.EndAt <= entityDto.StartAt)
                 throw new ArgumentException("Дата окончания не может быть раньше даты начала.");
 
+            var entity = new EventEntity
+            {
+                Id = Guid.NewGuid(),
+                Title = entityDto.Title,
+                Description = entityDto.Description,
+                StartAt = entityDto.StartAt,
+                EndAt = entityDto.EndAt
+            };
+
             _repository.Add(entity);
+
+            return new EventResponseDto(
+                entity.Id,
+                entity.Title,
+                entity.Description,
+                entity.StartAt,
+                entity.EndAt
+            );
         }
-        public void UpdateEvent(Guid id, EventEntity entity)
+        public void UpdateEvent(Guid id, EventCreateDto entityDto)
         {
             var existing = _repository.GetById(id);
             if (existing == null) throw new KeyNotFoundException("Событие не найдено.");
 
-            if (entity.EndAt <= entity.StartAt)
+            if (entityDto.EndAt <= entityDto.StartAt)
                 throw new ArgumentException("Дата окончания должна быть позже даты начала.");
 
-            existing.Title = entity.Title;
-            existing.Description = entity.Description;
-            existing.StartAt = entity.StartAt;
-            existing.EndAt = entity.EndAt;
+            existing.Title = entityDto.Title;
+            existing.Description = entityDto.Description;
+            existing.StartAt = entityDto.StartAt;
+            existing.EndAt = entityDto.EndAt;
 
             _repository.Update(existing);
         }
