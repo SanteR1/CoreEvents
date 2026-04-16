@@ -12,15 +12,30 @@ namespace CoreEvents.Services
             _repository = repository;
         }
 
-        public IEnumerable<EventResponseDto> GetEvents()
+        public IEnumerable<EventResponseDto> GetEvents(EventFilter eventFilter)
         {
-            var entities = _repository.GetAll();
-            return entities.Select(entity => new EventResponseDto(
-                entity.Id,
-                entity.Title,
-                entity.Description,
-                entity.StartAt,
-                entity.EndAt
+            var entity = _repository.GetAll();
+            if (!string.IsNullOrWhiteSpace(eventFilter.Title))
+            {
+                entity = entity.Where(e => e.Title.Contains(eventFilter.Title, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (eventFilter.From is not null)
+            {
+                entity = entity.Where(e => e.StartAt >= eventFilter.From.Value);
+            }
+
+            if (eventFilter.To is not null)
+            {
+                entity = entity.Where(e => e.EndAt < eventFilter.To.Value.Date.AddDays(1));
+            }
+
+            return entity.Select(entityDto => new EventResponseDto(
+                entityDto.Id,
+                entityDto.Title,
+                entityDto.Description,
+                entityDto.StartAt,
+                entityDto.EndAt
             ));
         }
 

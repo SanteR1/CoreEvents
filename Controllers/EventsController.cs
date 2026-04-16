@@ -20,7 +20,10 @@ namespace CoreEvents.Controllers
         [HttpGet]
         [Produces("application/json")]
         [ProducesResponseType(typeof(IEnumerable<EventResponseDto>), StatusCodes.Status200OK)]
-        public ActionResult<IEnumerable<EventResponseDto>> GetAll() => Ok(_eventService.GetEvents());
+        public ActionResult<IEnumerable<EventResponseDto>> GetAll([FromQuery] EventFilter filter)
+        {
+            return Ok(_eventService.GetEvents(filter));
+        }
 
         [HttpGet("{id:guid}")]
         [Produces("application/json")]
