@@ -12,7 +12,7 @@ namespace CoreEvents.Services
             _repository = repository;
         }
 
-        public IEnumerable<EventResponseDto> GetEvents(EventFilter eventFilter)
+        public PaginatedResult GetEvents(EventFilter eventFilter)
         {
             var entity = _repository.GetAll();
             if (!string.IsNullOrWhiteSpace(eventFilter.Title))
@@ -30,13 +30,20 @@ namespace CoreEvents.Services
                 entity = entity.Where(e => e.EndAt < eventFilter.To.Value.Date.AddDays(1));
             }
 
-            return entity.Select(entityDto => new EventResponseDto(
-                entityDto.Id,
-                entityDto.Title,
-                entityDto.Description,
-                entityDto.StartAt,
-                entityDto.EndAt
-            ));
+            var totalEvents = entity.Count();
+
+            var items = entity
+                .OrderByDescending(e => e.StartAt)
+                .Skip((eventFilter.Page - 1) * eventFilter.PageSize)
+                .Take(eventFilter.PageSize)
+                .Select(EventResponseDto.ToDtoCompiled)
+                .ToList();
+
+            return new PaginatedResult(
+                totalEvents,
+                items,
+                eventFilter.Page,
+                eventFilter.PageSize);
         }
 
         public EventResponseDto GetEventById(Guid id)
