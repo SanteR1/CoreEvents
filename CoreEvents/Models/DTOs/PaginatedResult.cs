@@ -4,5 +4,5 @@
         int TotalEvents,
         IEnumerable<EventResponseDto> Events,
         int CurrentPage,
-        int ItemsOnPage);
+        int PageSize);
 }

@@ -27,7 +27,7 @@ namespace CoreEvents.Services
 
             if (eventFilter.To is not null)
             {
-                entity = entity.Where(e => e.EndAt < eventFilter.To.Value.Date.AddDays(1));
+                entity = entity.Where(e => e.EndAt <= eventFilter.To.Value);
             }
 
             var totalEvents = entity.Count();
