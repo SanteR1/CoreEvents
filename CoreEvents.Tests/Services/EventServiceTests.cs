@@ -320,7 +320,7 @@ namespace CoreEvents.Tests.Services
         [InlineData(null)]
         [InlineData("")]
         [InlineData("   ")]
-        public void GetEvents_EmptyFilter_ShouldReturnAllEvents(string emptyTitle)
+        public void GetEvents_EmptyFilter_ShouldReturnAllEvents(string? emptyTitle)
         {
             // Arrange
             var filter = new EventFilter(emptyTitle);

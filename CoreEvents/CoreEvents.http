@@ -1,6 +1,40 @@
 @CoreEvents_HostAddress = http://localhost:5209
+@EventId = a92a342a-5fb2-42d1-950d-7b2c5afc032d
 
-GET {{CoreEvents_HostAddress}}/weatherforecast/
+### Получить все события (с примером фильтрации)
+GET {{CoreEvents_HostAddress}}/events
 Accept: application/json
 
-###
+### Создать новое событие
+POST {{CoreEvents_HostAddress}}/events
+Content-Type: application/json
+Accept: application/json
+
+{
+  "title": "New Tech Meetup",
+  "description": "Discussion about C# 14 features",
+  "startAt": "2026-05-20T18:00:00Z",
+  "endAt": "2026-05-20T20:00:00Z"
+}
+
+### Получить событие по ID
+GET {{CoreEvents_HostAddress}}/events/{{EventId}}
+Accept: application/json
+
+
+
+### Обновить существующее событие
+PUT {{CoreEvents_HostAddress}}/events/{{EventId}}
+Content-Type: application/json
+
+{
+  "id":"{{EventId}}",
+  "title": "Updated Tech Meetup",
+  "description": "Extended discussion about .NET 10",
+  "startAt": "2026-05-20T16:00:00Z",
+  "endAt": "2026-05-20T22:00:00Z"
+}
+
+### Удалить событие
+DELETE {{CoreEvents_HostAddress}}/events/{{EventId}}
+Accept: application/json
