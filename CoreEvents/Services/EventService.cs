@@ -12,16 +12,43 @@ namespace CoreEvents.Services
             _repository = repository;
         }
 
-        public IEnumerable<EventResponseDto> GetEvents()
+        public PaginatedResult GetEvents(EventFilter eventFilter)
         {
-            var entities = _repository.GetAll();
-            return entities.Select(entity => new EventResponseDto(
-                entity.Id,
-                entity.Title,
-                entity.Description,
-                entity.StartAt,
-                entity.EndAt
-            ));
+            var entity = _repository.GetAll();
+            if (!string.IsNullOrWhiteSpace(eventFilter.Title))
+            {
+                entity = entity.Where(e => e.Title.Contains(eventFilter.Title, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (eventFilter.From is not null)
+            {
+                entity = entity.Where(e => e.StartAt >= eventFilter.From.Value);
+            }
+
+            if (eventFilter.To is not null)
+            {
+                var toDate = eventFilter.To.Value;
+                if (toDate.TimeOfDay == TimeSpan.Zero)
+                {
+                    toDate = toDate.AddDays(1).AddTicks(-1);
+                }
+                entity = entity.Where(e => e.EndAt <= toDate);
+            }
+
+            var totalEvents = entity.Count();
+
+            var items = entity
+                .OrderByDescending(e => e.StartAt)
+                .Skip((eventFilter.Page - 1) * eventFilter.PageSize)
+                .Take(eventFilter.PageSize)
+                .Select(EventResponseDto.ToDtoCompiled)
+                .ToList();
+
+            return new PaginatedResult(
+                totalEvents,
+                items,
+                eventFilter.Page,
+                eventFilter.PageSize);
         }
 
         public EventResponseDto GetEventById(Guid id)

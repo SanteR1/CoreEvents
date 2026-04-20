@@ -5,7 +5,7 @@ namespace CoreEvents.Services
 {
     public interface IEventService
     {
-        IEnumerable<EventResponseDto> GetEvents();
+        PaginatedResult GetEvents(EventFilter eventFilter);
         EventResponseDto GetEventById(Guid id);
         EventResponseDto CreateEvent(EventCreateDto entityDto);
         void UpdateEvent(Guid id, EventCreateDto entityDto);
