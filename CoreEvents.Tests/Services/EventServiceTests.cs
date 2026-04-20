@@ -1,4 +1,5 @@
-﻿using CoreEvents.Data.Repositories;
+﻿using System.ComponentModel.DataAnnotations;
+using CoreEvents.Data.Repositories;
 using CoreEvents.Models.Domain;
 using CoreEvents.Models.DTOs;
 using CoreEvents.Services;
@@ -75,7 +76,7 @@ namespace CoreEvents.Tests.Services
             string optionalTitle = "C";
             DateTime optionalDateTimeStartAt = new DateTime(2026, 01, 01, 13, 00, 00);
             DateTime optionalDateTimeEndAt = new DateTime(2026, 01, 01, 18, 00, 00);
-            EventFilter eventFilter = new EventFilter(optionalTitle, optionalDateTimeStartAt, optionalDateTimeEndAt);
+            EventFilter eventFilter = new EventFilter() { Title = optionalTitle, From = optionalDateTimeStartAt, To = optionalDateTimeEndAt };
             int expectedPage = 1;
             int expectedPageSize = 10;
             int expectedEvents = 2;
@@ -158,7 +159,7 @@ namespace CoreEvents.Tests.Services
             // Arrange
             string filterTitle = "df";
             int expectedCount = 1;
-            EventFilter eventFilter = new EventFilter(filterTitle);
+            EventFilter eventFilter = new EventFilter() { Title = filterTitle };
             string expectedTitle = "Cdf";
             string expectedDescription = "Test 2";
 
@@ -183,7 +184,37 @@ namespace CoreEvents.Tests.Services
             int expectedCount = 1;
             DateTime filterStartAt = new DateTime(2026, 01, 02, 13, 00, 00);
             DateTime filterEndAt = new DateTime(2026, 01, 02, 18, 00, 00);
-            EventFilter eventFilter = new EventFilter(From: filterStartAt, To: filterEndAt);
+            EventFilter eventFilter = new EventFilter() { From = filterStartAt, To = filterEndAt };
+            string expectedTitle = "Nrh";
+            string expectedDescription = "Test 3";
+            DateTime expectedStartAt = new DateTime(2026, 01, 02, 13, 00, 00);
+            DateTime expectedEndAt = new DateTime(2026, 01, 02, 18, 00, 00);
+
+            // Act
+            var result = _eventService.GetEvents(eventFilter);
+
+            // Assert
+            Assert.Equal(expectedCount, result.TotalEvents);
+
+            var items = result.Events.ToList();
+            Assert.Single(items);
+
+            var actualEvent = items.First();
+            Assert.Equal(expectedTitle, actualEvent.Title);
+            Assert.Equal(expectedDescription, actualEvent.Description);
+
+            Assert.Equal(expectedStartAt, actualEvent.StartAt);
+            Assert.Equal(expectedEndAt, actualEvent.EndAt);
+        }
+
+        [Fact]
+        public void GetEvents_FromAndToDateOnly_ShouldIncludeAllEventsForThatDa()
+        {
+            // Arrange
+            int expectedCount = 1;
+            DateTime filterStartAt = new DateTime(2026, 01, 02);
+            DateTime filterEndAt = new DateTime(2026, 01, 02);
+            EventFilter eventFilter = new EventFilter() { From = filterStartAt, To = filterEndAt };
             string expectedTitle = "Nrh";
             string expectedDescription = "Test 3";
             DateTime expectedStartAt = new DateTime(2026, 01, 02, 13, 00, 00);
@@ -234,7 +265,7 @@ namespace CoreEvents.Tests.Services
             DateTime filterEndAt = new DateTime(2026, 01, 01, 18, 00, 00);
             int currentPage = 1;
             int pageSize = 1;
-            EventFilter eventFilter = new EventFilter(Title: filterTitle, Page: currentPage, PageSize: pageSize, From: filterStartAt, To: filterEndAt);
+            EventFilter eventFilter = new EventFilter() { Title = filterTitle, Page = currentPage, PageSize = pageSize, From = filterStartAt, To = filterEndAt };
             string expectedTitle = "c";
             DateTime expectedStartAt = new DateTime(2026, 01, 01, 13, 00, 00);
             DateTime expectedEndAt = new DateTime(2026, 01, 01, 18, 00, 00);
@@ -286,12 +317,33 @@ namespace CoreEvents.Tests.Services
 
             // Act & Assert
             var exception = Assert.Throws<KeyNotFoundException>(() =>
-                _eventService.UpdateEvent(expectedId,entityDto)
+                _eventService.UpdateEvent(expectedId, entityDto)
             );
 
             //Assert
             Assert.Equal(expectedExceptionMessage, exception.Message);
             _mockRepository.Verify(r => r.Update(It.IsAny<EventEntity>()), Times.Never);
+        }
+
+        [Fact]
+        public void CreateEvent_WithNonValidDate_ShouldReturnArgumentException()
+        {
+            // Arrange
+            string title = "Create Title";
+            string description = "Create Description";
+            var expectedStartAt = new DateTime(2026, 01, 02, 13, 00, 00);
+            var expectedEndAt = new DateTime(2026, 01, 01, 18, 00, 00);
+            string expectedExceptionMessage = "Дата окончания не может быть раньше даты начала.";
+            EventCreateDto entityDto = new EventCreateDto(Title: title, Description: description, StartAt: expectedStartAt, EndAt: expectedEndAt);
+
+            // Act & Assert
+            var exception = Assert.Throws<ArgumentException>(() =>
+                _eventService.CreateEvent(entityDto)
+            );
+
+            //Assert
+            Assert.Equal(expectedExceptionMessage, exception.Message);
+            _mockRepository.Verify(r => r.Add(It.IsAny<EventEntity>()), Times.Never);
         }
 
         [Fact]
@@ -316,6 +368,82 @@ namespace CoreEvents.Tests.Services
             _mockRepository.Verify(r => r.Update(It.IsAny<EventEntity>()), Times.Never);
         }
 
+        [Fact]
+        public void GetEvents_NonValidPageNumber_ShouldReturnValidationError()
+        {
+            // Arrange
+            int expectedPage = 100_001;
+            var filter = new EventFilter() { Page = expectedPage };
+            string expectedExceptionMessage = "Значение должно быть в диапазоне от 1 до 100000";
+
+            // Act
+            var context = new ValidationContext(filter);
+            var results = new List<ValidationResult>();
+            bool isValid = Validator.TryValidateObject(filter, context, results, true);
+
+            // Assert
+            Assert.False(isValid);
+            Assert.Contains(results, r => r.ErrorMessage == expectedExceptionMessage);
+            _mockRepository.Verify(r => r.GetAll(), Times.Never);
+        }
+
+        [Fact]
+        public void GetEvents_PageNumberIsNegativeNumber_ShouldReturnValidationError()
+        {
+            // Arrange
+            int expectedPage = -1;
+            var filter = new EventFilter() { Page = expectedPage };
+            string expectedExceptionMessage = "Значение должно быть в диапазоне от 1 до 100000";
+
+            // Act
+            var context = new ValidationContext(filter);
+            var results = new List<ValidationResult>();
+            bool isValid = Validator.TryValidateObject(filter, context, results, true);
+
+            // Assert
+            Assert.False(isValid);
+            Assert.Contains(results, r => r.ErrorMessage == expectedExceptionMessage);
+            _mockRepository.Verify(r => r.GetAll(), Times.Never);
+        }
+
+        [Fact]
+        public void GetEvents_NonValidPageSizeNumber_ShouldReturnValidationError()
+        {
+            // Arrange
+            int expectedPageSize = 101;
+            var filter = new EventFilter() { PageSize = expectedPageSize };
+            string expectedExceptionMessage = "Значение должно быть в диапазоне от 1 до 100";
+
+            // Act
+            var context = new ValidationContext(filter);
+            var results = new List<ValidationResult>();
+            bool isValid = Validator.TryValidateObject(filter, context, results, true);
+
+            // Assert
+            Assert.False(isValid);
+            Assert.Contains(results, r => r.ErrorMessage == expectedExceptionMessage);
+            _mockRepository.Verify(r => r.GetAll(), Times.Never);
+        }
+
+        [Fact]
+        public void GetEvents_PageSizeIsNegativeNumber_ShouldReturnValidationError()
+        {
+            // Arrange
+            int expectedPageSize = -1;
+            var filter = new EventFilter() { PageSize = expectedPageSize };
+            string expectedExceptionMessage = "Значение должно быть в диапазоне от 1 до 100";
+
+            // Act
+            var context = new ValidationContext(filter);
+            var results = new List<ValidationResult>();
+            bool isValid = Validator.TryValidateObject(filter, context, results, true);
+
+            // Assert
+            Assert.False(isValid);
+            Assert.Contains(results, r => r.ErrorMessage == expectedExceptionMessage);
+            _mockRepository.Verify(r => r.GetAll(), Times.Never);
+        }
+
         [Theory]
         [InlineData(null)]
         [InlineData("")]
@@ -323,7 +451,7 @@ namespace CoreEvents.Tests.Services
         public void GetEvents_EmptyFilter_ShouldReturnAllEvents(string? emptyTitle)
         {
             // Arrange
-            var filter = new EventFilter(emptyTitle);
+            var filter = new EventFilter() { Title = emptyTitle };
             var totalInStore = _eventsList.Count;
 
             // Act
@@ -343,7 +471,7 @@ namespace CoreEvents.Tests.Services
             string description)
         {
             // Arrange
-            var filter = new EventFilter(From: start, To: end);
+            var filter = new EventFilter() { From = start, To = end };
 
             // Act
             var result = _eventService.GetEvents(filter);
