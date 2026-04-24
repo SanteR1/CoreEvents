@@ -1,6 +1,6 @@
 ﻿using CoreEvents.Models.Domain;
 using CoreEvents.Models.DTOs;
-using CoreEvents.Services;
+using CoreEvents.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CoreEvents.Controllers
@@ -11,27 +11,29 @@ namespace CoreEvents.Controllers
     public class EventsController : ControllerBase
     {
         private readonly IEventService _eventService;
+        private readonly IBookingService _bookingService;
 
-        public EventsController(IEventService eventService)
+        public EventsController(IEventService eventService, IBookingService bookingService)
         {
             _eventService = eventService;
+            _bookingService = bookingService;
         }
 
         [HttpGet]
         [Produces("application/json")]
         [ProducesResponseType(typeof(IEnumerable<EventResponseDto>), StatusCodes.Status200OK)]
-        public ActionResult<IEnumerable<EventResponseDto>> GetAll([FromQuery] EventFilter filter)
+        public async Task<ActionResult<IEnumerable<EventResponseDto>>> GetAll([FromQuery] EventFilter filter)
         {
-            return Ok(_eventService.GetEvents(filter));
+            return Ok(await _eventService.GetEvents(filter));
         }
 
         [HttpGet("{id:guid}")]
         [Produces("application/json")]
         [ProducesResponseType(typeof(EventResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-        public ActionResult<EventResponseDto> GetById(Guid id)
+        public async Task<ActionResult<EventResponseDto>> GetById(Guid id)
         {
-            var result = _eventService.GetEventById(id);
+            var result = await _eventService.GetEventById(id);
             return Ok(result);
         }
 
@@ -39,9 +41,9 @@ namespace CoreEvents.Controllers
         [Produces("application/json")]
         [ProducesResponseType(typeof(EventResponseDto), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-        public ActionResult<EventResponseDto> Create([FromBody] EventCreateDto entity)
+        public async Task<ActionResult<EventResponseDto>> Create([FromBody] EventCreateDto entity)
         {
-            var createdEvent = _eventService.CreateEvent(entity);
+            var createdEvent = await _eventService.CreateEvent(entity);
 
             return CreatedAtAction(
                 nameof(GetById),
@@ -55,20 +57,39 @@ namespace CoreEvents.Controllers
         [ProducesResponseType(typeof(IActionResult), StatusCodes.Status204NoContent)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-        public IActionResult Put(Guid id, [FromBody] EventCreateDto entity)
+        public async Task<IActionResult> Put(Guid id, [FromBody] EventCreateDto entity)
         {
-            _eventService.UpdateEvent(id, entity);
+            await _eventService.UpdateEvent(id, entity);
             return NoContent();
         }
-        
+
         [HttpDelete("{id:guid}")]
         [Produces("application/json")]
         [ProducesResponseType(typeof(IActionResult), StatusCodes.Status204NoContent)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-        public IActionResult Delete(Guid id)
+        public async Task<IActionResult> Delete(Guid id)
         {
-            _eventService.DeleteEvent(id);
+            await _eventService.DeleteEvent(id);
             return NoContent();
+        }
+
+        [HttpPost("{id:guid}/book")]
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(BookingResponseDto), StatusCodes.Status202Accepted)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<BookingResponseDto>> CreateBooking([FromRoute] Guid id, CancellationToken ct)
+        {
+            var createdBooking = await _bookingService.
+                CreateBookingAsync(
+                new BookingCreateDto(id),
+                ct
+                );
+
+            return AcceptedAtRoute(
+                "GetBookingStatus",
+                new { id = createdBooking.Id },
+                createdBooking
+            );
         }
     }
 }

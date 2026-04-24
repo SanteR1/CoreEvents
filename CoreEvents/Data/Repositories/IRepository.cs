@@ -4,10 +4,10 @@ namespace CoreEvents.Data.Repositories
 {
     public interface IRepository<T> where T : IEntity
     {
-        IEnumerable<T> GetAll();
-        T? GetById(Guid id);
-        void Add(T entity);
-        void Update(T entity);
-        void Delete(Guid id);
+        IEnumerable<T> GetAll(CancellationToken ct = default);
+        T? GetById(Guid id, CancellationToken ct = default);
+        void Add(T entity, CancellationToken ct = default);
+        void Update(T entity, CancellationToken ct = default);
+        void Delete(Guid id, CancellationToken ct = default);
     }
 }
