@@ -2,10 +2,10 @@
 {
     public class Booking : IEntity
     {
-        public Guid Id { get; set; }
-        public Guid Guid { get; set; }
-        public BookingStatus Status { get; set; }
-        public DateTime CreatedAt { get; set; }
+        public required Guid Id { get; set; }
+        public required Guid EventId { get; set; }
+        public required BookingStatus Status { get; set; }
+        public required DateTime CreatedAt { get; set; }
         public DateTime? ProcessedAt { get; set; }
     }
 }

@@ -80,10 +80,7 @@ namespace CoreEvents.Controllers
         public async Task<ActionResult<BookingResponseDto>> CreateBooking([FromRoute] Guid id, CancellationToken ct)
         {
             var createdBooking = await _bookingService.
-                CreateBookingAsync(
-                new BookingCreateDto(id),
-                ct
-                );
+                CreateBookingAsync(new BookingCreateDto(id), ct);
 
             return AcceptedAtRoute(
                 "GetBookingStatus",

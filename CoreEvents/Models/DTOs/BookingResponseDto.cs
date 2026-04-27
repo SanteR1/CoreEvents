@@ -13,7 +13,7 @@ namespace CoreEvents.Models.DTOs
     {
         public static Expression<Func<Booking, BookingResponseDto>> ToDto => booking => new BookingResponseDto(
             booking.Id,
-            booking.Guid,
+            booking.EventId,
             booking.Status,
             booking.CreatedAt,
             booking.ProcessedAt

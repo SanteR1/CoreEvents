@@ -26,7 +26,6 @@ namespace CoreEvents.Infrastructure.BackgroundServices
                     var bookingService = scope.ServiceProvider.GetRequiredService<IBookingService>();
 
                     await bookingService.GetBookingForProcessing(stoppingToken);
-
                 }
                 catch (OperationCanceledException)
                 {

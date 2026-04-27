@@ -24,15 +24,14 @@ namespace CoreEvents.Services.Implementations
         {
             ct.ThrowIfCancellationRequested();
             var existEvent = await _eventService.GetEventById(bookingDto.EventId);
-            
-                if (existEvent is null)
-                    throw new KeyNotFoundException($"Событие с ID {bookingDto.EventId} не найдено.");
-            
+
+            if (existEvent is null)
+                throw new KeyNotFoundException($"Событие с ID {bookingDto.EventId} не найдено.");
 
             var booking = new Booking()
             {
                 Id = Guid.NewGuid(),
-                Guid = bookingDto.EventId,
+                EventId = bookingDto.EventId,
                 Status = BookingStatus.Pending,
                 CreatedAt = DateTime.Now
             };
@@ -41,7 +40,7 @@ namespace CoreEvents.Services.Implementations
 
             return new BookingResponseDto(
                 booking.Id,
-                booking.Guid,
+                booking.EventId,
                 booking.Status,
                 booking.CreatedAt,
                 null
@@ -58,7 +57,7 @@ namespace CoreEvents.Services.Implementations
 
             return new ValueTask<BookingResponseDto>(new BookingResponseDto(
                 booking.Id,
-                booking.Guid,
+                booking.EventId,
                 booking.Status,
                 booking.CreatedAt,
                 booking.ProcessedAt));
