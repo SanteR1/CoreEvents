@@ -205,7 +205,6 @@ namespace CoreEvents.Tests.Services
         public async Task BookingProcessingService_ShouldChangeStatusAndSetProcessedAt()
         {
             // Arrange
-            var bookingId = Guid.NewGuid();
             Guid expectedId = new Guid("bbf1cb27-02af-4253-927b-2aece4724434");
             BookingStatus expectedStatus = BookingStatus.Pending;
             BookingCreateDto createDto = new BookingCreateDto(expectedId);

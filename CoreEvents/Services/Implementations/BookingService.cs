@@ -73,7 +73,7 @@ namespace CoreEvents.Services.Implementations
                 await _semaphore.WaitAsync(ct);
                 isEntered = true;
 
-                // По замылсу в очереди все находятся только со статусом Pending
+                // По замылсу в очереди находятся только со статусом Pending
                 if (!_queue.TryDequeue(out id)) return;
 
                 var booking = _repository.GetById(id, ct);
