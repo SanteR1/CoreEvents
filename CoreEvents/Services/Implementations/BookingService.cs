@@ -66,11 +66,14 @@ namespace CoreEvents.Services.Implementations
         public async Task GetBookingForProcessing(CancellationToken ct)
         {
             var id = Guid.Empty;
+            bool isEntered = false;
             try
             {
-                ct.ThrowIfCancellationRequested();
                 await _semaphore.WaitAsync(ct);
+                isEntered = true;
+                ct.ThrowIfCancellationRequested();
 
+                // По замылсу в очереди все находятся только со статусом Pending
                 if (!_queue.TryDequeue(out id)) return;
 
                 var booking = _repository.GetById(id, ct);
@@ -94,7 +97,7 @@ namespace CoreEvents.Services.Implementations
             }
             finally
             {
-                _semaphore.Release();
+                if (isEntered) _semaphore.Release();
             }
         }
     }

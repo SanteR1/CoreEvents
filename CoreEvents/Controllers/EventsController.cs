@@ -76,7 +76,7 @@ namespace CoreEvents.Controllers
         [HttpPost("{id:guid}/book")]
         [Produces("application/json")]
         [ProducesResponseType(typeof(BookingResponseDto), StatusCodes.Status202Accepted)]
-        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         public async Task<ActionResult<BookingResponseDto>> CreateBooking([FromRoute] Guid id, CancellationToken ct)
         {
             var createdBooking = await _bookingService.

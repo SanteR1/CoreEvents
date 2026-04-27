@@ -172,6 +172,23 @@ namespace CoreEvents.Tests.Services
         }
 
         [Fact]
+        public async Task BookingProcessingService_WhenCancellationRequested_ShouldThrowOperationCanceledException()
+        {
+            string expectedExceptionMessage = $"The operation was canceled.";
+            var cancellationToken = new CancellationTokenSource();
+            cancellationToken.Cancel();
+
+            // Act & Assert
+            var exception = await Assert.ThrowsAsync<OperationCanceledException>(async () =>
+                await _bookingService.GetBookingForProcessing(cancellationToken.Token));
+
+            // Assert
+            Assert.Equal(expectedExceptionMessage, exception.Message);
+            Assert.Equal(cancellationToken.Token, exception.CancellationToken);
+            _mockRepository.Verify(r => r.Update(It.IsAny<Booking>(), It.IsAny<CancellationToken>()), Times.Never);
+        }
+
+        [Fact]
         public async Task BookingProcessingService_ShouldChangeStatusAndSetProcessedAt()
         {
             // Arrange
@@ -196,7 +213,7 @@ namespace CoreEvents.Tests.Services
         }
 
         [Fact]
-        public async Task CreateBookingAsync_NonExistingEventId_ShouldReturnNotFound()
+        public async Task CreateBookingAsync_NonExistingEventId_ShouldThrowKeyNotFoundException()
         {
             // Arrange
             Guid expectedId = new Guid("d37e421e-c2a3-456a-a283-dc34d47e183c");
@@ -208,13 +225,33 @@ namespace CoreEvents.Tests.Services
                 await _bookingService.CreateBookingAsync(createDto, CancellationToken.None)
             );
 
-            //Assert
+            // Assert
             Assert.Equal(expectedExceptionMessage, exception.Message);
             _eventRepoMock.Verify(r => r.GetById(expectedId), Times.Once);
         }
 
         [Fact]
-        public async Task GetBookingByIdAsync_NonExistingBookingId_ShouldReturnNotFound()
+        public async Task CreateBookingAsync_WhenEventDoesNotExist_ShouldThrowKeyNotFoundException()
+        {
+            // Arrange
+            Guid existEventId = new Guid("9ab82324-d774-42fd-a2a8-58dcfe22a174");
+            string expectedExceptionMessage = $"Событие с ID {existEventId} не найдено.";
+            BookingCreateDto createDto = new BookingCreateDto(existEventId);
+
+            // Act
+            await _eventService.DeleteEvent(existEventId);
+            
+            var exception = await Assert.ThrowsAsync<KeyNotFoundException>(async () =>
+                await _bookingService.CreateBookingAsync(createDto, CancellationToken.None)
+            );
+
+            // Assert
+            Assert.Equal(expectedExceptionMessage, exception.Message);
+            _eventRepoMock.Verify(r => r.GetById(existEventId), Times.AtLeastOnce);
+        }
+
+        [Fact]
+        public async Task GetBookingByIdAsync_NonExistingBookingId_ShouldThrowKeyNotFoundException()
         {
             // Arrange
             Guid expectedId = new Guid("8f74a67e-f930-4883-a17c-e8067b5bd820");
@@ -225,9 +262,49 @@ namespace CoreEvents.Tests.Services
                 await _bookingService.GetBookingByIdAsync(expectedId, CancellationToken.None)
             );
 
-            //Assert
+            // Assert
             Assert.Equal(expectedExceptionMessage, exception.Message);
             _mockRepository.Verify(r => r.GetById(expectedId), Times.Once);
         }
+
+        [Fact]
+        public async Task CreateBookingAsync_WhenCancellationRequested_ShouldThrowOperationCanceledException()
+        {
+            // Arrange
+            Guid existEventId = new Guid("9ab82324-d774-42fd-a2a8-58dcfe22a174");
+            BookingCreateDto createDto = new BookingCreateDto(existEventId);
+            string expectedExceptionMessage = $"The operation was canceled.";
+            var cancellationToken = new CancellationTokenSource();
+            cancellationToken.Cancel();
+
+            // Act
+            var exception = await Assert.ThrowsAsync<OperationCanceledException>(async () =>
+                await _bookingService.CreateBookingAsync(createDto, cancellationToken.Token)
+            );
+
+            // Assert
+            Assert.Equal(expectedExceptionMessage, exception.Message);
+            Assert.Equal(cancellationToken.Token, exception.CancellationToken);
+        }
+
+        [Fact]
+        public async Task GetBookingByIdAsync_NonExistingBookingId_ShouldThrowOperationCanceledException()
+        {
+            // Arrange
+            Guid expectedId = new Guid("8f74a67e-f930-4883-a17c-e8067b5bd820");
+            string expectedExceptionMessage = $"The operation was canceled.";
+            var cancellationToken = new CancellationTokenSource();
+            cancellationToken.Cancel();
+
+            // Act
+            var exception = await Assert.ThrowsAsync<OperationCanceledException>(async () =>
+                await _bookingService.GetBookingByIdAsync(expectedId, cancellationToken.Token)
+            );
+
+            //Assert
+            Assert.Equal(expectedExceptionMessage, exception.Message);
+            Assert.Equal(cancellationToken.Token, exception.CancellationToken);
+        }
+
     }
 }

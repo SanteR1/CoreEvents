@@ -20,7 +20,7 @@ namespace CoreEvents.Tests.Repositories
             _repository = new InMemoryBookingRepository<Booking>();
         }
 
-        private Booking SeedOneBooking(Guid? guid = default)
+        private Booking SeedOneBooking()
         {
             var entity = new Booking()
             {
@@ -192,23 +192,6 @@ namespace CoreEvents.Tests.Repositories
             // Assert
             Assert.Null(result);
         }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
         [Fact]
         public void GetAll_WhenCancellationRequested_ShouldThrowOperationCanceledException()
