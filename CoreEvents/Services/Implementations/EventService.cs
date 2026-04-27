@@ -44,7 +44,7 @@ namespace CoreEvents.Services.Implementations
                 .Take(eventFilter.PageSize)
                 .Select(EventResponseDto.ToDtoCompiled)
                 .ToList();
-
+            
             return new ValueTask<PaginatedResult>(new PaginatedResult(
                 totalEvents,
                 items,

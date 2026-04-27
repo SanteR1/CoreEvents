@@ -297,7 +297,7 @@ namespace CoreEvents.Tests.Services
                 await _eventService.GetEventById(expectedId)
             );
 
-            //Assert
+            // Assert
             Assert.Equal(expectedExceptionMessage, exception.Message);
             _mockRepository.Verify(r => r.GetById(expectedId), Times.Once);
         }
@@ -319,7 +319,7 @@ namespace CoreEvents.Tests.Services
                 await _eventService.UpdateEvent(expectedId, entityDto)
             );
 
-            //Assert
+            // Assert
             Assert.Equal(expectedExceptionMessage, exception.Message);
             _mockRepository.Verify(r => r.Update(It.IsAny<EventEntity>()), Times.Never);
         }
@@ -340,7 +340,7 @@ namespace CoreEvents.Tests.Services
                 await _eventService.CreateEvent(entityDto)
             );
 
-            //Assert
+            // Assert
             Assert.Equal(expectedExceptionMessage, exception.Message);
             _mockRepository.Verify(r => r.Add(It.IsAny<EventEntity>()), Times.Never);
         }
@@ -362,7 +362,7 @@ namespace CoreEvents.Tests.Services
                 await _eventService.UpdateEvent(expectedId, entityDto)
             );
 
-            //Assert
+            // Assert
             Assert.Equal(expectedExceptionMessage, exception.Message);
             _mockRepository.Verify(r => r.Update(It.IsAny<EventEntity>()), Times.Never);
         }

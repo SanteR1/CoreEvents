@@ -11,7 +11,6 @@ namespace CoreEvents.Tests.Services
 {
     public class BookingServiceTests
     {
-
         private readonly Mock<IRepository<Booking>> _mockRepository;
         private readonly Mock<IRepository<EventEntity>> _eventRepoMock;
         private readonly Mock<IQueueSource<Guid>> _mockBookingQueue;
@@ -23,31 +22,37 @@ namespace CoreEvents.Tests.Services
 
         public BookingServiceTests()
         {
-            _eventsList = new List<EventEntity>
-            {
-                new EventEntity {
+            _eventsList =
+            [
+                new EventEntity
+                {
                     Id = new Guid("9ab82324-d774-42fd-a2a8-58dcfe22a174"),
                     Title = "Abc",
                     Description = "Test 1",
                     StartAt = new DateTime(2026, 01, 01, 13, 00, 00),
-                    EndAt = new DateTime(2026, 01, 01, 18, 00, 00)},
-                new EventEntity {
+                    EndAt = new DateTime(2026, 01, 01, 18, 00, 00)
+                },
+                new EventEntity
+                {
                     Id = new Guid("8d1499d8-02fa-4e83-a2eb-6f8dbf13014c"),
                     Title = "Cdf",
                     Description = "Test 2",
                     StartAt = new DateTime(2026, 01, 01, 13, 00, 00),
-                    EndAt = new DateTime(2026, 01, 01, 18, 00, 00)},
-                new EventEntity {
+                    EndAt = new DateTime(2026, 01, 01, 18, 00, 00)
+                },
+                new EventEntity
+                {
                     Id = new Guid("bbf1cb27-02af-4253-927b-2aece4724434"),
                     Title = "Nrh",
                     Description = "Test 3",
                     StartAt = new DateTime(2026, 01, 02, 13, 00, 00),
-                    EndAt = new DateTime(2026, 01, 02, 18, 00, 00)}
-            };
+                    EndAt = new DateTime(2026, 01, 02, 18, 00, 00)
+                }
+            ];
 
             _dictionary.TryAdd(
                 new Guid("5e68cc94-9dd9-44ae-8ea4-2652f55589ee"),
-                new Booking()
+                new Booking
                 {
                     Id = new Guid("5e68cc94-9dd9-44ae-8ea4-2652f55589ee"),
                     EventId = new Guid("9ab82324-d774-42fd-a2a8-58dcfe22a174"),
@@ -57,7 +62,7 @@ namespace CoreEvents.Tests.Services
             );
             _dictionary.TryAdd(
                 new Guid("96263b7a-f285-44fc-9964-5d3ba6155f0d"),
-                new Booking()
+                new Booking
                 {
                     Id = new Guid("96263b7a-f285-44fc-9964-5d3ba6155f0d"),
                     EventId = new Guid("9ab82324-d774-42fd-a2a8-58dcfe22a174"),
@@ -68,15 +73,16 @@ namespace CoreEvents.Tests.Services
                 );
             _dictionary.TryAdd(
                 new Guid("e2c3a01a-b89c-442c-ba2b-12177b3ae1c0"),
-                new Booking()
+                new Booking
                 {
                     Id = new Guid("e2c3a01a-b89c-442c-ba2b-12177b3ae1c0"),
                     EventId = new Guid("bbf1cb27-02af-4253-927b-2aece4724434"),
                     Status = BookingStatus.Confirmed,
                     CreatedAt = new DateTime(2026, 01, 01, 09, 00, 00),
                     ProcessedAt = new DateTime(2026, 01, 01, 09, 10, 00)
-                });
-            
+                }
+            );
+
             _eventRepoMock = new Mock<IRepository<EventEntity>>();
             _eventRepoMock
                 .Setup(repo => repo
@@ -97,7 +103,7 @@ namespace CoreEvents.Tests.Services
                 .Returns((Guid id, CancellationToken ct) => _dictionary.GetValueOrDefault(id));
             _mockRepository.Setup(repo => repo
                     .Add(It.IsAny<Booking>(), It.IsAny<CancellationToken>()))
-                .Callback((Booking id, CancellationToken ct) => _dictionary.TryAdd(id.Id, id));
+                .Callback((Booking booking, CancellationToken ct) => _dictionary.TryAdd(booking.Id, booking));
 
             _mockBookingQueue = new Mock<IQueueSource<Guid>>();
             _mockBookingQueue
@@ -109,47 +115,53 @@ namespace CoreEvents.Tests.Services
                 {
                     return _testQueue.TryDequeue(out id);
                 });
+
             _eventService = new EventService(_eventRepoMock.Object);
-            _bookingService = new BookingService(_mockRepository.Object, _mockBookingQueue.Object, _eventService, new NullLogger<BookingService>());
+            _bookingService = new BookingService(
+                _mockRepository.Object,
+                _mockBookingQueue.Object,
+                _eventService,
+                new NullLogger<BookingService>());
         }
 
         [Fact]
-        public async Task CreateBookingAsync_WithValidEvent_ShouldReturnCreatedBookingWithPendingStaus()
+        public async Task CreateBookingAsync_WithValidEvent_ShouldReturnCreatedBookingWithPendingStatus()
         {
             // Arrange
             Guid expectedId = new Guid("9ab82324-d774-42fd-a2a8-58dcfe22a174");
             BookingStatus expectedStatus = BookingStatus.Pending;
-            BookingCreateDto CreateDto = new BookingCreateDto(expectedId);
+            BookingCreateDto createDto = new BookingCreateDto(expectedId);
 
             // Act
-            var result = await _bookingService.CreateBookingAsync(CreateDto, CancellationToken.None);
+            var result = await _bookingService.CreateBookingAsync(createDto, CancellationToken.None);
 
             // Assert
             Assert.Equal(expectedStatus, result.Status);
         }
 
         [Fact]
-        public async Task CreateBookingAsync_MultipleBookingsForSameEvent_ShouldAssignUniqueIds()
+        public async Task CreateBookingAsync_MultipleBookingsForSameEvent_ShouldAssignUniqueIdsAndStatusIsPending()
         {
             // Arrange
             Guid expectedId = new Guid("9ab82324-d774-42fd-a2a8-58dcfe22a174");
             BookingStatus expectedStatus = BookingStatus.Pending;
-            BookingCreateDto CreateDto = new BookingCreateDto(expectedId);
+            BookingCreateDto createDto = new BookingCreateDto(expectedId);
             int count = 10;
-            var results = new List<BookingResponseDto>();
 
             // Act
-            for (int i = 0; i < count; i++)
-            {
-                results.Add(await _bookingService.CreateBookingAsync(CreateDto, CancellationToken.None));
-            }
+            var results = await Task.WhenAll(
+                Enumerable.Range(0, count)
+                    .Select(_ => _bookingService.CreateBookingAsync(createDto, CancellationToken.None)));
 
             // Assert
             var uniqueIdsCount = results.Select(r => r.Id).Distinct().Count();
             Assert.Equal(count, uniqueIdsCount);
 
-            var expectedUniqueEventCount = results.Select(r => r.EventId == expectedId).Distinct().Count();
-            Assert.Equal(1, expectedUniqueEventCount);
+            var uniqueStatusCount = results.Count(r => r.Status == expectedStatus);
+            Assert.Equal(count, uniqueStatusCount);
+
+            var uniqueEventCount = results.Select(r => r.EventId == expectedId).Distinct().Count();
+            Assert.Equal(1, uniqueEventCount);
         }
 
         [Fact]
@@ -174,7 +186,8 @@ namespace CoreEvents.Tests.Services
         [Fact]
         public async Task BookingProcessingService_WhenCancellationRequested_ShouldThrowOperationCanceledException()
         {
-            string expectedExceptionMessage = $"The operation was canceled.";
+            // Arrange
+            string expectedExceptionMessage = "The operation was canceled.";
             var cancellationToken = new CancellationTokenSource();
             cancellationToken.Cancel();
 
@@ -195,11 +208,11 @@ namespace CoreEvents.Tests.Services
             var bookingId = Guid.NewGuid();
             Guid expectedId = new Guid("bbf1cb27-02af-4253-927b-2aece4724434");
             BookingStatus expectedStatus = BookingStatus.Pending;
-            BookingCreateDto CreateDto = new BookingCreateDto(expectedId);
+            BookingCreateDto createDto = new BookingCreateDto(expectedId);
             var validStatuses = new[] { BookingStatus.Confirmed, BookingStatus.Rejected };
 
             // Act & Assert
-            var resultBeforeUpdateStatus = await _bookingService.CreateBookingAsync(CreateDto, CancellationToken.None);
+            var resultBeforeUpdateStatus = await _bookingService.CreateBookingAsync(createDto, CancellationToken.None);
             Assert.Equal(expectedStatus, resultBeforeUpdateStatus.Status);
             Assert.Null(resultBeforeUpdateStatus.ProcessedAt);
 
@@ -231,7 +244,7 @@ namespace CoreEvents.Tests.Services
         }
 
         [Fact]
-        public async Task CreateBookingAsync_WhenEventDoesNotExist_ShouldThrowKeyNotFoundException()
+        public async Task CreateBookingAsync_WhenEventWasDeletedAndDoesNotExist_ShouldThrowKeyNotFoundException()
         {
             // Arrange
             Guid existEventId = new Guid("9ab82324-d774-42fd-a2a8-58dcfe22a174");
@@ -240,14 +253,14 @@ namespace CoreEvents.Tests.Services
 
             // Act
             await _eventService.DeleteEvent(existEventId);
-            
+
             var exception = await Assert.ThrowsAsync<KeyNotFoundException>(async () =>
                 await _bookingService.CreateBookingAsync(createDto, CancellationToken.None)
             );
 
             // Assert
             Assert.Equal(expectedExceptionMessage, exception.Message);
-            _eventRepoMock.Verify(r => r.GetById(existEventId), Times.AtLeastOnce);
+            _mockRepository.Verify(r => r.Add(It.IsAny<Booking>(), CancellationToken.None), Times.Never);
         }
 
         [Fact]
@@ -301,7 +314,7 @@ namespace CoreEvents.Tests.Services
                 await _bookingService.GetBookingByIdAsync(expectedId, cancellationToken.Token)
             );
 
-            //Assert
+            // Assert
             Assert.Equal(expectedExceptionMessage, exception.Message);
             Assert.Equal(cancellationToken.Token, exception.CancellationToken);
         }

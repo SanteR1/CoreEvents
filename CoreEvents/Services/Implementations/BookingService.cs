@@ -65,13 +65,13 @@ namespace CoreEvents.Services.Implementations
 
         public async Task GetBookingForProcessing(CancellationToken ct)
         {
+            ct.ThrowIfCancellationRequested();
             var id = Guid.Empty;
             bool isEntered = false;
             try
             {
                 await _semaphore.WaitAsync(ct);
                 isEntered = true;
-                ct.ThrowIfCancellationRequested();
 
                 // По замылсу в очереди все находятся только со статусом Pending
                 if (!_queue.TryDequeue(out id)) return;
