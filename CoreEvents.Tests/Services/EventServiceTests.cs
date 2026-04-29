@@ -2,8 +2,7 @@
 using CoreEvents.Data.Repositories;
 using CoreEvents.Models.Domain;
 using CoreEvents.Models.DTOs;
-using CoreEvents.Services;
-
+using CoreEvents.Services.Implementations;
 using Moq;
 
 namespace CoreEvents.Tests.Services
@@ -40,17 +39,17 @@ namespace CoreEvents.Tests.Services
                 .Returns(_eventsList);
             _mockRepository
                 .Setup(repo => repo
-                .GetById(It.IsAny<Guid>()))
-                .Returns((Guid id) => _eventsList.FirstOrDefault(x => x.Id == id));
+                .GetById(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+                .Returns((Guid id, CancellationToken ct) => _eventsList.FirstOrDefault(x => x.Id == id));
             _mockRepository
                 .Setup(repo => repo
-                .Delete(It.IsAny<Guid>()))
-                .Callback((Guid id) => _eventsList.RemoveAll(x => x.Id == id));
+                .Delete(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+                .Callback((Guid id, CancellationToken ct) => _eventsList.RemoveAll(x => x.Id == id));
             _eventService = new EventService(_mockRepository.Object);
         }
 
         [Fact]
-        public void CreateEvent_WithValidData_ShouldReturnCreatedEvent()
+        public async Task CreateEvent_WithValidData_ShouldReturnCreatedEvent()
         {
             // Arrange
             string expectedTitle = "Event Title";
@@ -60,7 +59,7 @@ namespace CoreEvents.Tests.Services
             EventCreateDto expectedCreateDto = new EventCreateDto(expectedTitle, expectedDescription, expectedDateTimeStartAt, expectedDateTimeEndAt);
 
             // Act
-            var result = _eventService.CreateEvent(expectedCreateDto);
+            var result = await _eventService.CreateEvent(expectedCreateDto);
 
             // Assert
             Assert.Equal(expectedTitle, result.Title);
@@ -70,7 +69,7 @@ namespace CoreEvents.Tests.Services
         }
 
         [Fact]
-        public void GetEvents_WithValidFilters_ShouldReturnAllEvents()
+        public async Task GetEvents_WithValidFilters_ShouldReturnAllEvents()
         {
             // Arrange
             string optionalTitle = "C";
@@ -83,7 +82,7 @@ namespace CoreEvents.Tests.Services
             int expectedTotalEvents = 2;
 
             // Act
-            var result = _eventService.GetEvents(eventFilter);
+            var result = await _eventService.GetEvents(eventFilter);
 
             // Assert
             Assert.Equal(expectedPage, result.CurrentPage);
@@ -93,7 +92,7 @@ namespace CoreEvents.Tests.Services
         }
 
         [Fact]
-        public void GetEventById_ExistingId_ShouldRetrieveEventSuccessfully()
+        public async Task GetEventById_ExistingId_ShouldRetrieveEventSuccessfully()
         {
             // Arrange
             Guid expectedId = new Guid("9ab82324-d774-42fd-a2a8-58dcfe22a174");
@@ -103,7 +102,7 @@ namespace CoreEvents.Tests.Services
             DateTime expectedDateTimeEndAt = new DateTime(2026, 01, 01, 18, 00, 00);
 
             // Act
-            var result = _eventService.GetEventById(expectedId);
+            var result = await _eventService.GetEventById(expectedId);
 
             // Assert
             Assert.Equal(expectedId, result.Id);
@@ -114,7 +113,7 @@ namespace CoreEvents.Tests.Services
         }
 
         [Fact]
-        public void UpdateEvent_WithExistingId_ShouldModifyEventInList()
+        public async Task UpdateEvent_WithExistingId_ShouldModifyEventInList()
         {
             // Arrange
             Guid expectedId = new Guid("9ab82324-d774-42fd-a2a8-58dcfe22a174");
@@ -125,7 +124,7 @@ namespace CoreEvents.Tests.Services
             EventCreateDto eventCreateDto = new EventCreateDto(expectedTitle, expectedDescription, expectedDateTimeStartAt, expectedDateTimeEndAt);
 
             // Act
-            _eventService.UpdateEvent(expectedId, eventCreateDto);
+            await _eventService.UpdateEvent(expectedId, eventCreateDto);
 
             // Assert
             var updatedEvent = _eventsList.First(x => x.Id == expectedId);
@@ -138,14 +137,14 @@ namespace CoreEvents.Tests.Services
         }
 
         [Fact]
-        public void DeleteEvent_WithExistingId_ShouldRemoveEventFromList()
+        public async Task DeleteEvent_WithExistingId_ShouldRemoveEventFromList()
         {
             // Arrange
             int initialCount = _eventsList.Count;
             Guid expectedId = new Guid("9ab82324-d774-42fd-a2a8-58dcfe22a174");
 
             // Act
-            _eventService.DeleteEvent(expectedId);
+            await _eventService.DeleteEvent(expectedId);
 
             // Assert
             Assert.DoesNotContain(_eventsList, x => x.Id == expectedId);
@@ -154,7 +153,7 @@ namespace CoreEvents.Tests.Services
         }
 
         [Fact]
-        public void GetEvents_ByTitleFilter_ShouldReturnFilteredEvents()
+        public async Task GetEvents_ByTitleFilter_ShouldReturnFilteredEvents()
         {
             // Arrange
             string filterTitle = "df";
@@ -164,7 +163,7 @@ namespace CoreEvents.Tests.Services
             string expectedDescription = "Test 2";
 
             // Act
-            var result = _eventService.GetEvents(eventFilter);
+            var result = await _eventService.GetEvents(eventFilter);
 
             // Assert
             Assert.Equal(expectedCount, result.TotalEvents);
@@ -178,7 +177,7 @@ namespace CoreEvents.Tests.Services
         }
 
         [Fact]
-        public void GetEvents_ByDateFilter_ShouldReturnFilteredEvents()
+        public async Task GetEvents_ByDateFilter_ShouldReturnFilteredEvents()
         {
             // Arrange
             int expectedCount = 1;
@@ -191,7 +190,7 @@ namespace CoreEvents.Tests.Services
             DateTime expectedEndAt = new DateTime(2026, 01, 02, 18, 00, 00);
 
             // Act
-            var result = _eventService.GetEvents(eventFilter);
+            var result = await _eventService.GetEvents(eventFilter);
 
             // Assert
             Assert.Equal(expectedCount, result.TotalEvents);
@@ -208,7 +207,7 @@ namespace CoreEvents.Tests.Services
         }
 
         [Fact]
-        public void GetEvents_FromAndToDateOnly_ShouldIncludeAllEventsForThatDa()
+        public async Task GetEvents_FromAndToDateOnly_ShouldIncludeAllEventsForThatDay()
         {
             // Arrange
             int expectedCount = 1;
@@ -221,7 +220,7 @@ namespace CoreEvents.Tests.Services
             DateTime expectedEndAt = new DateTime(2026, 01, 02, 18, 00, 00);
 
             // Act
-            var result = _eventService.GetEvents(eventFilter);
+            var result = await _eventService.GetEvents(eventFilter);
 
             // Assert
             Assert.Equal(expectedCount, result.TotalEvents);
@@ -238,7 +237,7 @@ namespace CoreEvents.Tests.Services
         }
 
         [Fact]
-        public void GetEvents_ByPagination_ShouldReturnPaginationEvents()
+        public async Task GetEvents_ByPagination_ShouldReturnPaginationEvents()
         {
             // Arrange
             int currentPage = 2;
@@ -247,7 +246,7 @@ namespace CoreEvents.Tests.Services
             var expectedReturnedEventsCount = Math.Min(pageSize, expectedTotalEvents);
             var eventFilter = new EventFilter { Page = currentPage, PageSize = pageSize };
             // Act
-            var paginatedResult = _eventService.GetEvents(eventFilter);
+            var paginatedResult = await _eventService.GetEvents(eventFilter);
 
             // Assert
             Assert.Equal(expectedTotalEvents, paginatedResult.TotalEvents);
@@ -256,7 +255,7 @@ namespace CoreEvents.Tests.Services
         }
 
         [Fact]
-        public void GetEvents_ByTitleAndDateAndPageFilter_ShouldReturnFilteredEvents()
+        public async Task GetEvents_ByTitleAndDateAndPageFilter_ShouldReturnFilteredEvents()
         {
             // Arrange
             string filterTitle = "c";
@@ -271,7 +270,7 @@ namespace CoreEvents.Tests.Services
             DateTime expectedEndAt = new DateTime(2026, 01, 01, 18, 00, 00);
 
             // Act
-            var result = _eventService.GetEvents(eventFilter);
+            var result = await _eventService.GetEvents(eventFilter);
 
             // Assert
             Assert.Equal(expectedCount, result.TotalEvents);
@@ -287,24 +286,24 @@ namespace CoreEvents.Tests.Services
         }
 
         [Fact]
-        public void GetEventById_NonExistingId_ShouldReturnNotFound()
+        public async Task GetEventById_NonExistingId_ShouldReturnNotFound()
         {
             // Arrange
             Guid expectedId = Guid.NewGuid();
             string expectedExceptionMessage = $"Событие с ID {expectedId} не найдено.";
 
             // Act & Assert
-            var exception = Assert.Throws<KeyNotFoundException>(() =>
-                _eventService.GetEventById(expectedId)
+            var exception = await Assert.ThrowsAsync<KeyNotFoundException>(async () =>
+                await _eventService.GetEventById(expectedId)
             );
 
-            //Assert
+            // Assert
             Assert.Equal(expectedExceptionMessage, exception.Message);
             _mockRepository.Verify(r => r.GetById(expectedId), Times.Once);
         }
 
         [Fact]
-        public void UpdateEvent_NonExistingId_ShouldReturnNotFound()
+        public async Task UpdateEvent_NonExistingId_ShouldReturnNotFound()
         {
             // Arrange
             Guid expectedId = Guid.NewGuid();
@@ -316,17 +315,17 @@ namespace CoreEvents.Tests.Services
             EventCreateDto entityDto = new EventCreateDto(Title: title, Description: description, StartAt: expectedStartAt, EndAt: expectedEndAt);
 
             // Act & Assert
-            var exception = Assert.Throws<KeyNotFoundException>(() =>
-                _eventService.UpdateEvent(expectedId, entityDto)
+            var exception = await Assert.ThrowsAsync<KeyNotFoundException>(async () =>
+                await _eventService.UpdateEvent(expectedId, entityDto)
             );
 
-            //Assert
+            // Assert
             Assert.Equal(expectedExceptionMessage, exception.Message);
             _mockRepository.Verify(r => r.Update(It.IsAny<EventEntity>()), Times.Never);
         }
 
         [Fact]
-        public void CreateEvent_WithNonValidDate_ShouldReturnArgumentException()
+        public async Task CreateEvent_WithNonValidDate_ShouldReturnArgumentException()
         {
             // Arrange
             string title = "Create Title";
@@ -337,17 +336,17 @@ namespace CoreEvents.Tests.Services
             EventCreateDto entityDto = new EventCreateDto(Title: title, Description: description, StartAt: expectedStartAt, EndAt: expectedEndAt);
 
             // Act & Assert
-            var exception = Assert.Throws<ArgumentException>(() =>
-                _eventService.CreateEvent(entityDto)
+            var exception = await Assert.ThrowsAsync<ArgumentException>(async () =>
+                await _eventService.CreateEvent(entityDto)
             );
 
-            //Assert
+            // Assert
             Assert.Equal(expectedExceptionMessage, exception.Message);
             _mockRepository.Verify(r => r.Add(It.IsAny<EventEntity>()), Times.Never);
         }
 
         [Fact]
-        public void UpdateEvent_WithNonValidDate_ShouldReturnArgumentException()
+        public async Task UpdateEvent_WithNonValidDate_ShouldReturnArgumentExceptionShouldReturnArgumentException()
         {
             // Arrange
             Guid expectedId = new Guid("9ab82324-d774-42fd-a2a8-58dcfe22a174");
@@ -359,11 +358,11 @@ namespace CoreEvents.Tests.Services
             EventCreateDto entityDto = new EventCreateDto(Title: title, Description: description, StartAt: expectedStartAt, EndAt: expectedEndAt);
 
             // Act & Assert
-            var exception = Assert.Throws<ArgumentException>(() =>
-                _eventService.UpdateEvent(expectedId, entityDto)
+            var exception = await Assert.ThrowsAsync<ArgumentException>(async () =>
+                await _eventService.UpdateEvent(expectedId, entityDto)
             );
 
-            //Assert
+            // Assert
             Assert.Equal(expectedExceptionMessage, exception.Message);
             _mockRepository.Verify(r => r.Update(It.IsAny<EventEntity>()), Times.Never);
         }
@@ -448,14 +447,14 @@ namespace CoreEvents.Tests.Services
         [InlineData(null)]
         [InlineData("")]
         [InlineData("   ")]
-        public void GetEvents_EmptyFilter_ShouldReturnAllEvents(string? emptyTitle)
+        public async Task GetEvents_EmptyFilter_ShouldReturnAllEvents(string? emptyTitle)
         {
             // Arrange
             var filter = new EventFilter() { Title = emptyTitle };
             var totalInStore = _eventsList.Count;
 
             // Act
-            var result = _eventService.GetEvents(filter);
+            var result = await _eventService.GetEvents(filter);
 
             // Assert
             Assert.Equal(totalInStore, result.TotalEvents);
@@ -464,7 +463,7 @@ namespace CoreEvents.Tests.Services
 
         [Theory]
         [MemberData(nameof(GetDateBoundaryData))]
-        public void GetEvents_DateBoundaries_ShouldFilterCorrectly(
+        public async Task GetEvents_DateBoundaries_ShouldFilterCorrectly(
             DateTime? start,
             DateTime? end,
             int expectedCount,
@@ -474,7 +473,7 @@ namespace CoreEvents.Tests.Services
             var filter = new EventFilter() { From = start, To = end };
 
             // Act
-            var result = _eventService.GetEvents(filter);
+            var result = await _eventService.GetEvents(filter);
 
             // Assert
             Assert.True(expectedCount == result.TotalEvents,

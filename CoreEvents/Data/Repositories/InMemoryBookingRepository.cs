@@ -1,28 +1,29 @@
-﻿using CoreEvents.Models.Domain;
+﻿using System.Collections.Concurrent;
+using CoreEvents.Models.Domain;
 
 namespace CoreEvents.Data.Repositories
 {
-    public class InMemoryRepository<T> : IRepository<T> where T : IEntity
+    public class InMemoryBookingRepository<T> :  IRepository<T> where T : IEntity
     {
-        private readonly List<T> _entities = new();
+        private readonly ConcurrentDictionary<Guid, T> _dictionary = new();
 
         public IEnumerable<T> GetAll(CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
-            return _entities;
+            return _dictionary.Values;
         }
 
         public T? GetById(Guid id, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
-            return _entities.FirstOrDefault(e => e.Id == id);
+            return _dictionary.GetValueOrDefault(id);
         }
 
         public void Add(T entity, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
             if (entity.Id == Guid.Empty) entity.Id = Guid.NewGuid();
-            _entities.Add(entity);
+            _dictionary.TryAdd(entity.Id, entity);
         }
 
         public void Update(T entity, CancellationToken ct)
@@ -31,8 +32,7 @@ namespace CoreEvents.Data.Repositories
             var existing = GetById(entity.Id, ct);
             if (existing != null)
             {
-                var index = _entities.IndexOf(existing);
-                _entities[index] = entity;
+                _dictionary[entity.Id] = entity;
             }
         }
 
@@ -40,7 +40,7 @@ namespace CoreEvents.Data.Repositories
         {
             ct.ThrowIfCancellationRequested();
             var entity = GetById(id, ct);
-            if (entity != null) _entities.Remove(entity);
+            if (entity != null) _dictionary.TryRemove(entity.Id, out _);
         }
     }
 }

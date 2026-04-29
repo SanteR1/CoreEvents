@@ -1,8 +1,9 @@
 ﻿using CoreEvents.Data.Repositories;
 using CoreEvents.Models.Domain;
 using CoreEvents.Models.DTOs;
+using CoreEvents.Services.Interfaces;
 
-namespace CoreEvents.Services
+namespace CoreEvents.Services.Implementations
 {
     public class EventService : IEventService
     {
@@ -12,7 +13,7 @@ namespace CoreEvents.Services
             _repository = repository;
         }
 
-        public PaginatedResult GetEvents(EventFilter eventFilter)
+        public ValueTask<PaginatedResult> GetEvents(EventFilter eventFilter)
         {
             var entity = _repository.GetAll();
             if (!string.IsNullOrWhiteSpace(eventFilter.Title))
@@ -43,30 +44,30 @@ namespace CoreEvents.Services
                 .Take(eventFilter.PageSize)
                 .Select(EventResponseDto.ToDtoCompiled)
                 .ToList();
-
-            return new PaginatedResult(
+            
+            return new ValueTask<PaginatedResult>(new PaginatedResult(
                 totalEvents,
                 items,
                 eventFilter.Page,
-                eventFilter.PageSize);
+                eventFilter.PageSize));
         }
 
-        public EventResponseDto GetEventById(Guid id)
+        public ValueTask<EventResponseDto> GetEventById(Guid id)
         {
             var entity = _repository.GetById(id);
             if (entity == null) throw new KeyNotFoundException($"Событие с ID {id} не найдено.");
 
-            return new EventResponseDto(
+            return new ValueTask<EventResponseDto>(new EventResponseDto(
                 entity.Id,
                 entity.Title,
                 entity.Description,
                 entity.StartAt,
                 entity.EndAt
-                );
+                ));
 
         }
 
-        public EventResponseDto CreateEvent(EventCreateDto entityDto)
+        public ValueTask<EventResponseDto> CreateEvent(EventCreateDto entityDto)
         {
             if (entityDto.EndAt <= entityDto.StartAt)
                 throw new ArgumentException("Дата окончания не может быть раньше даты начала.");
@@ -82,15 +83,15 @@ namespace CoreEvents.Services
 
             _repository.Add(entity);
 
-            return new EventResponseDto(
+            return new ValueTask<EventResponseDto>(new EventResponseDto(
                 entity.Id,
                 entity.Title,
                 entity.Description,
                 entity.StartAt,
                 entity.EndAt
-            );
+            ));
         }
-        public void UpdateEvent(Guid id, EventCreateDto entityDto)
+        public ValueTask UpdateEvent(Guid id, EventCreateDto entityDto)
         {
             var existing = _repository.GetById(id);
             if (existing == null) throw new KeyNotFoundException("Событие не найдено.");
@@ -104,14 +105,16 @@ namespace CoreEvents.Services
             existing.EndAt = entityDto.EndAt;
 
             _repository.Update(existing);
+            return ValueTask.CompletedTask;
         }
 
-        public void DeleteEvent(Guid id)
+        public ValueTask DeleteEvent(Guid id)
         {
             var existing = _repository.GetById(id);
             if (existing == null) throw new KeyNotFoundException("Событие не найдено.");
 
             _repository.Delete(id);
+            return ValueTask.CompletedTask;
         }
     }
 }
