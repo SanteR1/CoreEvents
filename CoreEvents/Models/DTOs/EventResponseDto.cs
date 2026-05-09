@@ -8,7 +8,9 @@ namespace CoreEvents.Models.DTOs
         string Title,
         string? Description,
         DateTime StartAt,
-        DateTime EndAt
+        DateTime EndAt,
+        int TotalSeats,
+        int AvailableSeats
     )
     {
         public static Expression<Func<EventEntity, EventResponseDto>> ToDto => entity => new EventResponseDto(
@@ -16,7 +18,9 @@ namespace CoreEvents.Models.DTOs
             entity.Title,
             entity.Description,
             entity.StartAt,
-            entity.EndAt
+            entity.EndAt,
+            entity.TotalSeats,
+            entity.AvailableSeats
         );
         public static Func<EventEntity, EventResponseDto> ToDtoCompiled => ToDto.Compile();
     }

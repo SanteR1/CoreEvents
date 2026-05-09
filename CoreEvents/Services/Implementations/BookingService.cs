@@ -1,5 +1,6 @@
 ﻿using CoreEvents.Data.Queues;
 using CoreEvents.Data.Repositories;
+using CoreEvents.Middleware;
 using CoreEvents.Models.Domain;
 using CoreEvents.Models.DTOs;
 using CoreEvents.Services.Interfaces;
@@ -8,25 +9,24 @@ namespace CoreEvents.Services.Implementations
 {
     public class BookingService : IBookingService
     {
-        private readonly IRepository<Booking> _repository;
-        private readonly IEventService _eventService;
+        private readonly IRepository<Booking> _bookingRepository;
+        private readonly IRepository<EventEntity> _eventRepository;
         private readonly IQueueSource<Guid> _queue;
         private readonly ILogger<BookingService> _logger;
         private readonly SemaphoreSlim _semaphore = new(1, 1);
-        public BookingService(IRepository<Booking> repository, IQueueSource<Guid> queue, IEventService eventService, ILogger<BookingService> logger)
+        private readonly object _bookingLock = new();
+        public BookingService(IRepository<Booking> bookingRepository, IQueueSource<Guid> queue, ILogger<BookingService> logger, IRepository<EventEntity> eventRepository)
         {
-            _repository = repository;
+            _bookingRepository = bookingRepository;
             _queue = queue;
-            _eventService = eventService;
             _logger = logger;
+            _eventRepository = eventRepository;
         }
         public async Task<BookingResponseDto> CreateBookingAsync(BookingCreateDto bookingDto, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
-            var existEvent = await _eventService.GetEventById(bookingDto.EventId);
-
-            if (existEvent is null)
-                throw new KeyNotFoundException($"Событие с ID {bookingDto.EventId} не найдено.");
+            var existEvent = _eventRepository.GetById(bookingDto.EventId);
+            if (existEvent is null) throw new KeyNotFoundException($"Событие с ID {bookingDto.EventId} не найдено.");
 
             var booking = new Booking()
             {
@@ -35,8 +35,15 @@ namespace CoreEvents.Services.Implementations
                 Status = BookingStatus.Pending,
                 CreatedAt = DateTime.Now
             };
-            _repository.Add(booking, ct);
-            _queue.Enqueue(booking.Id);
+
+            lock (_bookingLock)
+            {
+                var tryReserve = existEvent.TryReserveSeats();
+                if (!tryReserve)
+                    throw new NoAvailableSeatsException("No available seats for this event");
+                _bookingRepository.Add(booking, ct);
+                _queue.Enqueue(booking.Id);
+            }
 
             return new BookingResponseDto(
                 booking.Id,
@@ -50,7 +57,7 @@ namespace CoreEvents.Services.Implementations
         public ValueTask<BookingResponseDto> GetBookingByIdAsync(Guid id, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
-            var booking = _repository.GetById(id, ct);
+            var booking = _bookingRepository.GetById(id, ct);
             if (booking == null)
                 throw new KeyNotFoundException($"Бронь с ID {id} не найдена.");
 
@@ -76,7 +83,7 @@ namespace CoreEvents.Services.Implementations
                 // По замылсу в очереди находятся только со статусом Pending
                 if (!_queue.TryDequeue(out id)) return;
 
-                var booking = _repository.GetById(id, ct);
+                var booking = _bookingRepository.GetById(id, ct);
                 if (booking == null) return;
 
                 _logger.LogInformation("Начал обработку брони {id}", id);
@@ -88,7 +95,7 @@ namespace CoreEvents.Services.Implementations
                 booking.ProcessedAt = DateTime.Now;
                 _logger.LogInformation("Закончил обработку брони {id}", id);
 
-                _repository.Update(booking, ct);
+                _bookingRepository.Update(booking, ct);
             }
             catch (Exception e)
             {

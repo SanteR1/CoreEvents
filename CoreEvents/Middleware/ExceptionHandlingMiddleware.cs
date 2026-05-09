@@ -61,6 +61,7 @@ namespace CoreEvents.Middleware
         {
             ArgumentException => StatusCodes.Status400BadRequest,
             KeyNotFoundException => StatusCodes.Status404NotFound,
+            NoAvailableSeatsException => StatusCodes.Status409Conflict,
             OperationCanceledException => StatusCodes.Status499ClientClosedRequest,
             _ => StatusCodes.Status500InternalServerError
         };
@@ -69,6 +70,7 @@ namespace CoreEvents.Middleware
         {
             ArgumentException => "Bad request",
             KeyNotFoundException => "Not found",
+            NoAvailableSeatsException => "No available seats for this event",
             OperationCanceledException => "The operation was canceled",
             _ => "Internal server error"
         };
