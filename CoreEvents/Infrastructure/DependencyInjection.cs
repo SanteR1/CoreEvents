@@ -13,7 +13,8 @@ namespace CoreEvents.Infrastructure
         {
             services.AddSingleton<IRepository<EventEntity>, InMemoryRepository<EventEntity>>();
             services.AddSingleton<IQueueSource<Guid>, InMemoryBookingQueue>();
-            services.AddSingleton<IRepository<Booking>, InMemoryBookingRepository<Booking>>();
+            services.AddSingleton<IBookingRepository, InMemoryBookingRepository>();
+            services.AddSingleton<IBookingQueue, BookingQueue>();
             services.AddScoped<IEventService, EventService>();
             services.AddScoped<IBookingService, BookingService>();
             services.AddHostedService<BookingProcessingService>();

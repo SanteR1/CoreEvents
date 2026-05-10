@@ -9,16 +9,16 @@ namespace CoreEvents.Services.Implementations
 {
     public class BookingService : IBookingService
     {
-        private readonly IRepository<Booking> _bookingRepository;
+        private readonly IBookingRepository _bookingRepository;
         private readonly IRepository<EventEntity> _eventRepository;
-        private readonly IQueueSource<Guid> _queue;
+        private readonly IBookingQueue _bookingQueue;
         private readonly ILogger<BookingService> _logger;
         private readonly SemaphoreSlim _semaphore = new(1, 1);
         private readonly object _bookingLock = new();
-        public BookingService(IRepository<Booking> bookingRepository, IQueueSource<Guid> queue, ILogger<BookingService> logger, IRepository<EventEntity> eventRepository)
+        public BookingService(IBookingRepository bookingRepository, IBookingQueue bookingQueue, IQueueSource<Guid> queue, ILogger<BookingService> logger, IRepository<EventEntity> eventRepository)
         {
             _bookingRepository = bookingRepository;
-            _queue = queue;
+            _bookingQueue = bookingQueue;
             _logger = logger;
             _eventRepository = eventRepository;
         }
@@ -42,7 +42,7 @@ namespace CoreEvents.Services.Implementations
                 if (!tryReserve)
                     throw new NoAvailableSeatsException("No available seats for this event");
                 _bookingRepository.Add(booking, ct);
-                _queue.Enqueue(booking.Id);
+                _bookingQueue.EnqueueAsync(booking, ct);
             }
 
             return new BookingResponseDto(
@@ -72,40 +72,41 @@ namespace CoreEvents.Services.Implementations
 
         public async Task GetBookingForProcessing(CancellationToken ct)
         {
-            ct.ThrowIfCancellationRequested();
-            var id = Guid.Empty;
-            bool isEntered = false;
-            try
-            {
-                await _semaphore.WaitAsync(ct);
-                isEntered = true;
+            // TODO => Удалить метод
+            //ct.ThrowIfCancellationRequested();
+            //var id = Guid.Empty;
+            //bool isEntered = false;
+            //try
+            //{
+            //    await _semaphore.WaitAsync(ct);
+            //    isEntered = true;
 
-                // По замылсу в очереди находятся только со статусом Pending
-                if (!_queue.TryDequeue(out id)) return;
+            //    // По замылсу в очереди находятся только со статусом Pending
+            //    //if (!_bookingQueue.DequeueAsync(out id)) return;
 
-                var booking = _bookingRepository.GetById(id, ct);
-                if (booking == null) return;
+            //    var booking = _bookingRepository.GetById(id, ct);
+            //    if (booking == null) return;
 
-                _logger.LogInformation("Начал обработку брони {id}", id);
-                await Task.Delay(2000, ct);
+            //    _logger.LogInformation("Начал обработку брони {id}", id);
+            //    await Task.Delay(2000, ct);
 
-                // ~10% Rejected
-                var errorProbability = Random.Shared.Next(0, 10);
-                booking.Status = errorProbability == 0 ? BookingStatus.Rejected : BookingStatus.Confirmed;
-                booking.ProcessedAt = DateTime.Now;
-                _logger.LogInformation("Закончил обработку брони {id}", id);
+            //    // ~10% Rejected
+            //    var errorProbability = Random.Shared.Next(0, 10);
+            //    booking.Status = errorProbability == 0 ? BookingStatus.Rejected : BookingStatus.Confirmed;
+            //    booking.ProcessedAt = DateTime.Now;
+            //    _logger.LogInformation("Закончил обработку брони {id}", id);
 
-                _bookingRepository.Update(booking, ct);
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "Критический сбой при обработке брони {id}", id);
-                throw;
-            }
-            finally
-            {
-                if (isEntered) _semaphore.Release();
-            }
+            //    _bookingRepository.Update(booking, ct);
+            //}
+            //catch (Exception e)
+            //{
+            //    _logger.LogError(e, "Критический сбой при обработке брони {id}", id);
+            //    throw;
+            //}
+            //finally
+            //{
+            //    if (isEntered) _semaphore.Release();
+            //}
         }
     }
 }

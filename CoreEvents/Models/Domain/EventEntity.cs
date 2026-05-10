@@ -55,9 +55,8 @@ namespace CoreEvents.Models.Domain
             do
             {
                 current = _availableSeats;
-                if (current < count) return false;
-
                 updated = current + count;
+                if (updated > TotalSeats) return false;
             } while (Interlocked.CompareExchange(ref _availableSeats, updated, current) != current);
             return true;
         }
