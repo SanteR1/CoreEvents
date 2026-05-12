@@ -1,5 +1,4 @@
-﻿using CoreEvents.Models.Domain;
-using CoreEvents.Models.DTOs;
+﻿using CoreEvents.Models.DTOs;
 using CoreEvents.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 

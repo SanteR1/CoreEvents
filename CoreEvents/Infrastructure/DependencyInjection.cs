@@ -1,5 +1,4 @@
-﻿using CoreEvents.Data.Queues;
-using CoreEvents.Data.Repositories;
+﻿using CoreEvents.Data.Repositories;
 using CoreEvents.Infrastructure.BackgroundServices;
 using CoreEvents.Models.Domain;
 using CoreEvents.Services.Implementations;
@@ -12,9 +11,7 @@ namespace CoreEvents.Infrastructure
         public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
         {
             services.AddSingleton<IRepository<EventEntity>, InMemoryRepository<EventEntity>>();
-            services.AddSingleton<IQueueSource<Guid>, InMemoryBookingQueue>();
             services.AddSingleton<IBookingRepository, InMemoryBookingRepository>();
-            services.AddSingleton<IBookingQueue, BookingQueue>();
             services.AddScoped<IEventService, EventService>();
             services.AddScoped<IBookingService, BookingService>();
             services.AddHostedService<BookingProcessingService>();

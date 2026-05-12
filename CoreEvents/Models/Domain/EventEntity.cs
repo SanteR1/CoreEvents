@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using CoreEvents.Models.DTOs;
 
 namespace CoreEvents.Models.Domain
 {
@@ -10,7 +9,7 @@ namespace CoreEvents.Models.Domain
         public string? Description { get; set; }
         public DateTime StartAt { get; set; }
         public DateTime EndAt { get; set; }
-        public required int TotalSeats { get; set; }
+        public required int TotalSeats { get; init; }
         private volatile int _availableSeats;
         public int AvailableSeats => _availableSeats;
 

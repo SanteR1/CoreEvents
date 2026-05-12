@@ -1,5 +1,4 @@
-﻿using CoreEvents.Models.Domain;
-using CoreEvents.Models.DTOs;
+﻿using CoreEvents.Models.DTOs;
 
 namespace CoreEvents.Services.Interfaces
 {
@@ -7,6 +6,5 @@ namespace CoreEvents.Services.Interfaces
     {
         Task<BookingResponseDto> CreateBookingAsync(BookingCreateDto booking, CancellationToken ct = default);
         ValueTask<BookingResponseDto> GetBookingByIdAsync(Guid booking, CancellationToken ct = default);
-        Task GetBookingForProcessing(CancellationToken ct = default);
     }
 }

@@ -1,106 +1,92 @@
-﻿using System.Collections;
-using CoreEvents.Data.Queues;
-using CoreEvents.Data.Repositories;
+﻿using CoreEvents.Data.Repositories;
 using CoreEvents.Models.Domain;
-using CoreEvents.Services.Interfaces;
 
 namespace CoreEvents.Infrastructure.BackgroundServices
 {
     public class BookingProcessingService : BackgroundService
     {
-        private readonly IServiceScopeFactory _scopeFactory;
+        private const int PollingIntervalSeconds = 10;
+        private const int ProcessingDelaySeconds = 2;
+
         private readonly ILogger<BookingProcessingService> _logger;
         private readonly SemaphoreSlim _processingSemaphore = new(1, 1);
         private readonly IRepository<EventEntity> _eventRepository;
         private readonly IBookingRepository _bookingRepository;
-        private readonly IBookingQueue _bookingQueue;
 
 
         public BookingProcessingService(
             IRepository<EventEntity> eventRepository,
             IBookingRepository bookingRepository,
-            IServiceScopeFactory scopeFactory,
-            ILogger<BookingProcessingService> logger,
-            IBookingQueue bookingQueue)
+            ILogger<BookingProcessingService> logger)
         {
             _eventRepository = eventRepository;
             _bookingRepository = bookingRepository;
-            _scopeFactory = scopeFactory;
             _logger = logger;
-            _bookingQueue = bookingQueue;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             _logger.LogInformation("Фоновая служба обработки броней запущена.");
-            try
+            while (!stoppingToken.IsCancellationRequested)
             {
-                stoppingToken.ThrowIfCancellationRequested();
-                var options = new ParallelOptions()
+                try
                 {
-                    MaxDegreeOfParallelism = 10
-                };
-
-                await Parallel.ForEachAsync(
-                    _bookingQueue.DequeueAsync(stoppingToken),
-                    options,
-                    async (booking, token) =>
-                    {
-                        await ProcessBookingAsync(booking, token);
-                    });
-            }
-            catch (OperationCanceledException e) when (stoppingToken.IsCancellationRequested)
-            {
-                _logger.LogInformation(e, "Отмена операции в фоновой обработке");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Критическая ошибка в фоновой обработке");
+                    var pendingBookings = _bookingRepository.GetPending(stoppingToken).ToList();
+                    var tasks = pendingBookings.Select(booking => ProcessBookingAsync(booking, stoppingToken));
+                    await Task.WhenAll(tasks);
+                    await Task.Delay(TimeSpan.FromSeconds(PollingIntervalSeconds), stoppingToken);
+                }
+                catch (OperationCanceledException e) when (stoppingToken.IsCancellationRequested)
+                {
+                    _logger.LogInformation(e, "Запрос на остановку службы получен.");
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Критическая ошибка в фоновой обработке");
+                }
             }
             _logger.LogInformation("Фоновая служба остановлена.");
         }
 
         private async Task ProcessBookingAsync(Booking booking, CancellationToken stoppingToken)
         {
-            EventEntity? existEvent = null;
             _logger.LogInformation("Начал обработку брони {id}", booking.Id);
-            await Task.Delay(2000, stoppingToken);
+            await Task.Delay(TimeSpan.FromSeconds(ProcessingDelaySeconds), stoppingToken);
 
             await _processingSemaphore.WaitAsync(stoppingToken);
             try
             {
-                existEvent = _eventRepository.GetById(booking.EventId);
+                var existEvent = _eventRepository.GetById(booking.EventId, stoppingToken);
                 if (existEvent is null)
                 {
-                    _logger.LogWarning("Событие с ID {EventId} не найдено", booking.EventId);
-                    booking.Status = BookingStatus.Rejected;
-                    booking.ProcessedAt = DateTime.Now;
+                    booking.Reject();
                     _bookingRepository.Update(booking, stoppingToken);
+                    _logger.LogWarning("Событие {EventId} не найдено. Бронь {Id} отменена.", booking.EventId, booking.Id);
                     return;
                 }
 
-                booking.Status = BookingStatus.Confirmed;
-                booking.ProcessedAt = DateTime.Now;
-
+                booking.Confirm();
                 _bookingRepository.Update(booking, stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
                 _logger.LogInformation("Операция брони с ID {Id} была отменена", booking.Id);
+                throw;
             }
             catch (Exception ex)
             {
                 _logger.LogCritical(ex, "Критическая ошибка при обработке бронирования с ID {Id}", booking.Id);
                 try
                 {
-                    existEvent = _eventRepository.GetById(booking.EventId);
+                    var existEvent = _eventRepository.GetById(booking.EventId, stoppingToken);
                     if (existEvent is not null)
                     {
+                        booking.Reject();
                         var releaseSeats = existEvent.ReleaseSeats();
-                        booking.Status = BookingStatus.Rejected;
-                        booking.ProcessedAt = DateTime.Now;
+                        _eventRepository.Update(existEvent, stoppingToken);
                         _bookingRepository.Update(booking, stoppingToken);
-                        _logger.LogInformation(ex, "Забронированные места были восстановлены: {releaseSeats}", releaseSeats);
+                        _logger.LogInformation("Результат попытки отмены забронированных мест: {releaseSeats}", releaseSeats);
                     }
                 }
                 catch (Exception rollbackEx)
