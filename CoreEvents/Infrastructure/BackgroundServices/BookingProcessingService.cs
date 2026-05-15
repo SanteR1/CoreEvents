@@ -3,10 +3,10 @@ using CoreEvents.Models.Domain;
 
 namespace CoreEvents.Infrastructure.BackgroundServices
 {
-    public class BookingProcessingService : BackgroundService
+    public class BookingProcessingService : BackgroundService, IBookingProcessingService
     {
-        private const int PollingIntervalSeconds = 10;
-        private const int ProcessingDelaySeconds = 2;
+        public int PollingIntervalSeconds { get; set; } = 10;
+        public int ProcessingDelaySeconds { get; set; } = 2;
 
         private readonly ILogger<BookingProcessingService> _logger;
         private readonly SemaphoreSlim _processingSemaphore = new(1, 1);
@@ -49,7 +49,7 @@ namespace CoreEvents.Infrastructure.BackgroundServices
             _logger.LogInformation("Фоновая служба остановлена.");
         }
 
-        private async Task ProcessBookingAsync(Booking booking, CancellationToken stoppingToken)
+        public async Task ProcessBookingAsync(Booking booking, CancellationToken stoppingToken)
         {
             _logger.LogInformation("Начал обработку брони {id}", booking.Id);
             await Task.Delay(TimeSpan.FromSeconds(ProcessingDelaySeconds), stoppingToken);

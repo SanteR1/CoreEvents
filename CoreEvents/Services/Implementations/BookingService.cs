@@ -37,14 +37,7 @@ namespace CoreEvents.Services.Implementations
                     throw new NoAvailableSeatsException("No available seats for this event");
                 _bookingRepository.Add(booking, ct);
             }
-
-            return new BookingResponseDto(
-                booking.Id,
-                booking.EventId,
-                booking.Status,
-                booking.CreatedAt,
-                null
-            );
+            return BookingResponseDto.ToDtoCompiled(booking);
         }
 
         public ValueTask<BookingResponseDto> GetBookingByIdAsync(Guid id, CancellationToken ct)
@@ -53,13 +46,7 @@ namespace CoreEvents.Services.Implementations
             var booking = _bookingRepository.GetById(id, ct);
             if (booking == null)
                 throw new KeyNotFoundException($"Бронь с ID {id} не найдена.");
-
-            return new ValueTask<BookingResponseDto>(new BookingResponseDto(
-                booking.Id,
-                booking.EventId,
-                booking.Status,
-                booking.CreatedAt,
-                booking.ProcessedAt));
+            return new ValueTask<BookingResponseDto>(BookingResponseDto.ToDtoCompiled(booking));
         }
     }
 }

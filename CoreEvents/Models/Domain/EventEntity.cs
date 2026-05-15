@@ -13,6 +13,7 @@ namespace CoreEvents.Models.Domain
         private volatile int _availableSeats;
         public int AvailableSeats => _availableSeats;
 
+        // Приватный конструктор, чтобы никто не создал объект в обход метода Create
         private EventEntity() { }
 
         public static EventEntity Create(string title, string description, DateTime startAt, DateTime endAt, int totalSeats)
