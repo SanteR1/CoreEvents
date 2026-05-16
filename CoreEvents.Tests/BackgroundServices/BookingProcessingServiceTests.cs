@@ -23,48 +23,68 @@ namespace CoreEvents.Tests.BackgroundServices
                 new NullLogger<BookingProcessingService>());
             _bookingProcessingService.ProcessingDelaySeconds = 0;
         }
-
+        
         [Fact]
-        public async Task BookingProcessingService_WhenCancellationRequested_ShouldThrowTaskCanceledException()
+        public async Task HandleConfirmationAsync_ShouldSetStatusToConfirmedAndSetProcessedAt()
         {
             // Arrange
-            var booking = _ctx.AddBooking();
-            string expectedExceptionMessage = "A task was canceled.";
-            var cancellationToken = new CancellationTokenSource();
-            await cancellationToken.CancelAsync();
+            var eventEntity = _ctx.AddEvent("Confirm Test", seats: 5);
+            var booking = _ctx.AddBooking(eventEntity.Id);
 
-            // Act & Assert
-            var exception = await Assert.ThrowsAsync<TaskCanceledException>(async () =>
-                await _bookingProcessingService.ProcessBookingAsync(booking, cancellationToken.Token));
+            // Act 
+            await _bookingProcessingService.HandleConfirmationAsync(booking, eventEntity, default);
 
             // Assert
-            Assert.Equal(expectedExceptionMessage, exception.Message);
-            Assert.Equal(cancellationToken.Token, exception.CancellationToken);
-            _ctx.BookingRepo.Verify(r => r.Update(It.IsAny<Booking>(), It.IsAny<CancellationToken>()), Times.Never);
+            Assert.Equal(BookingStatus.Confirmed, booking.Status);
+            Assert.NotEqual(default, booking.ProcessedAt);
+        }
+        [Fact]
+        public async Task HandleRejectionAsync_WhenEventExists_ShouldSetStatusToRejected()
+        {
+            // Arrange
+            var eventEntity = _ctx.AddEvent("Reject Test", seats: 1);
+            var booking = _ctx.AddBooking(eventEntity.Id);
+
+            eventEntity.TryReserveSeats(1);
+            Assert.Equal(0, eventEntity.AvailableSeats);
+
+            // Act
+            await _bookingProcessingService.HandleRejectionAsync(booking, eventEntity, default);
+
+            // Assert
+            Assert.Equal(BookingStatus.Rejected, booking.Status);
+            Assert.NotEqual(default, booking.ProcessedAt);
         }
 
         [Fact]
-        public async Task BookingProcessingService_ShouldChangeStatusAndSetProcessedAt()
+        public async Task HandleRejectionAsync_WhenEventExists_ShouldReleaseSeats()
         {
             // Arrange
-            EventEntity eventEntity = _ctx.AddEvent("Test Event");
-            Booking booking = _ctx.AddBooking(eventEntity.Id);
-            BookingStatus expectedStatus = BookingStatus.Pending;
-            var validStatuses = new[] { BookingStatus.Confirmed, BookingStatus.Rejected };
+            var eventEntity = _ctx.AddEvent("Reject Test", seats: 1);
+            var booking = _ctx.AddBooking(eventEntity.Id);
 
-            // Act & Assert
-            var resultBeforeUpdateStatus = booking;
-            Assert.Equal(expectedStatus, resultBeforeUpdateStatus.Status);
-            Assert.Null(resultBeforeUpdateStatus.ProcessedAt);
+            eventEntity.TryReserveSeats(1);
+            Assert.Equal(0, eventEntity.AvailableSeats);
 
-            await _bookingProcessingService.ProcessBookingAsync(resultBeforeUpdateStatus, CancellationToken.None);
-            var resultAfterUpdateStatus = _ctx.BookingRepo.Object.GetById(resultBeforeUpdateStatus.Id, CancellationToken.None);
+            // Act
+            await _bookingProcessingService.HandleRejectionAsync(booking, eventEntity, default);
 
             // Assert
-            Assert.NotNull(resultAfterUpdateStatus?.ProcessedAt);
-            Assert.Contains(resultAfterUpdateStatus.Status, validStatuses);
-            Assert.Equal(booking.EventId, resultBeforeUpdateStatus.EventId);
-            _ctx.BookingRepo.Verify(r => r.Update(It.IsAny<Booking>(), It.IsAny<CancellationToken>()), Times.Once);
+            Assert.Equal(1, eventEntity.AvailableSeats);
+        }
+
+        [Fact]
+        public async Task HandleRejectionAsync_WhenEventDoesNotExist_ShouldSetStatusToRejectedButNotReleaseSeats()
+        {
+            // Arrange
+            var booking = _ctx.AddBooking(Guid.NewGuid());
+            booking.Status = BookingStatus.Pending;
+
+            // Act
+            await _bookingProcessingService.HandleRejectionAsync(booking, null, default);
+
+            // Assert
+            Assert.Equal(BookingStatus.Rejected, booking.Status);
         }
     }
 }

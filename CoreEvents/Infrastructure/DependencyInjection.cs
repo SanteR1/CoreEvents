@@ -12,7 +12,6 @@ namespace CoreEvents.Infrastructure
         {
             services.AddSingleton<IRepository<EventEntity>, InMemoryRepository<EventEntity>>();
             services.AddSingleton<IBookingRepository, InMemoryBookingRepository>();
-            services.AddSingleton<IBookingProcessingService, BookingProcessingService>();
             services.AddScoped<IEventService, EventService>();
             services.AddScoped<IBookingService, BookingService>();
             services.AddHostedService<BookingProcessingService>();

@@ -10,7 +10,7 @@ namespace CoreEvents.Services.Implementations
     {
         private readonly IBookingRepository _bookingRepository;
         private readonly IRepository<EventEntity> _eventRepository;
-        private readonly object _bookingLock = new();
+        private static readonly SemaphoreSlim _semaphore = new(1, 1);
         public BookingService(IBookingRepository bookingRepository, IRepository<EventEntity> eventRepository)
         {
             _bookingRepository = bookingRepository;
@@ -22,22 +22,31 @@ namespace CoreEvents.Services.Implementations
             var existEvent = _eventRepository.GetById(bookingDto.EventId, ct);
             if (existEvent is null) throw new KeyNotFoundException($"Событие с ID {bookingDto.EventId} не найдено.");
 
-            var booking = new Booking()
-            {
-                Id = Guid.NewGuid(),
-                EventId = bookingDto.EventId,
-                Status = BookingStatus.Pending,
-                CreatedAt = DateTime.Now
-            };
-
-            lock (_bookingLock)
+            await _semaphore.WaitAsync(ct);
+            try
             {
                 var tryReserve = existEvent.TryReserveSeats();
                 if (!tryReserve)
-                    throw new NoAvailableSeatsException("No available seats for this event");
+                {
+                    throw new NoAvailableSeatsException("No available seats for this event.");
+                }
+
+                var booking = new Booking()
+                {
+                    Id = Guid.NewGuid(),
+                    EventId = bookingDto.EventId,
+                    Status = BookingStatus.Pending,
+                    CreatedAt = DateTime.Now
+                };
+
                 _bookingRepository.Add(booking, ct);
+
+                return BookingResponseDto.ToDtoCompiled(booking);
             }
-            return BookingResponseDto.ToDtoCompiled(booking);
+            finally
+            {
+                _semaphore.Release();
+            }
         }
 
         public ValueTask<BookingResponseDto> GetBookingByIdAsync(Guid id, CancellationToken ct)

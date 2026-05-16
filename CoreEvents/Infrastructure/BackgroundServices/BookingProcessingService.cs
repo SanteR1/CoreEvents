@@ -1,9 +1,10 @@
 ﻿using CoreEvents.Data.Repositories;
 using CoreEvents.Models.Domain;
+using CoreEvents.Services.Interfaces;
 
 namespace CoreEvents.Infrastructure.BackgroundServices
 {
-    public class BookingProcessingService : BackgroundService, IBookingProcessingService
+    public class BookingProcessingService : BackgroundService
     {
         public int PollingIntervalSeconds { get; set; } = 10;
         public int ProcessingDelaySeconds { get; set; } = 2;
@@ -49,7 +50,7 @@ namespace CoreEvents.Infrastructure.BackgroundServices
             _logger.LogInformation("Фоновая служба остановлена.");
         }
 
-        public async Task ProcessBookingAsync(Booking booking, CancellationToken stoppingToken)
+        private async Task ProcessBookingAsync(Booking booking, CancellationToken stoppingToken)
         {
             _logger.LogInformation("Начал обработку брони {id}", booking.Id);
             await Task.Delay(TimeSpan.FromSeconds(ProcessingDelaySeconds), stoppingToken);
@@ -60,14 +61,11 @@ namespace CoreEvents.Infrastructure.BackgroundServices
                 var existEvent = _eventRepository.GetById(booking.EventId, stoppingToken);
                 if (existEvent is null)
                 {
-                    booking.Reject();
-                    _bookingRepository.Update(booking, stoppingToken);
-                    _logger.LogWarning("Событие {EventId} не найдено. Бронь {Id} отменена.", booking.EventId, booking.Id);
+                    await HandleRejectionAsync(booking, null, stoppingToken);
                     return;
                 }
 
-                booking.Confirm();
-                _bookingRepository.Update(booking, stoppingToken);
+                await HandleConfirmationAsync(booking, existEvent, stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -76,18 +74,11 @@ namespace CoreEvents.Infrastructure.BackgroundServices
             }
             catch (Exception ex)
             {
-                _logger.LogCritical(ex, "Критическая ошибка при обработке бронирования с ID {Id}", booking.Id);
+                _logger.LogCritical(ex, "Ошибка при обработке бронирования {Id}. Попытка отката...", booking.Id);
                 try
                 {
                     var existEvent = _eventRepository.GetById(booking.EventId, stoppingToken);
-                    if (existEvent is not null)
-                    {
-                        booking.Reject();
-                        var releaseSeats = existEvent.ReleaseSeats();
-                        _eventRepository.Update(existEvent, stoppingToken);
-                        _bookingRepository.Update(booking, stoppingToken);
-                        _logger.LogInformation("Результат попытки отмены забронированных мест: {releaseSeats}", releaseSeats);
-                    }
+                    await HandleRejectionAsync(booking, existEvent, stoppingToken);
                 }
                 catch (Exception rollbackEx)
                 {
@@ -99,6 +90,33 @@ namespace CoreEvents.Infrastructure.BackgroundServices
                 _processingSemaphore.Release();
             }
             _logger.LogInformation("Закончил обработку брони {id}", booking.Id);
+        }
+
+        public async Task HandleConfirmationAsync(Booking booking, EventEntity existEvent, CancellationToken ct)
+        {
+            booking.Confirm();
+            _bookingRepository.Update(booking, ct);
+
+            _logger.LogInformation("Бронь {Id} успешно подтверждена для события {EventId}", booking.Id, booking.EventId);
+        }
+
+        public async Task HandleRejectionAsync(Booking booking, EventEntity? existEvent, CancellationToken ct)
+        {
+            booking.Reject();
+            _bookingRepository.Update(booking, ct);
+
+            if (existEvent is not null)
+            {
+                var released = existEvent.ReleaseSeats();
+                _eventRepository.Update(existEvent, ct);
+
+                _logger.LogInformation("Бронь {Id} отменена. Места возвращены: {released}. Событие: {EventId}",
+                    booking.Id, released, booking.EventId);
+            }
+            else
+            {
+                _logger.LogWarning("Бронь {Id} отменена. Событие не найдено, места не возвращены.", booking.Id);
+            }
         }
     }
 }

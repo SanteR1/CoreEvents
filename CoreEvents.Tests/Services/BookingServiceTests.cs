@@ -1,4 +1,5 @@
-﻿using CoreEvents.Models.Domain;
+﻿using CoreEvents.Middleware;
+using CoreEvents.Models.Domain;
 using CoreEvents.Models.DTOs;
 using CoreEvents.Services.Implementations;
 using CoreEvents.Tests.Infrastructure;
@@ -29,7 +30,7 @@ namespace CoreEvents.Tests.Services
             BookingCreateDto createDto = new BookingCreateDto(eventEntity.Id);
 
             // Act
-            var result = await _bookingService.CreateBookingAsync(createDto, CancellationToken.None);
+            var result = await _bookingService.CreateBookingAsync(createDto, default);
 
             // Assert
             Assert.Equal(BookingStatus.Pending, result.Status);
@@ -40,21 +41,24 @@ namespace CoreEvents.Tests.Services
         public async Task CreateBookingAsync_MultipleBookingsForSameEvent_ShouldAssignUniqueIds()
         {
             // Arrange
-            var booking = _ctx.AddEvent("Multi Event", seats: 10);
-            BookingCreateDto createDto = new BookingCreateDto(booking.Id);
+            const int initialSeats = 10;
+            var eventEntity = _ctx.AddEvent("Multi Event", seats: initialSeats);
+            BookingCreateDto createDto = new BookingCreateDto(eventEntity.Id);
             int count = 10;
 
             // Act
             var results = await Task.WhenAll(
                 Enumerable.Range(0, count)
-                    .Select(_ => _bookingService.CreateBookingAsync(createDto, CancellationToken.None)));
+                    .Select(_ => Task.Run(() => _bookingService.CreateBookingAsync(createDto, default))));
 
             // Assert
             var uniqueIdsCount = results.Select(r => r.Id).Distinct().Count();
-            Assert.Equal(count, uniqueIdsCount);
+            Assert.Equal(initialSeats, uniqueIdsCount);
 
-            var uniqueEventCount = results.Select(r => r.EventId == booking.Id).Distinct().Count();
-            Assert.Equal(1, uniqueEventCount);
+            Assert.All(results, b =>
+                Assert.Equal(eventEntity.Id, b.EventId));
+
+            Assert.Equal(0, eventEntity.AvailableSeats);
         }
 
         [Fact]
@@ -68,7 +72,7 @@ namespace CoreEvents.Tests.Services
             // Act
             var results = await Task.WhenAll(
                 Enumerable.Range(0, count)
-                    .Select(_ => _bookingService.CreateBookingAsync(createDto, CancellationToken.None)));
+                    .Select(_ => Task.Run(() => _bookingService.CreateBookingAsync(createDto, default))));
 
             // Assert
             Assert.All(results, r => Assert.Equal(BookingStatus.Pending, r.Status));
@@ -81,7 +85,7 @@ namespace CoreEvents.Tests.Services
             var booking = _ctx.AddBooking();
 
             // Act
-            var result = await _bookingService.GetBookingByIdAsync(booking.Id, CancellationToken.None);
+            var result = await _bookingService.GetBookingByIdAsync(booking.Id, default);
 
             // Assert
             Assert.NotNull(result);
@@ -98,7 +102,7 @@ namespace CoreEvents.Tests.Services
 
             // Act
             var exception = await Assert.ThrowsAsync<KeyNotFoundException>(async () =>
-                await _bookingService.CreateBookingAsync(createDto, CancellationToken.None)
+                await _bookingService.CreateBookingAsync(createDto, default)
             );
 
             // Assert
@@ -119,12 +123,12 @@ namespace CoreEvents.Tests.Services
             await _eventService.DeleteEvent(eventEntity.Id);
 
             var exception = await Assert.ThrowsAsync<KeyNotFoundException>(async () =>
-                await _bookingService.CreateBookingAsync(createDto, CancellationToken.None)
+                await _bookingService.CreateBookingAsync(createDto, default)
             );
 
             // Assert
             Assert.Equal(expectedExceptionMessage, exception.Message);
-            _ctx.BookingRepo.Verify(r => r.Add(It.IsAny<Booking>(), CancellationToken.None), Times.Never);
+            _ctx.BookingRepo.Verify(r => r.Add(It.IsAny<Booking>(), default), Times.Never);
         }
 
         [Fact]
@@ -137,7 +141,7 @@ namespace CoreEvents.Tests.Services
 
             // Act
             var exception = await Assert.ThrowsAsync<KeyNotFoundException>(async () =>
-                await _bookingService.GetBookingByIdAsync(nonExistBooking, CancellationToken.None)
+                await _bookingService.GetBookingByIdAsync(nonExistBooking, default)
             );
 
             // Assert
@@ -184,5 +188,129 @@ namespace CoreEvents.Tests.Services
             Assert.Equal(cancellationToken.Token, exception.CancellationToken);
         }
 
+        [Fact]
+        public async Task CreateBookingAsync_WhenBookingCreated_ShouldDecreaseAvailableSeats()
+        {
+            // Arrange
+            const int initialSeats = 3;
+            var eventEntity = _ctx.AddEvent("Test Event", seats: initialSeats);
+            BookingCreateDto createDto = new BookingCreateDto(eventEntity.Id);
+            const int expectedSeats = initialSeats - 1;
+
+            // Act
+            await _bookingService.CreateBookingAsync(createDto, default);
+
+            // Assert
+            Assert.Equal(expectedSeats, eventEntity.AvailableSeats);
+        }
+
+        [Fact]
+        public async Task CreateBookingAsync_WhenSeatsAreDepleted_ShouldAllowSuccessfulBookingsUntilEmpty()
+        {
+            // Arrange
+            const int initialSeats = 2;
+            var eventEntity = _ctx.AddEvent("Test Event", seats: initialSeats);
+            var createDto = new BookingCreateDto(eventEntity.Id);
+
+            // Act & Assert
+            await _bookingService.CreateBookingAsync(createDto, default);
+            Assert.Equal(initialSeats - 1, eventEntity.AvailableSeats);
+
+            // Act & Assert
+            await _bookingService.CreateBookingAsync(createDto, default);
+            Assert.Equal(0, eventEntity.AvailableSeats);
+
+            // Act & Assert
+            await Assert.ThrowsAsync<NoAvailableSeatsException>(() =>
+                _bookingService.CreateBookingAsync(createDto, default));
+        }
+
+        [Fact]
+        public async Task CreateBookingAsync_WhenNoSeatsAvailable_ShouldThrowNoAvailableSeatsException()
+        {
+            // Arrange
+            const int initialSeats = 1;
+            const string expectedMessage = "No available seats for this event.";
+            var eventEntity = _ctx.AddEvent("Test Event", seats: initialSeats);
+            var createDto = new BookingCreateDto(eventEntity.Id);
+            
+            eventEntity.TryReserveSeats(1);
+
+            // Assert
+            Assert.Equal(0, eventEntity.AvailableSeats);
+
+            // Act & Assert
+            var exception = await Assert.ThrowsAsync<NoAvailableSeatsException>(() =>
+                _bookingService.CreateBookingAsync(createDto, default));
+
+            Assert.Equal(expectedMessage, exception.Message);
+        }
+
+        [Fact]
+        public async Task CreateBookingAsync_WhenMultipleConcurrentRequests_ShouldPreventOverbooking()
+        {
+            // Arrange
+            const int initialSeats = 5;
+            const int totalRequests = 20;
+            const int expectedSuccesses = 5;
+
+
+            var eventEntity = _ctx.AddEvent("Concurrency Test", seats: initialSeats);
+            BookingCreateDto createDto = new BookingCreateDto(eventEntity.Id);
+
+
+            var tasks = Enumerable.Range(0, totalRequests)
+                .Select(_ => Task.Run(() => _bookingService.CreateBookingAsync(createDto, default)))
+                .ToArray();
+
+            var allTasks = Task.WhenAll(tasks);
+
+            try
+            {
+                await allTasks;
+            }
+            catch { }
+
+            // Assert
+            int successCount = tasks.Count(t => t.Status == TaskStatus.RanToCompletion);
+            var exceptions = allTasks.Exception?.InnerExceptions ?? Enumerable.Empty<Exception>();
+
+            int noSeatsExceptionCount = exceptions.Count(e => e is NoAvailableSeatsException);
+            int otherErrorCount = exceptions.Count(e => e is not NoAvailableSeatsException);
+
+
+            Assert.Equal(expectedSuccesses, successCount);
+            Assert.Equal(totalRequests - expectedSuccesses, noSeatsExceptionCount);
+            Assert.Equal(0, otherErrorCount);
+
+            Assert.Equal(0, eventEntity.AvailableSeats);
+        }
+
+        [Fact]
+        public async Task CreateBookingAsync_WhenMultipleConcurrentRequests_ShouldAssignUniqueIds()
+        {
+            // Arrange
+            const int initialSeats = 10;
+            const int totalRequests = 10;
+            const int expectedSuccesses = 10;
+
+
+            var eventEntity = _ctx.AddEvent("Concurrency Test", seats: initialSeats);
+            BookingCreateDto createDto = new BookingCreateDto(eventEntity.Id);
+
+            // Act
+            var results = await Task.WhenAll(
+                Enumerable.Range(0, totalRequests)
+                    .Select(_ => Task.Run(() => _bookingService.CreateBookingAsync(createDto, default))));
+
+            // Assert
+            var uniqueIdsCount = results.Select(r => r.Id).Distinct().Count();
+            Assert.Equal(expectedSuccesses, uniqueIdsCount);
+
+            Assert.All(results, b =>
+                Assert.Equal(eventEntity.Id, b.EventId));
+
+            Assert.Equal(0, eventEntity.AvailableSeats);
+        }
     }
 }
