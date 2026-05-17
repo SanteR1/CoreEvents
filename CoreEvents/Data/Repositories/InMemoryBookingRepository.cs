@@ -3,30 +3,30 @@ using CoreEvents.Models.Domain;
 
 namespace CoreEvents.Data.Repositories
 {
-    public class InMemoryBookingRepository<T> :  IRepository<T> where T : IEntity
+    public class InMemoryBookingRepository : IBookingRepository
     {
-        private readonly ConcurrentDictionary<Guid, T> _dictionary = new();
+        private readonly ConcurrentDictionary<Guid, Booking> _dictionary = new();
 
-        public IEnumerable<T> GetAll(CancellationToken ct)
+        public IEnumerable<Booking> GetAll(CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
             return _dictionary.Values;
         }
 
-        public T? GetById(Guid id, CancellationToken ct)
+        public Booking? GetById(Guid id, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
             return _dictionary.GetValueOrDefault(id);
         }
 
-        public void Add(T entity, CancellationToken ct)
+        public void Add(Booking entity, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
             if (entity.Id == Guid.Empty) entity.Id = Guid.NewGuid();
             _dictionary.TryAdd(entity.Id, entity);
         }
 
-        public void Update(T entity, CancellationToken ct)
+        public void Update(Booking entity, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
             var existing = GetById(entity.Id, ct);
@@ -41,6 +41,13 @@ namespace CoreEvents.Data.Repositories
             ct.ThrowIfCancellationRequested();
             var entity = GetById(id, ct);
             if (entity != null) _dictionary.TryRemove(entity.Id, out _);
+        }
+
+        public IEnumerable<Booking> GetPending(CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
+            return _dictionary.Select(x => x.Value)
+                .Where(x => x.Status == BookingStatus.Pending); ;
         }
     }
 }

@@ -19,6 +19,6 @@ namespace CoreEvents.Models.DTOs
             booking.ProcessedAt
         );
 
-        public static Func<Booking, BookingResponseDto> ToDtoCompile => ToDto.Compile();
+        public static Func<Booking, BookingResponseDto> ToDtoCompiled => ToDto.Compile();
     }
 }

@@ -1,5 +1,4 @@
-﻿using CoreEvents.Models.Domain;
-using CoreEvents.Models.DTOs;
+﻿using CoreEvents.Models.DTOs;
 using CoreEvents.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
@@ -77,6 +76,7 @@ namespace CoreEvents.Controllers
         [Produces("application/json")]
         [ProducesResponseType(typeof(BookingResponseDto), StatusCodes.Status202Accepted)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
         public async Task<ActionResult<BookingResponseDto>> CreateBooking([FromRoute] Guid id, CancellationToken ct)
         {
             var createdBooking = await _bookingService.

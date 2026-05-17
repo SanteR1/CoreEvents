@@ -1,6 +1,5 @@
 ﻿using CoreEvents.Models.DTOs;
 using CoreEvents.Services.Interfaces;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CoreEvents.Controllers

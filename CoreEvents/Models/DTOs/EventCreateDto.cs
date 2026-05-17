@@ -9,6 +9,9 @@ namespace CoreEvents.Models.DTOs
         [Required(ErrorMessage = "Дата начала обязательна")]
         DateTime StartAt,
         [Required(ErrorMessage = "Дата окончания обязательна")]
-        DateTime EndAt
+        DateTime EndAt,
+        [Required(ErrorMessage = "Общее количество мест обязательно")]
+        [Range(1, int.MaxValue, ErrorMessage = "Количество мест должно быть больше нуля")]
+        int? TotalSeats
     );
 }

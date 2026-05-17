@@ -1,5 +1,5 @@
-﻿using CoreEvents.Data.Queues;
-using CoreEvents.Data.Repositories;
+﻿using CoreEvents.Data.Repositories;
+using CoreEvents.Middleware;
 using CoreEvents.Models.Domain;
 using CoreEvents.Models.DTOs;
 using CoreEvents.Services.Interfaces;
@@ -8,97 +8,54 @@ namespace CoreEvents.Services.Implementations
 {
     public class BookingService : IBookingService
     {
-        private readonly IRepository<Booking> _repository;
-        private readonly IEventService _eventService;
-        private readonly IQueueSource<Guid> _queue;
-        private readonly ILogger<BookingService> _logger;
-        private readonly SemaphoreSlim _semaphore = new(1, 1);
-        public BookingService(IRepository<Booking> repository, IQueueSource<Guid> queue, IEventService eventService, ILogger<BookingService> logger)
+        private readonly IBookingRepository _bookingRepository;
+        private readonly IRepository<EventEntity> _eventRepository;
+        private static readonly SemaphoreSlim _semaphore = new(1, 1);
+        public BookingService(IBookingRepository bookingRepository, IRepository<EventEntity> eventRepository)
         {
-            _repository = repository;
-            _queue = queue;
-            _eventService = eventService;
-            _logger = logger;
+            _bookingRepository = bookingRepository;
+            _eventRepository = eventRepository;
         }
         public async Task<BookingResponseDto> CreateBookingAsync(BookingCreateDto bookingDto, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
-            var existEvent = await _eventService.GetEventById(bookingDto.EventId);
+            var existEvent = _eventRepository.GetById(bookingDto.EventId, ct);
+            if (existEvent is null) throw new KeyNotFoundException($"Событие с ID {bookingDto.EventId} не найдено.");
 
-            if (existEvent is null)
-                throw new KeyNotFoundException($"Событие с ID {bookingDto.EventId} не найдено.");
-
-            var booking = new Booking()
+            await _semaphore.WaitAsync(ct);
+            try
             {
-                Id = Guid.NewGuid(),
-                EventId = bookingDto.EventId,
-                Status = BookingStatus.Pending,
-                CreatedAt = DateTime.Now
-            };
-            _repository.Add(booking, ct);
-            _queue.Enqueue(booking.Id);
+                var tryReserve = existEvent.TryReserveSeats();
+                if (!tryReserve)
+                {
+                    throw new NoAvailableSeatsException("No available seats for this event.");
+                }
 
-            return new BookingResponseDto(
-                booking.Id,
-                booking.EventId,
-                booking.Status,
-                booking.CreatedAt,
-                null
-            );
+                var booking = new Booking()
+                {
+                    Id = Guid.NewGuid(),
+                    EventId = bookingDto.EventId,
+                    Status = BookingStatus.Pending,
+                    CreatedAt = DateTime.Now
+                };
+
+                _bookingRepository.Add(booking, ct);
+
+                return BookingResponseDto.ToDtoCompiled(booking);
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
         }
 
         public ValueTask<BookingResponseDto> GetBookingByIdAsync(Guid id, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
-            var booking = _repository.GetById(id, ct);
+            var booking = _bookingRepository.GetById(id, ct);
             if (booking == null)
                 throw new KeyNotFoundException($"Бронь с ID {id} не найдена.");
-
-
-            return new ValueTask<BookingResponseDto>(new BookingResponseDto(
-                booking.Id,
-                booking.EventId,
-                booking.Status,
-                booking.CreatedAt,
-                booking.ProcessedAt));
-        }
-
-        public async Task GetBookingForProcessing(CancellationToken ct)
-        {
-            ct.ThrowIfCancellationRequested();
-            var id = Guid.Empty;
-            bool isEntered = false;
-            try
-            {
-                await _semaphore.WaitAsync(ct);
-                isEntered = true;
-
-                // По замылсу в очереди находятся только со статусом Pending
-                if (!_queue.TryDequeue(out id)) return;
-
-                var booking = _repository.GetById(id, ct);
-                if (booking == null) return;
-
-                _logger.LogInformation("Начал обработку брони {id}", id);
-                await Task.Delay(2000, ct);
-
-                // ~10% Rejected
-                var errorProbability = Random.Shared.Next(0, 10);
-                booking.Status = errorProbability == 0 ? BookingStatus.Rejected : BookingStatus.Confirmed;
-                booking.ProcessedAt = DateTime.Now;
-                _logger.LogInformation("Закончил обработку брони {id}", id);
-
-                _repository.Update(booking, ct);
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "Критический сбой при обработке брони {id}", id);
-                throw;
-            }
-            finally
-            {
-                if (isEntered) _semaphore.Release();
-            }
+            return new ValueTask<BookingResponseDto>(BookingResponseDto.ToDtoCompiled(booking));
         }
     }
 }

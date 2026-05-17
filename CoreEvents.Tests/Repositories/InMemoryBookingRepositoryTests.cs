@@ -1,23 +1,17 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Collections.Concurrent;
 using CoreEvents.Data.Repositories;
 using CoreEvents.Models.Domain;
-using Moq;
-using Newtonsoft.Json.Linq;
 
 namespace CoreEvents.Tests.Repositories
 {
     public class InMemoryBookingRepositoryTests
     {
-        private readonly InMemoryBookingRepository<Booking> _repository;
+        private readonly InMemoryBookingRepository _repository;
         private readonly ConcurrentDictionary<Guid, Booking> _dictionary = new();
 
         public InMemoryBookingRepositoryTests()
         {
-            _repository = new InMemoryBookingRepository<Booking>();
+            _repository = new InMemoryBookingRepository();
         }
 
         private Booking SeedOneBooking()
@@ -132,8 +126,7 @@ namespace CoreEvents.Tests.Repositories
                 Id = existingBooking.Id,
                 EventId = Guid.NewGuid(),
                 CreatedAt = new DateTime(2026, 04, 27, 12, 00, 00),
-                Status = BookingStatus.Confirmed,
-                ProcessedAt = new DateTime(2026, 04, 27, 12, 15, 00)
+                Status = BookingStatus.Confirmed
             };
 
             // Act
@@ -145,7 +138,6 @@ namespace CoreEvents.Tests.Repositories
             Assert.Equal(updateBooking.Id, result.Id);
             Assert.Equal(updateBooking.EventId, result.EventId);
             Assert.Equal(updateBooking.CreatedAt, result.CreatedAt);
-            Assert.Equal(updateBooking.ProcessedAt, result.ProcessedAt);
             Assert.Equal(updateBooking.Status, result.Status);
         }
 

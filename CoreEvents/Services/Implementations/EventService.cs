@@ -57,39 +57,21 @@ namespace CoreEvents.Services.Implementations
             var entity = _repository.GetById(id);
             if (entity == null) throw new KeyNotFoundException($"Событие с ID {id} не найдено.");
 
-            return new ValueTask<EventResponseDto>(new EventResponseDto(
-                entity.Id,
-                entity.Title,
-                entity.Description,
-                entity.StartAt,
-                entity.EndAt
-                ));
-
+            return new ValueTask<EventResponseDto>(EventResponseDto.ToDtoCompiled(entity));
         }
 
         public ValueTask<EventResponseDto> CreateEvent(EventCreateDto entityDto)
         {
-            if (entityDto.EndAt <= entityDto.StartAt)
-                throw new ArgumentException("Дата окончания не может быть раньше даты начала.");
-
-            var entity = new EventEntity
-            {
-                Id = Guid.NewGuid(),
-                Title = entityDto.Title,
-                Description = entityDto.Description,
-                StartAt = entityDto.StartAt,
-                EndAt = entityDto.EndAt
-            };
+            var entity = EventEntity.Create(
+                title: entityDto.Title,
+                description: entityDto.Description ?? "",
+                startAt: entityDto.StartAt,
+                endAt: entityDto.EndAt,
+                totalSeats: entityDto.TotalSeats!.Value);
 
             _repository.Add(entity);
 
-            return new ValueTask<EventResponseDto>(new EventResponseDto(
-                entity.Id,
-                entity.Title,
-                entity.Description,
-                entity.StartAt,
-                entity.EndAt
-            ));
+            return new ValueTask<EventResponseDto>(EventResponseDto.ToDtoCompiled(entity));
         }
         public ValueTask UpdateEvent(Guid id, EventCreateDto entityDto)
         {
