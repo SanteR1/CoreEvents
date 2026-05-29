@@ -7,18 +7,11 @@ namespace CoreEvents.Tests.Domain
 {
     public class BookingTests
     {
-
         [Fact]
         public void Confirm_ShouldChangeStatusToConfirmed()
         {
             // Arrange
-            var booking = new Booking
-            {
-                Status = BookingStatus.Pending,
-                Id = default,
-                EventId = default,
-                CreatedAt = default
-            };
+            var booking = Booking.Create(Guid.NewGuid());
 
             Assert.Null(booking.ProcessedAt);
 
@@ -34,13 +27,7 @@ namespace CoreEvents.Tests.Domain
         public void Reject_ShouldChangeStatusToRejected()
         {
             // Arrange
-            var booking = new Booking
-            {
-                Status = BookingStatus.Pending,
-                Id = default,
-                EventId = default,
-                CreatedAt = default
-            };
+            var booking = Booking.Create(Guid.NewGuid());
 
             Assert.Null(booking.ProcessedAt);
 
