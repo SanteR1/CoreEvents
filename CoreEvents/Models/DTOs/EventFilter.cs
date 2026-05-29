@@ -1,6 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-
-namespace CoreEvents.Models.DTOs
+﻿namespace CoreEvents.Models.DTOs
 {
     public class EventFilter : PagedFilter
     {

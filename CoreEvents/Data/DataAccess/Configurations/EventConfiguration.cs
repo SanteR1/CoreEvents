@@ -1,0 +1,56 @@
+﻿using CoreEvents.Models.Domain;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+
+namespace CoreEvents.Data.DataAccess.Configurations
+{
+    internal sealed class EventConfiguration: IEntityTypeConfiguration<Event>
+    {
+        public void Configure(EntityTypeBuilder<Event> builder)
+        {
+            builder.ToTable("events");
+
+            builder.HasKey(x=> x.Id);
+
+            builder.HasIndex(x => x.Title);
+            builder.HasIndex(x => x.StartAt);
+
+            builder.Property(x => x.Id)
+                .ValueGeneratedNever();
+
+            builder.Property(x => x.Title)
+                .HasColumnName("title")
+                .IsRequired()
+                .HasMaxLength(200);
+
+            builder.Property(x => x.Description)
+                .HasColumnName("description")
+                .HasMaxLength(2000);
+
+            builder.Property(x => x.StartAt)
+                .HasColumnName("start_at")
+                .IsRequired();
+
+            builder.Property(x => x.EndAt)
+                .HasColumnName("end_at")
+                .IsRequired();
+
+            builder.Property(e => e.AvailableSeats)
+                .HasColumnName("available_seats")
+                .IsRequired();
+
+            builder.Property(x => x.TotalSeats)
+                .HasColumnName("total_seats")
+                .IsRequired()
+                .HasMaxLength(int.MaxValue);
+
+            builder.HasMany(e => e.Bookings)
+                .WithOne(b => b.Event)
+                .HasForeignKey(b => b.EventId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+
+
+        }
+    }
+}

@@ -13,7 +13,7 @@ namespace CoreEvents.Models.DTOs
         int AvailableSeats
     )
     {
-        public static Expression<Func<EventEntity, EventResponseDto>> ToDto => entity => new EventResponseDto(
+        internal static Expression<Func<Event, EventResponseDto>> ToDto => entity => new EventResponseDto(
             entity.Id,
             entity.Title,
             entity.Description,
@@ -22,6 +22,15 @@ namespace CoreEvents.Models.DTOs
             entity.TotalSeats,
             entity.AvailableSeats
         );
-        public static Func<EventEntity, EventResponseDto> ToDtoCompiled => ToDto.Compile();
+
+        internal static EventResponseDto FromEntity(Event entity) => new(
+            entity.Id,
+            entity.Title,
+            entity.Description,
+            entity.StartAt,
+            entity.EndAt,
+            entity.TotalSeats,
+            entity.AvailableSeats
+        );
     }
 }
