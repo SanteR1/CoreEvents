@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Mvc;
 
 namespace CoreEvents.Middleware
 {
@@ -59,8 +60,8 @@ namespace CoreEvents.Middleware
 
         private static int GetStatusCode(Exception ex) => ex switch
         {
-            ArgumentException => StatusCodes.Status400BadRequest,
-            KeyNotFoundException => StatusCodes.Status404NotFound,
+            ValidationException => StatusCodes.Status400BadRequest,
+            NotFoundException => StatusCodes.Status404NotFound,
             NoAvailableSeatsException => StatusCodes.Status409Conflict,
             OperationCanceledException => StatusCodes.Status499ClientClosedRequest,
             _ => StatusCodes.Status500InternalServerError
@@ -68,8 +69,8 @@ namespace CoreEvents.Middleware
 
         private static string GetTitle(Exception ex) => ex switch
         {
-            ArgumentException => "Bad request",
-            KeyNotFoundException => "Not found",
+            ValidationException => "Bad request",
+            NotFoundException => "Not found",
             NoAvailableSeatsException => "No available seats for this event",
             OperationCanceledException => "The operation was canceled",
             _ => "Internal server error"

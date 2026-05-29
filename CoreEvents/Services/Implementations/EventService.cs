@@ -1,24 +1,33 @@
-﻿using CoreEvents.Data.Repositories;
+﻿using CoreEvents.Data.DataAccess;
+using CoreEvents.Middleware;
 using CoreEvents.Models.Domain;
 using CoreEvents.Models.DTOs;
 using CoreEvents.Services.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 namespace CoreEvents.Services.Implementations
 {
-    public class EventService : IEventService
+    internal sealed class EventService : IEventService
     {
-        private readonly IRepository<EventEntity> _repository;
-        public EventService(IRepository<EventEntity> repository)
+        private readonly AppDbContext _context;
+        public EventService(AppDbContext context)
         {
-            _repository = repository;
+            _context = context;
         }
 
-        public ValueTask<PaginatedResult> GetEvents(EventFilter eventFilter)
+        public async Task<PaginatedResult> GetAllEventsAsync(EventFilter eventFilter, CancellationToken cancellationToken = default)
         {
-            var entity = _repository.GetAll();
+            var entity = _context.Events.AsQueryable();
             if (!string.IsNullOrWhiteSpace(eventFilter.Title))
             {
-                entity = entity.Where(e => e.Title.Contains(eventFilter.Title, StringComparison.OrdinalIgnoreCase));
+                if(_context.Database.IsNpgsql())
+                {
+                    entity = entity.Where(e => EF.Functions.ILike(e.Title, $"%{eventFilter.Title}%"));
+                }
+                else
+                {
+                    entity = entity.Where(e => e.Title.ToLower().Contains(eventFilter.Title.ToLower()));
+                }
             }
 
             if (eventFilter.From is not null)
@@ -36,67 +45,77 @@ namespace CoreEvents.Services.Implementations
                 entity = entity.Where(e => e.EndAt <= toDate);
             }
 
-            var totalEvents = entity.Count();
+            var totalEvents = await entity.CountAsync(cancellationToken);
 
-            var items = entity
+            var items = await entity
                 .OrderByDescending(e => e.StartAt)
                 .Skip((eventFilter.Page - 1) * eventFilter.PageSize)
                 .Take(eventFilter.PageSize)
-                .Select(EventResponseDto.ToDtoCompiled)
-                .ToList();
-            
-            return new ValueTask<PaginatedResult>(new PaginatedResult(
-                totalEvents,
-                items,
-                eventFilter.Page,
-                eventFilter.PageSize));
+                .Select(EventResponseDto.ToDto)
+                .ToListAsync(cancellationToken);
+
+            return new PaginatedResult()
+            {
+                Items = items,
+                PageSize = eventFilter.PageSize,
+                CurrentPage = eventFilter.Page,
+                TotalCount = totalEvents
+            };
         }
 
-        public ValueTask<EventResponseDto> GetEventById(Guid id)
+        public async Task<EventResponseDto> GetEventByIdAsync(Guid id, CancellationToken cancellationToken = default)
         {
-            var entity = _repository.GetById(id);
-            if (entity == null) throw new KeyNotFoundException($"Событие с ID {id} не найдено.");
+            var dto = await _context.Events
+                .Where(e => e.Id == id)
+                .Select(EventResponseDto.ToDto)
+                .FirstOrDefaultAsync(cancellationToken);
 
-            return new ValueTask<EventResponseDto>(EventResponseDto.ToDtoCompiled(entity));
+            if (dto == null)
+                throw new NotFoundException($"Событие с ID {id} не найдено.");
+
+            return dto;
         }
 
-        public ValueTask<EventResponseDto> CreateEvent(EventCreateDto entityDto)
+        public async Task<EventResponseDto> CreateEventAsync(EventCreateDto entityDto, CancellationToken cancellationToken = default)
         {
-            var entity = EventEntity.Create(
-                title: entityDto.Title,
-                description: entityDto.Description ?? "",
-                startAt: entityDto.StartAt,
-                endAt: entityDto.EndAt,
-                totalSeats: entityDto.TotalSeats!.Value);
+            var entity = Event.Create(
+                title: entityDto.Title!,
+                startAt: entityDto.StartAt!.Value,
+                endAt: entityDto.EndAt!.Value,
+                totalSeats: entityDto.TotalSeats!.Value,
+                description: entityDto.Description);
 
-            _repository.Add(entity);
+            await _context.Events
+                .AddAsync(entity, cancellationToken);
+            await _context.SaveChangesAsync(cancellationToken);
 
-            return new ValueTask<EventResponseDto>(EventResponseDto.ToDtoCompiled(entity));
+            return EventResponseDto.FromEntity(entity);
         }
-        public ValueTask UpdateEvent(Guid id, EventCreateDto entityDto)
+        public async Task<EventResponseDto> UpdateEventAsync(Guid id, EventUpdateDto entityDto, CancellationToken cancellationToken = default)
         {
-            var existing = _repository.GetById(id);
-            if (existing == null) throw new KeyNotFoundException("Событие не найдено.");
+            var existing = await _context.Events.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+            if (existing == null) throw new NotFoundException("Событие не найдено.");
 
-            if (entityDto.EndAt <= entityDto.StartAt)
-                throw new ArgumentException("Дата окончания должна быть позже даты начала.");
+            existing.Update(
+                entityDto.Title,
+                entityDto.StartAt,
+                entityDto.EndAt,
+                entityDto.Description
+                );
 
-            existing.Title = entityDto.Title;
-            existing.Description = entityDto.Description;
-            existing.StartAt = entityDto.StartAt;
-            existing.EndAt = entityDto.EndAt;
-
-            _repository.Update(existing);
-            return ValueTask.CompletedTask;
+            await _context.SaveChangesAsync(cancellationToken);
+            return EventResponseDto.FromEntity(existing);
         }
 
-        public ValueTask DeleteEvent(Guid id)
+        public async Task<bool> DeleteEventAsync(Guid id, CancellationToken cancellationToken = default)
         {
-            var existing = _repository.GetById(id);
-            if (existing == null) throw new KeyNotFoundException("Событие не найдено.");
+            var existing = await _context.Events.FirstOrDefaultAsync(x=> x.Id == id, cancellationToken);
+            if (existing == null) //throw new NotFoundException("Событие не найдено.");
+                return false;
 
-            _repository.Delete(id);
-            return ValueTask.CompletedTask;
+            _context.Events.Remove(existing);
+            await _context.SaveChangesAsync(cancellationToken);
+            return true;
         }
     }
 }

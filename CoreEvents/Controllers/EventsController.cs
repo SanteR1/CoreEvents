@@ -23,7 +23,7 @@ namespace CoreEvents.Controllers
         [ProducesResponseType(typeof(IEnumerable<EventResponseDto>), StatusCodes.Status200OK)]
         public async Task<ActionResult<IEnumerable<EventResponseDto>>> GetAll([FromQuery] EventFilter filter)
         {
-            return Ok(await _eventService.GetEvents(filter));
+            return Ok(await _eventService.GetAllEventsAsync(filter));
         }
 
         [HttpGet("{id:guid}")]
@@ -32,7 +32,7 @@ namespace CoreEvents.Controllers
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         public async Task<ActionResult<EventResponseDto>> GetById(Guid id)
         {
-            var result = await _eventService.GetEventById(id);
+            var result = await _eventService.GetEventByIdAsync(id);
             return Ok(result);
         }
 
@@ -42,7 +42,7 @@ namespace CoreEvents.Controllers
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<EventResponseDto>> Create([FromBody] EventCreateDto entity)
         {
-            var createdEvent = await _eventService.CreateEvent(entity);
+            var createdEvent = await _eventService.CreateEventAsync(entity);
 
             return CreatedAtAction(
                 nameof(GetById),
@@ -56,9 +56,9 @@ namespace CoreEvents.Controllers
         [ProducesResponseType(typeof(IActionResult), StatusCodes.Status204NoContent)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> Put(Guid id, [FromBody] EventCreateDto entity)
+        public async Task<IActionResult> Put(Guid id, [FromBody] EventUpdateDto entity)
         {
-            await _eventService.UpdateEvent(id, entity);
+            await _eventService.UpdateEventAsync(id, entity);
             return NoContent();
         }
 
@@ -68,7 +68,7 @@ namespace CoreEvents.Controllers
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> Delete(Guid id)
         {
-            await _eventService.DeleteEvent(id);
+            await _eventService.DeleteEventAsync(id);
             return NoContent();
         }
 
