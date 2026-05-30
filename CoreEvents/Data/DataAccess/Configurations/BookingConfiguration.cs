@@ -11,7 +11,6 @@ namespace CoreEvents.Data.DataAccess.Configurations
             builder.ToTable("bookings");
 
             builder.HasKey(b => b.Id);
-            builder.HasIndex(x => x.EventId);
 
             builder.Property(b => b.Id)
                 .HasColumnName("id")

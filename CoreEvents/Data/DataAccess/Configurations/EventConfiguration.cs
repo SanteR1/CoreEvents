@@ -41,8 +41,7 @@ namespace CoreEvents.Data.DataAccess.Configurations
 
             builder.Property(x => x.TotalSeats)
                 .HasColumnName("total_seats")
-                .IsRequired()
-                .HasMaxLength(int.MaxValue);
+                .IsRequired();
 
             builder.HasMany(e => e.Bookings)
                 .WithOne(b => b.Event)
