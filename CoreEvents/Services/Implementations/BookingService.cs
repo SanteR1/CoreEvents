@@ -1,61 +1,54 @@
-﻿using CoreEvents.Data.Repositories;
+﻿using CoreEvents.Data.DataAccess;
 using CoreEvents.Middleware;
 using CoreEvents.Models.Domain;
 using CoreEvents.Models.DTOs;
 using CoreEvents.Services.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 namespace CoreEvents.Services.Implementations
 {
-    public class BookingService : IBookingService
+    internal sealed class BookingService : IBookingService
     {
-        private readonly IBookingRepository _bookingRepository;
-        private readonly IRepository<EventEntity> _eventRepository;
-        private static readonly SemaphoreSlim _semaphore = new(1, 1);
-        public BookingService(IBookingRepository bookingRepository, IRepository<EventEntity> eventRepository)
+        private readonly AppDbContext _context;
+        private static readonly SemaphoreSlim Semaphore = new(1, 1);
+        public BookingService(AppDbContext context)
         {
-            _bookingRepository = bookingRepository;
-            _eventRepository = eventRepository;
+            _context = context;
         }
-        public async Task<BookingResponseDto> CreateBookingAsync(BookingCreateDto bookingDto, CancellationToken ct)
+        public async Task<BookingResponseDto> CreateBookingAsync(BookingCreateDto bookingDto, CancellationToken cancellationToken = default)
         {
-            ct.ThrowIfCancellationRequested();
-            var existEvent = _eventRepository.GetById(bookingDto.EventId, ct);
-            if (existEvent is null) throw new KeyNotFoundException($"Событие с ID {bookingDto.EventId} не найдено.");
+            cancellationToken.ThrowIfCancellationRequested();
 
-            await _semaphore.WaitAsync(ct);
+            await Semaphore.WaitAsync(cancellationToken);
             try
             {
-                var tryReserve = existEvent.TryReserveSeats();
-                if (!tryReserve)
+                var existEvent = await _context.Events.FirstOrDefaultAsync(x => x.Id == bookingDto.EventId, cancellationToken);
+                if (existEvent is null) throw new NotFoundException($"Событие с ID {bookingDto.EventId} не найдено.");
+
+                if (!existEvent.TryReserveSeats())
                 {
                     throw new NoAvailableSeatsException("No available seats for this event.");
                 }
 
-                var booking = new Booking()
-                {
-                    Id = Guid.NewGuid(),
-                    EventId = bookingDto.EventId,
-                    Status = BookingStatus.Pending,
-                    CreatedAt = DateTime.Now
-                };
+                var booking = Booking.Create(bookingDto.EventId);
+                await _context.Bookings.AddAsync(booking, cancellationToken);
+                await _context.SaveChangesAsync(cancellationToken);
 
-                _bookingRepository.Add(booking, ct);
-
-                return BookingResponseDto.ToDtoCompiled(booking);
+                return BookingResponseDto.FromEntity(booking);
             }
             finally
             {
-                _semaphore.Release();
+                Semaphore.Release();
             }
         }
 
-        public ValueTask<BookingResponseDto> GetBookingByIdAsync(Guid id, CancellationToken ct)
+        public async Task<BookingResponseDto> GetBookingByIdAsync(Guid id, CancellationToken cancellationToken = default)
         {
-            ct.ThrowIfCancellationRequested();
-            var booking = _bookingRepository.GetById(id, ct);
+            cancellationToken.ThrowIfCancellationRequested();
+            var booking = await _context.Bookings.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
             if (booking == null)
-                throw new KeyNotFoundException($"Бронь с ID {id} не найдена.");
-            return new ValueTask<BookingResponseDto>(BookingResponseDto.ToDtoCompiled(booking));
+                throw new NotFoundException($"Бронь с ID {id} не найдена.");
+            return BookingResponseDto.FromEntity(booking);
         }
     }
 }

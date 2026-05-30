@@ -1,15 +1,35 @@
-﻿namespace CoreEvents.Models.Domain
-{
-    public class Booking : IEntity
-    {
-        public required Guid Id { get; set; }
-        public required Guid EventId { get; init; }
-        public required BookingStatus Status { get; set; }
-        public required DateTime CreatedAt { get; init; }
-        public DateTime? ProcessedAt { get; private set; }
+﻿using System.ComponentModel.DataAnnotations;
 
-        public void Confirm() => ChangeStatus(BookingStatus.Confirmed);
-        public void Reject() => ChangeStatus(BookingStatus.Rejected);
+namespace CoreEvents.Models.Domain
+{
+    internal sealed class Booking
+    {
+        internal Guid Id { get; private set; }
+        internal Guid EventId { get; private set; }
+        internal BookingStatus Status { get; private set; }
+        internal DateTime CreatedAt { get; private set; }
+        internal DateTime? ProcessedAt { get; private set; }
+        internal Event? Event { get; private set; }
+        private Booking() { }
+
+        internal static Booking Create(Guid eventId)
+        {
+            if (eventId == Guid.Empty)
+                throw new ValidationException(
+                    new ValidationResult("Событие не может быть пустым.", [nameof(eventId)]),
+                    validatingAttribute: null,
+                    value: eventId);
+
+            return new Booking()
+            {
+                Id = Guid.NewGuid(),
+                EventId = eventId,
+                Status = BookingStatus.Pending,
+                CreatedAt = DateTime.UtcNow
+            };
+        }
+        internal void Confirm() => ChangeStatus(BookingStatus.Confirmed);
+        internal void Reject() => ChangeStatus(BookingStatus.Rejected);
         private void ChangeStatus(BookingStatus newStatus)
         {
             var allowed = Status switch
@@ -31,7 +51,7 @@
             }
 
             Status = newStatus;
-            ProcessedAt = DateTime.Now;
+            ProcessedAt = DateTime.UtcNow;
         }
     }
 }

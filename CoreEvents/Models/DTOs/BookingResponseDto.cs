@@ -1,9 +1,11 @@
-﻿using System.Linq.Expressions;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Linq.Expressions;
 using CoreEvents.Models.Domain;
 
 namespace CoreEvents.Models.DTOs
 {
     public record BookingResponseDto(
+        [Required]
         Guid Id,
         Guid EventId,
         BookingStatus Status,
@@ -11,7 +13,7 @@ namespace CoreEvents.Models.DTOs
         DateTime? ProcessedAt
         )
     {
-        public static Expression<Func<Booking, BookingResponseDto>> ToDto => booking => new BookingResponseDto(
+        internal static Expression<Func<Booking, BookingResponseDto>> ToDto => booking => new BookingResponseDto(
             booking.Id,
             booking.EventId,
             booking.Status,
@@ -19,6 +21,12 @@ namespace CoreEvents.Models.DTOs
             booking.ProcessedAt
         );
 
-        public static Func<Booking, BookingResponseDto> ToDtoCompiled => ToDto.Compile();
+        internal static BookingResponseDto FromEntity(Booking booking) => new(
+            booking.Id,
+            booking.EventId,
+            booking.Status,
+            booking.CreatedAt,
+            booking.ProcessedAt
+        );
     }
 }

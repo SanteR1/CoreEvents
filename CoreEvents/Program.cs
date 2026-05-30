@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using CoreEvents.Data.DataAccess;
 using CoreEvents.Infrastructure;
 using CoreEvents.Middleware;
 
@@ -19,6 +20,12 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddProblemDetails();
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.EnsureCreated();
+}
 
 app.UseExceptionHandling();
 

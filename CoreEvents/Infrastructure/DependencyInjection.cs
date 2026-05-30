@@ -1,8 +1,8 @@
-﻿using CoreEvents.Data.Repositories;
+﻿using CoreEvents.Data.DataAccess;
 using CoreEvents.Infrastructure.BackgroundServices;
-using CoreEvents.Models.Domain;
 using CoreEvents.Services.Implementations;
 using CoreEvents.Services.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 namespace CoreEvents.Infrastructure
 {
@@ -10,8 +10,14 @@ namespace CoreEvents.Infrastructure
     {
         public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
         {
-            services.AddSingleton<IRepository<EventEntity>, InMemoryRepository<EventEntity>>();
-            services.AddSingleton<IBookingRepository, InMemoryBookingRepository>();
+            var connectionString = configuration.GetConnectionString("DefaultConnection")
+                                   ?? throw new InvalidOperationException("Connection string 'Default' not found.");
+
+            services.AddDbContext<AppDbContext>(options =>
+                options.UseNpgsql(connectionString)
+                    .LogTo(Console.WriteLine)
+                    .EnableDetailedErrors());
+
             services.AddScoped<IEventService, EventService>();
             services.AddScoped<IBookingService, BookingService>();
             services.AddHostedService<BookingProcessingService>();
