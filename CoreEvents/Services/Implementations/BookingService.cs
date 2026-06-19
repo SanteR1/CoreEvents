@@ -1,28 +1,30 @@
 ﻿using CoreEvents.Data.DataAccess;
+using CoreEvents.Data.Repositories.Interfaces;
 using CoreEvents.Middleware;
 using CoreEvents.Models.Domain;
 using CoreEvents.Models.DTOs;
 using CoreEvents.Services.Interfaces;
-using Microsoft.EntityFrameworkCore;
 
 namespace CoreEvents.Services.Implementations
 {
     internal sealed class BookingService : IBookingService
     {
-        private readonly AppDbContext _context;
+        private readonly IBookingRepository _bookingRepository;
+        private readonly IEventRepository _eventRepository;
         private static readonly SemaphoreSlim Semaphore = new(1, 1);
-        public BookingService(AppDbContext context)
+        public BookingService(IBookingRepository bookingRepository, IEventRepository eventRepository)
         {
-            _context = context;
+            _bookingRepository = bookingRepository;
+            _eventRepository = eventRepository;
         }
-        public async Task<BookingResponseDto> CreateBookingAsync(BookingCreateDto bookingDto, CancellationToken cancellationToken = default)
+        public async Task<BookingResponseDto> CreateBookingAsync(BookingCreateDto bookingDto, CancellationToken ct = default)
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            ct.ThrowIfCancellationRequested();
 
-            await Semaphore.WaitAsync(cancellationToken);
+            await Semaphore.WaitAsync(ct);
             try
             {
-                var existEvent = await _context.Events.FirstOrDefaultAsync(x => x.Id == bookingDto.EventId, cancellationToken);
+                var existEvent = await _eventRepository.GetByIdAsync(bookingDto.EventId, ct);
                 if (existEvent is null) throw new NotFoundException($"Событие с ID {bookingDto.EventId} не найдено.");
 
                 if (!existEvent.TryReserveSeats())
@@ -31,8 +33,8 @@ namespace CoreEvents.Services.Implementations
                 }
 
                 var booking = Booking.Create(bookingDto.EventId);
-                await _context.Bookings.AddAsync(booking, cancellationToken);
-                await _context.SaveChangesAsync(cancellationToken);
+                _bookingRepository.Add(booking);
+                await _bookingRepository.SaveChangesAsync(ct);
 
                 return BookingResponseDto.FromEntity(booking);
             }
@@ -42,10 +44,10 @@ namespace CoreEvents.Services.Implementations
             }
         }
 
-        public async Task<BookingResponseDto> GetBookingByIdAsync(Guid id, CancellationToken cancellationToken = default)
+        public async Task<BookingResponseDto> GetBookingByIdAsync(Guid id, CancellationToken ct = default)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            var booking = await _context.Bookings.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+            ct.ThrowIfCancellationRequested();
+            var booking = await _bookingRepository.GetByIdAsync(id, ct);
             if (booking == null)
                 throw new NotFoundException($"Бронь с ID {id} не найдена.");
             return BookingResponseDto.FromEntity(booking);

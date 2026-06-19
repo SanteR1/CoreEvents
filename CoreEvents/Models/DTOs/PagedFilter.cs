@@ -2,7 +2,7 @@
 
 namespace CoreEvents.Models.DTOs
 {
-    public class PagedFilter
+    public record PagedFilter
     {
         [Range(1, 100000, ErrorMessage = "Значение должно быть в диапазоне от 1 до 100000")]
         public int Page { get; init; } = 1;

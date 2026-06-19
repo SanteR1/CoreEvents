@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using CoreEvents.Data.DataAccess;
 using CoreEvents.Infrastructure;
 using CoreEvents.Middleware;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,10 +22,12 @@ builder.Services.AddProblemDetails();
 
 var app = builder.Build();
 
-using (var scope = app.Services.CreateScope())
+// Накатываем миграции только если это НЕ интеграционные тесты
+if (!app.Environment.IsEnvironment("IntegrationTesting"))
 {
+    using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.EnsureCreated();
+    await db.Database.MigrateAsync();
 }
 
 app.UseExceptionHandling();
