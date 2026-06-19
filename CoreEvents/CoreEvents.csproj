@@ -19,6 +19,7 @@
 	</ItemGroup>
 	<ItemGroup>
 		<InternalsVisibleTo Include="CoreEvents.Tests" />
+		<InternalsVisibleTo Include="CoreEvents.IntegrationTests" />
 		<InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
 	</ItemGroup>
 </Project>
