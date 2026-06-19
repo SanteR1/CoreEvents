@@ -28,16 +28,17 @@ namespace CoreEvents.Middleware
             catch (Exception ex)
             {
                 var statusCode = GetStatusCode(ex);
+                var traceId = System.Diagnostics.Activity.Current?.Id ?? context.TraceIdentifier;
 
                 // Если это ошибка клиента (400, 404), логируем коротко как Warning
                 if (statusCode < 500)
                 {
-                    _logger.LogWarning("Request error: {Message} at {Path}", ex.Message, context.Request.Path);
+                    _logger.LogWarning("Request error: {Message} at {Path}. TraceId: {TraceId}", ex.Message, context.Request.Path, traceId);
                 }
                 else
                 {
                     // Если это 500-ка, значит это реальный баг. Логируем со всем стеком (LogError)
-                    _logger.LogError(ex, "Server error occurred at {Path}", context.Request.Path);
+                    _logger.LogError(ex, "Server error occurred at {Path}. TraceId: {TraceId}", context.Request.Path, traceId);
                 }
 
                 context.Response.StatusCode = statusCode;
@@ -46,7 +47,9 @@ namespace CoreEvents.Middleware
                 {
                     Title = GetTitle(ex),
                     Status = context.Response.StatusCode,
-                    Detail = ex.Message,
+                    Detail = statusCode >= 500
+                        ? "An unexpected server error occurred. Please try again later."
+                        : ex.Message,
                     Instance = context.Request.Path
                 };
 
