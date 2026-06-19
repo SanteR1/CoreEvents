@@ -1,7 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using CoreEvents.Models.Domain;
+﻿using CoreEvents.Models.Domain;
+using FluentAssertions;
 
 namespace CoreEvents.Tests.Domain
 {
@@ -13,14 +11,11 @@ namespace CoreEvents.Tests.Domain
             // Arrange
             var booking = Booking.Create(Guid.NewGuid());
 
-            Assert.Null(booking.ProcessedAt);
-
-            // Act
+            // Act & Assert
+            booking.ProcessedAt.Should().BeNull();
             booking.Confirm();
-
-            // Assert
-            Assert.Equal(BookingStatus.Confirmed, booking.Status);
-            Assert.IsType<DateTime>(booking.ProcessedAt);
+            booking.Status.Should().Be(BookingStatus.Confirmed);
+            booking.ProcessedAt.Should().NotBeNull();
         }
 
         [Fact]
@@ -29,15 +24,11 @@ namespace CoreEvents.Tests.Domain
             // Arrange
             var booking = Booking.Create(Guid.NewGuid());
 
-            Assert.Null(booking.ProcessedAt);
-
-            // Act
+            // Act & Assert
+            booking.ProcessedAt.Should().BeNull();
             booking.Reject();
-
-            // Assert
-            Assert.Equal(BookingStatus.Rejected, booking.Status);
-            Assert.IsType<DateTime>(booking.ProcessedAt);
+            booking.Status.Should().Be(BookingStatus.Rejected);
+            booking.ProcessedAt.Should().NotBeNull();
         }
-
     }
 }

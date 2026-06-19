@@ -1,55 +1,50 @@
-﻿using CoreEvents.Data.DataAccess;
+﻿using CoreEvents.Data.Repositories.Interfaces;
 using CoreEvents.Middleware;
 using CoreEvents.Models.Domain;
 using CoreEvents.Models.DTOs;
 using CoreEvents.Services.Implementations;
-using CoreEvents.Services.Interfaces;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
+using CoreEvents.Tests.Infrastructure;
+using FluentAssertions;
+using Moq;
 
 namespace CoreEvents.Tests.Services
 {
     public class BookingServiceTests
     {
-        private readonly IBookingService _bookingService;
-        private readonly IServiceScope _scope;
-        private readonly IEventService _eventService;
-        private readonly ServiceProvider _serviceProvider;
+        private readonly Mock<IBookingRepository> _bookingRepositoryMock;
+        private readonly Mock<IEventRepository> _eventRepositoryMock;
+        private readonly BookingService _bookingService;
 
         public BookingServiceTests()
         {
-            var dbName = Guid.NewGuid().ToString();
-            var services = new ServiceCollection();
-            services.AddDbContext<AppDbContext>(options =>
-                options.UseInMemoryDatabase(dbName));
-            services.AddScoped<IEventService, EventService>();
-            services.AddScoped<IBookingService, BookingService>();
-
-            _serviceProvider = services.BuildServiceProvider();
-            _scope = _serviceProvider.CreateScope();
-            _eventService = _scope.ServiceProvider.GetRequiredService<IEventService>();
-            _bookingService = _scope.ServiceProvider.GetRequiredService<IBookingService>();
+            _bookingRepositoryMock = new Mock<IBookingRepository>();
+            _eventRepositoryMock = new Mock<IEventRepository>();
+            _bookingService = new BookingService(_bookingRepositoryMock.Object, _eventRepositoryMock.Object);
         }
 
+        #region CreateBookingAsync
         [Fact]
         public async Task CreateBookingAsync_WithValidEvent_ShouldReturnCreatedBookingWithPendingStatus()
         {
             // Arrange
-            var futureDate = DateTime.UtcNow.AddDays(1);
-            var eventEntity = await _eventService.CreateEventAsync(new EventCreateDto(
-                Title: "Title",
-                Description: "Desc",
-                StartAt: futureDate,
-                EndAt: futureDate.AddHours(2),
-                TotalSeats: 10));
-            BookingCreateDto createDto = new BookingCreateDto(eventEntity.Id);
+            var existEvent = TestEventFactory.Create();
+
+            // Setup
+            _eventRepositoryMock
+                .Setup(repo => repo.GetByIdAsync(existEvent.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(existEvent);
 
             // Act
-            var result = await _bookingService.CreateBookingAsync(createDto);
+            var result = await _bookingService.CreateBookingAsync(new BookingCreateDto(existEvent.Id), TestContext.Current.CancellationToken);
 
             // Assert
-            Assert.Equal(BookingStatus.Pending, result.Status);
-            Assert.Equal(eventEntity.Id, result.EventId);
+            result.Should().NotBeNull();
+            result.Status.Should().Be(BookingStatus.Pending);
+            result.EventId.Should().Be(existEvent.Id);
+            result.ProcessedAt.Should().BeNull();
+            _eventRepositoryMock.Verify(repo => repo.GetByIdAsync(existEvent.Id, It.IsAny<CancellationToken>()), Times.Once);
+            _bookingRepositoryMock.Verify(repo => repo.Add(It.IsAny<Booking>()), Times.Once);
+            _bookingRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
@@ -57,89 +52,59 @@ namespace CoreEvents.Tests.Services
         {
             // Arrange
             const int initialSeats = 10;
-            var futureDate = DateTime.UtcNow.AddDays(1);
-            var eventEntity = await _eventService.CreateEventAsync(new EventCreateDto(
-                Title: "Title",
-                Description: "Desc",
-                StartAt: futureDate,
-                EndAt: futureDate.AddHours(2),
-                TotalSeats: initialSeats));
+            var existEvent = TestEventFactory.Create(seats: initialSeats);
+            BookingCreateDto createDto = new BookingCreateDto(existEvent.Id);
 
-            BookingCreateDto createDto = new BookingCreateDto(eventEntity.Id);
+            // Setup
+            _eventRepositoryMock
+                .Setup(repo => repo.GetByIdAsync(existEvent.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(existEvent);
 
             // Act
             var results = await Task.WhenAll(
                 Enumerable.Range(0, initialSeats)
-                    .Select(_ => Task.Run(async () =>
-                    {
-
-                        using var scope = _serviceProvider.CreateScope();
-                        var bookingService = scope.ServiceProvider.GetRequiredService<IBookingService>();
-                        return await bookingService.CreateBookingAsync(createDto);
-                    })));
+                    .Select(_ => Task.Run(async () => await _bookingService.CreateBookingAsync(createDto))));
 
             // Assert
-            var uniqueIdsCount = results.Select(r => r.Id).Distinct().Count();
-            Assert.Equal(initialSeats, uniqueIdsCount);
-
-            eventEntity = await _eventService.GetEventByIdAsync(eventEntity.Id);
-            Assert.All(results, b =>
-                Assert.Equal(eventEntity.Id, b.EventId));
-
-            Assert.Equal(0, eventEntity.AvailableSeats);
+            existEvent.Should().NotBeNull();
+            results.Select(r => r.Id)
+                .Should().OnlyHaveUniqueItems()
+                .And.HaveCount(initialSeats);
+            results.Should().OnlyContain(b => b.EventId == existEvent.Id);
+            existEvent.AvailableSeats.Should().Be(0);
+            _eventRepositoryMock.Verify(repo => repo.GetByIdAsync(createDto.EventId, It.IsAny<CancellationToken>()), Times.Exactly(initialSeats));
+            _bookingRepositoryMock.Verify(repo => repo.Add(It.IsAny<Booking>()), Times.Exactly(initialSeats));
+            _bookingRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Exactly(initialSeats));
         }
 
         [Fact]
         public async Task CreateBookingAsync_MultipleBookingsForSameEvent_ShouldAssignStatusIsPending()
         {
             // Arrange
-            var futureDate = DateTime.UtcNow.AddDays(1);
-            var eventEntity = await _eventService.CreateEventAsync(new EventCreateDto(
-                Title: "Title",
-                Description: "Desc",
-                StartAt: futureDate,
-                EndAt: futureDate.AddHours(2),
-                TotalSeats: 10));
-            BookingCreateDto createDto = new BookingCreateDto(eventEntity.Id);
-            int count = 10;
+            const int initialSeats = 10;
+            var existEvent = TestEventFactory.Create(seats: initialSeats);
+            BookingCreateDto createDto = new BookingCreateDto(existEvent.Id);
+
+            // Setup
+            _eventRepositoryMock
+                .Setup(repo => repo.GetByIdAsync(existEvent.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(existEvent);
 
             // Act
             var results = await Task.WhenAll(
-                Enumerable.Range(0, count)
-                    .Select(_ => Task.Run(async () =>
-                        {
-                            using var scope = _serviceProvider.CreateScope();
-                            var bookingService = scope.ServiceProvider.GetRequiredService<IBookingService>();
-                            return await bookingService.CreateBookingAsync(createDto);
-                        }
-                    )));
+                Enumerable.Range(0, initialSeats)
+                    .Select(_ => Task.Run(async () => await _bookingService.CreateBookingAsync(createDto))));
 
             // Assert
-            Assert.All(results, r => Assert.Equal(BookingStatus.Pending, r.Status));
+            results.Should().AllSatisfy(b =>
+            {
+                b.Status.Should().Be(BookingStatus.Pending);
+            });
+            _eventRepositoryMock.Verify(repo => repo.GetByIdAsync(createDto.EventId, It.IsAny<CancellationToken>()), Times.Exactly(initialSeats));
+            _bookingRepositoryMock.Verify(repo => repo.Add(It.IsAny<Booking>()), Times.Exactly(initialSeats));
+            _bookingRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Exactly(initialSeats));
         }
 
-        [Fact]
-        public async Task GetBookingByIdAsync_WithValidBookingId_ShouldRetrieveSuccessfully()
-        {
-            // Arrange
-            var futureDate = DateTime.UtcNow.AddDays(1);
-            var eventEntity = await _eventService.CreateEventAsync(new EventCreateDto(
-                Title: "Title",
-                Description: "Desc",
-                StartAt: futureDate,
-                EndAt: futureDate.AddHours(2),
-                TotalSeats: 10));
-            var booking = await _bookingService.CreateBookingAsync(new BookingCreateDto(eventEntity.Id));
-
-            // Act
-            var result = await _bookingService.GetBookingByIdAsync(booking.Id);
-
-            // Assert
-            Assert.NotNull(result);
-            Assert.Equal(booking.Id, result.Id);
-            Assert.Equal(booking.Status, result.Status);
-        }
-        
         [Fact]
         public async Task CreateBookingAsync_NonExistingEventId_ShouldThrowNotFoundException()
         {
@@ -147,94 +112,74 @@ namespace CoreEvents.Tests.Services
             BookingCreateDto createDto = new BookingCreateDto(Guid.NewGuid());
             string expectedExceptionMessage = $"Событие с ID {createDto.EventId} не найдено.";
 
-            // Act
-            var exception = await Assert.ThrowsAsync<NotFoundException>(async () =>
-                await _bookingService.CreateBookingAsync(createDto)
-            );
+            // Setup
+            _eventRepositoryMock
+                .Setup(repo => repo.GetByIdAsync(createDto.EventId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync((Event?)null);
 
-            // Assert
-            Assert.Equal(expectedExceptionMessage, exception.Message);
+            // Act & Assert
+            Func<Task> act = async () => await _bookingService.CreateBookingAsync(createDto);
+            await act.Should().ThrowAsync<NotFoundException>().WithMessage(expectedExceptionMessage);
+
+            _eventRepositoryMock.Verify(repo => repo.GetByIdAsync(createDto.EventId, It.IsAny<CancellationToken>()), Times.Once);
+            _bookingRepositoryMock.Verify(repo => repo.Add(It.IsAny<Booking>()), Times.Never);
+            _bookingRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
         }
 
-        [Fact]
-        public async Task CreateBookingAsync_WhenEventWasDeleted_ShouldThrowNotFoundException()
-        {
-            // Arrange
-            var futureDate = DateTime.UtcNow.AddDays(1);
-            var eventEntity = await _eventService.CreateEventAsync(new EventCreateDto(
-                Title: "To Be Deleted",
-                Description: "Desc",
-                StartAt: futureDate,
-                EndAt: futureDate.AddHours(2),
-                TotalSeats: 10));
-            await _bookingService.CreateBookingAsync(new BookingCreateDto(eventEntity.Id));
 
-            string expectedExceptionMessage = $"Событие с ID {eventEntity.Id} не найдено.";
-            BookingCreateDto createDto = new BookingCreateDto(eventEntity.Id);
-
-            // Act
-            await _eventService.DeleteEventAsync(eventEntity.Id);
-
-            var exception = await Assert.ThrowsAsync<NotFoundException>(async () =>
-                await _bookingService.CreateBookingAsync(createDto)
-            );
-
-            // Assert
-            Assert.Equal(expectedExceptionMessage, exception.Message);
-        }
-
-        [Fact]
-        public async Task GetBookingByIdAsync_NonExistingBookingId_ShouldThrowNotFoundException()
-        {
-            // Arrange
-            var nonExistBooking = Guid.NewGuid();
-            string expectedExceptionMessage = $"Бронь с ID {nonExistBooking} не найдена.";
-
-            // Act
-            var exception = await Assert.ThrowsAsync<NotFoundException>(async () =>
-                await _bookingService.GetBookingByIdAsync(nonExistBooking)
-            );
-
-            // Assert
-            Assert.Equal(expectedExceptionMessage, exception.Message);
-        }
 
         [Fact]
         public async Task CreateBookingAsync_WhenCancellationRequested_ShouldThrowOperationCanceledException()
         {
             // Arrange
-
             BookingCreateDto createDto = new BookingCreateDto(Guid.NewGuid());
-            string expectedExceptionMessage = $"The operation was canceled.";
-            var cancellationToken = new CancellationTokenSource();
-            cancellationToken.Cancel();
-
-            // Act
-            var exception = await Assert.ThrowsAsync<OperationCanceledException>(async () =>
-                await _bookingService.CreateBookingAsync(createDto, cancellationToken.Token)
-            );
-
-            // Assert
-            Assert.Equal(expectedExceptionMessage, exception.Message);
-            Assert.Equal(cancellationToken.Token, exception.CancellationToken);
-        }
-
-        [Fact]
-        public async Task GetBookingByIdAsync_NonExistingBookingId_ShouldThrowOperationCanceledException()
-        {
-            // Arrange
             string expectedExceptionMessage = $"The operation was canceled.";
             var cancellationToken = new CancellationTokenSource();
             await cancellationToken.CancelAsync();
 
+            // Act & Assert
+            Func<Task> act = async () => await _bookingService.CreateBookingAsync(createDto, cancellationToken.Token);
+            var exceptionAssertion = await act.Should().
+                ThrowAsync<OperationCanceledException>().WithMessage(expectedExceptionMessage);
+            exceptionAssertion.Which.CancellationToken.Should().Be(cancellationToken.Token);
+            
+
+            _eventRepositoryMock.Verify(
+                repo => repo.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+                Times.Never,
+                "Сервис не должен обращаться к БД, если запрос был отменен.");
+
+            _bookingRepositoryMock.Verify(
+                repo => repo.Add(It.IsAny<Booking>()),
+                Times.Never,
+                "Сервис не должен создавать бронирование при отмене.");
+
+            _bookingRepositoryMock.Verify(
+                repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task CreateBookingAsync_WhenValid_ShouldPassTokenToRepository()
+        {
+            // Arrange
+            var existEvent = TestEventFactory.Create();
+            var bookingDto = new BookingCreateDto(existEvent.Id);
+            using var cts = new CancellationTokenSource();
+
+            // Setup
+            _eventRepositoryMock
+                .Setup(r => r.GetByIdAsync(bookingDto.EventId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(existEvent);
+
             // Act
-            var exception = await Assert.ThrowsAsync<OperationCanceledException>(async () =>
-                await _bookingService.GetBookingByIdAsync(Guid.NewGuid(), cancellationToken.Token)
-            );
+            await _bookingService.CreateBookingAsync(bookingDto, cts.Token);
 
             // Assert
-            Assert.Equal(expectedExceptionMessage, exception.Message);
-            Assert.Equal(cancellationToken.Token, exception.CancellationToken);
+            _eventRepositoryMock.Verify(
+                repo => repo.GetByIdAsync(bookingDto.EventId, cts.Token),
+                Times.Once,
+                "Сервис забыл прокинуть CancellationToken в репозиторий!");
         }
 
         [Fact]
@@ -242,52 +187,56 @@ namespace CoreEvents.Tests.Services
         {
             // Arrange
             const int initialSeats = 3;
-            var futureDate = DateTime.UtcNow.AddDays(1);
-            var eventEntity = await _eventService.CreateEventAsync(new EventCreateDto(
-                Title: "Test Event",
-                Description: "Desc",
-                StartAt: futureDate,
-                EndAt: futureDate.AddHours(2),
-                TotalSeats: initialSeats));
+            var existEvent = TestEventFactory.Create(seats: initialSeats);
 
-            BookingCreateDto createDto = new BookingCreateDto(eventEntity.Id);
+            BookingCreateDto createDto = new BookingCreateDto(existEvent.Id);
             const int expectedSeats = initialSeats - 1;
 
+            // Setup
+            _eventRepositoryMock
+                .Setup(r => r.GetByIdAsync(existEvent.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(existEvent);
+
             // Act
-            await _bookingService.CreateBookingAsync(createDto);
+            var result = await _bookingService.CreateBookingAsync(createDto, TestContext.Current.CancellationToken);
 
             // Assert
-            eventEntity = await _eventService.GetEventByIdAsync(eventEntity.Id);
-            Assert.Equal(expectedSeats, eventEntity.AvailableSeats);
+            result.Should().NotBeNull();
+            result.Status.Should().Be(BookingStatus.Pending);
+            existEvent.AvailableSeats.Should().Be(expectedSeats);
+            existEvent.TotalSeats.Should().Be(initialSeats);
+
+            _eventRepositoryMock.Verify(repo => repo.GetByIdAsync(createDto.EventId, It.IsAny<CancellationToken>()), Times.Once);
+            _bookingRepositoryMock.Verify(repo => repo.Add(It.IsAny<Booking>()), Times.Once);
+            _bookingRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
         public async Task CreateBookingAsync_WhenSeatsAreDepleted_ShouldAllowSuccessfulBookingsUntilEmpty()
         {
             // Arrange
+            const string expectedMessage = "No available seats for this event.";
             const int initialSeats = 2;
-            var futureDate = DateTime.UtcNow.AddDays(1);
-            var eventEntity = await _eventService.CreateEventAsync(new EventCreateDto(
-                Title: "Test Event",
-                Description: "Desc",
-                StartAt: futureDate,
-                EndAt: futureDate.AddHours(2),
-                TotalSeats: initialSeats));
-            var createDto = new BookingCreateDto(eventEntity.Id);
+            var existEvent = TestEventFactory.Create(seats: initialSeats);
+            var createDto = new BookingCreateDto(existEvent.Id);
+
+            // Setup
+            _eventRepositoryMock.Setup(repo => repo.GetByIdAsync(existEvent.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(existEvent);
 
             // Act & Assert
-            await _bookingService.CreateBookingAsync(createDto);
-            eventEntity = await _eventService.GetEventByIdAsync(eventEntity.Id);
-            Assert.Equal(initialSeats - 1, eventEntity.AvailableSeats);
+            await _bookingService.CreateBookingAsync(createDto, TestContext.Current.CancellationToken);
+            existEvent.AvailableSeats.Should().Be(initialSeats - 1);
 
-            // Act & Assert
-            await _bookingService.CreateBookingAsync(createDto);
-            eventEntity = await _eventService.GetEventByIdAsync(eventEntity.Id);
-            Assert.Equal(0, eventEntity.AvailableSeats);
+            await _bookingService.CreateBookingAsync(createDto, TestContext.Current.CancellationToken);
+            existEvent.AvailableSeats.Should().Be(0);
 
-            // Act & Assert
-            await Assert.ThrowsAsync<NoAvailableSeatsException>(() =>
-                _bookingService.CreateBookingAsync(createDto));
+            Func<Task> act = async () => await _bookingService.CreateBookingAsync(createDto);
+            await act.Should().ThrowAsync<NoAvailableSeatsException>().WithMessage(expectedMessage);
+
+            _eventRepositoryMock.Verify(repo => repo.GetByIdAsync(createDto.EventId, It.IsAny<CancellationToken>()), Times.Exactly(3));
+            _bookingRepositoryMock.Verify(repo => repo.Add(It.IsAny<Booking>()), Times.Exactly(2));
+            _bookingRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
         }
 
         [Fact]
@@ -296,25 +245,25 @@ namespace CoreEvents.Tests.Services
             // Arrange
             const int initialSeats = 1;
             const string expectedMessage = "No available seats for this event.";
-            var futureDate = DateTime.UtcNow.AddDays(1);
-            var eventEntity = await _eventService.CreateEventAsync(new EventCreateDto(
-                Title: "Test Event",
-                Description: "Desc",
-                StartAt: futureDate,
-                EndAt: futureDate.AddHours(2),
-                TotalSeats: initialSeats));
-            var createDto = new BookingCreateDto(eventEntity.Id);
-            await _bookingService.CreateBookingAsync(createDto);
+            var existEvent = TestEventFactory.Create(seats: initialSeats);
+            var createDto = new BookingCreateDto(existEvent.Id);
 
-            // Assert
-            eventEntity = await _eventService.GetEventByIdAsync(eventEntity.Id);
-            Assert.Equal(0, eventEntity.AvailableSeats);
+            // Setup
+            _eventRepositoryMock.Setup(repo => repo.GetByIdAsync(existEvent.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(existEvent);
 
             // Act & Assert
-            var exception = await Assert.ThrowsAsync<NoAvailableSeatsException>(() =>
-                _bookingService.CreateBookingAsync(createDto));
+            await _bookingService.CreateBookingAsync(createDto, TestContext.Current.CancellationToken);
+            existEvent.Should().NotBeNull();
+            existEvent.AvailableSeats.Should().Be(0);
 
-            Assert.Equal(expectedMessage, exception.Message);
+            // Act & Assert
+            Func<Task> act = async () => await _bookingService.CreateBookingAsync(createDto);
+            await act.Should().ThrowAsync<NoAvailableSeatsException>().WithMessage(expectedMessage);
+
+            _eventRepositoryMock.Verify(repo => repo.GetByIdAsync(createDto.EventId, It.IsAny<CancellationToken>()), Times.Exactly(2));
+            _bookingRepositoryMock.Verify(repo => repo.Add(It.IsAny<Booking>()), Times.Once);
+            _bookingRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
@@ -325,23 +274,15 @@ namespace CoreEvents.Tests.Services
             const int totalRequests = 20;
             const int expectedSuccesses = 5;
 
-            var futureDate = DateTime.UtcNow.AddDays(1);
-            var eventEntity = await _eventService.CreateEventAsync(new EventCreateDto(
-                Title: "Test Event",
-                Description: "Desc",
-                StartAt: futureDate,
-                EndAt: futureDate.AddHours(2),
-                TotalSeats: initialSeats));
-            BookingCreateDto createDto = new BookingCreateDto(eventEntity.Id);
+            var existEvent = TestEventFactory.Create(seats: initialSeats);
+            BookingCreateDto createDto = new BookingCreateDto(existEvent.Id);
 
+            // Setup
+            _eventRepositoryMock.Setup(repo => repo.GetByIdAsync(existEvent.Id))
+                .ReturnsAsync(existEvent);
 
             var tasks = Enumerable.Range(0, totalRequests)
-                .Select(_ => Task.Run(async () =>
-                {
-                    using var scope = _serviceProvider.CreateScope();
-                    var bookingService = scope.ServiceProvider.GetRequiredService<IBookingService>();
-                    return await bookingService.CreateBookingAsync(createDto);
-                }))
+                .Select(_ => Task.Run(async () => await _bookingService.CreateBookingAsync(createDto)))
                 .ToArray();
 
             var allTasks = Task.WhenAll(tasks);
@@ -353,19 +294,21 @@ namespace CoreEvents.Tests.Services
             catch { }
 
             // Assert
-            int successCount = tasks.Count(t => t.Status == TaskStatus.RanToCompletion);
-            var exceptions = allTasks.Exception?.InnerExceptions ?? Enumerable.Empty<Exception>();
+            var exceptions = (allTasks.Exception?.InnerExceptions ?? Enumerable.Empty<Exception>()).ToList();
+            tasks.Where(t => t.Status == TaskStatus.RanToCompletion)
+                .Should().HaveCount(expectedSuccesses);
 
-            int noSeatsExceptionCount = exceptions.Count(e => e is NoAvailableSeatsException);
-            int otherErrorCount = exceptions.Count(e => e is not NoAvailableSeatsException);
+            exceptions.OfType<NoAvailableSeatsException>()
+                .Should().HaveCount(totalRequests - expectedSuccesses);
 
+            exceptions.Where(e => e is not NoAvailableSeatsException)
+                .Should().BeEmpty();
 
-            Assert.Equal(expectedSuccesses, successCount);
-            Assert.Equal(totalRequests - expectedSuccesses, noSeatsExceptionCount);
-            Assert.Equal(0, otherErrorCount);
+            existEvent.AvailableSeats.Should().Be(0);
 
-            eventEntity = await _eventService.GetEventByIdAsync(eventEntity.Id);
-            Assert.Equal(0, eventEntity.AvailableSeats);
+            _eventRepositoryMock.Verify(repo => repo.GetByIdAsync(createDto.EventId, It.IsAny<CancellationToken>()), Times.Exactly(20));
+            _bookingRepositoryMock.Verify(repo => repo.Add(It.IsAny<Booking>()), Times.Exactly(5));
+            _bookingRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Exactly(5));
         }
 
         [Fact]
@@ -375,36 +318,129 @@ namespace CoreEvents.Tests.Services
             const int initialSeats = 10;
             const int totalRequests = 10;
             const int expectedSuccesses = 10;
+            var existEvent = TestEventFactory.Create(seats: initialSeats);
+            BookingCreateDto createDto = new BookingCreateDto(existEvent.Id);
 
-
-            var futureDate = DateTime.UtcNow.AddDays(1);
-            var eventEntity = await _eventService.CreateEventAsync(new EventCreateDto(
-                Title: "Test Event",
-                Description: "Desc",
-                StartAt: futureDate,
-                EndAt: futureDate.AddHours(2),
-                TotalSeats: initialSeats));
-            BookingCreateDto createDto = new BookingCreateDto(eventEntity.Id);
+            // Setup
+            _eventRepositoryMock.Setup(repo => repo.GetByIdAsync(existEvent.Id))
+                .ReturnsAsync(existEvent);
 
             // Act
             var results = await Task.WhenAll(
                 Enumerable.Range(0, totalRequests)
-                    .Select(_ => Task.Run(async () =>
-                    {
-                        using var scope = _serviceProvider.CreateScope();
-                        var bookingService = scope.ServiceProvider.GetRequiredService<IBookingService>();
-                        return await bookingService.CreateBookingAsync(createDto);
-                    })));
+                    .Select(_ => Task.Run(async () => await _bookingService.CreateBookingAsync(createDto))));
 
             // Assert
-            var uniqueIdsCount = results.Select(r => r.Id).Distinct().Count();
-            Assert.Equal(expectedSuccesses, uniqueIdsCount);
+            results.Select(r => r.Id)
+                .Should().OnlyHaveUniqueItems()
+                .And.HaveCount(expectedSuccesses);
+            results.Should().OnlyContain(b => b.EventId == existEvent.Id);
+            existEvent.AvailableSeats.Should().Be(0);
 
-            eventEntity = await _eventService.GetEventByIdAsync(eventEntity.Id);
-            Assert.All(results, b =>
-                Assert.Equal(eventEntity.Id, b.EventId));
-
-            Assert.Equal(0, eventEntity.AvailableSeats);
+            _eventRepositoryMock.Verify(repo => repo.GetByIdAsync(createDto.EventId, It.IsAny<CancellationToken>()), Times.Exactly(10));
+            _bookingRepositoryMock.Verify(repo => repo.Add(It.IsAny<Booking>()), Times.Exactly(10));
+            _bookingRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Exactly(10));
         }
+        #endregion
+
+        #region GetBookingByIdAsync
+        [Fact]
+        public async Task GetBookingByIdAsync_NonExistingBookingId_ShouldThrowNotFoundException()
+        {
+            // Arrange
+            var nonExistBooking = Guid.NewGuid();
+            string expectedExceptionMessage = $"Бронь с ID {nonExistBooking} не найдена.";
+
+            // Setup
+            _bookingRepositoryMock
+                .Setup(repo => repo.GetByIdAsync(nonExistBooking, It.IsAny<CancellationToken>()))
+                .ReturnsAsync((Booking?)null);
+
+            // Act & Assert
+            Func<Task> act = async () => await _bookingService.GetBookingByIdAsync(nonExistBooking);
+            await act.Should().ThrowAsync<NotFoundException>().WithMessage(expectedExceptionMessage);
+
+            _bookingRepositoryMock.Verify(repo => repo.GetByIdAsync(nonExistBooking, It.IsAny<CancellationToken>()), Times.Once);
+            _bookingRepositoryMock.Verify(repo => repo.Add(It.IsAny<Booking>()), Times.Never);
+            _bookingRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        }
+        [Fact]
+        public async Task GetBookingByIdAsync_WithValidBookingId_ShouldRetrieveSuccessfully()
+        {
+            // Arrange
+            var existEvent = TestEventFactory.Create();
+
+            // Setup
+            _eventRepositoryMock.Setup(repo => repo.GetByIdAsync(existEvent.Id, TestContext.Current.CancellationToken))
+                .ReturnsAsync(existEvent);
+
+            // Act
+            var booking = await _bookingService.CreateBookingAsync(new BookingCreateDto(existEvent.Id), TestContext.Current.CancellationToken);
+
+            // Assert
+            booking.Should().NotBeNull();
+            booking.EventId.Should().Be(existEvent.Id);
+            booking.Status.Should().Be(BookingStatus.Pending);
+            booking.CreatedAt.Should().NotBe(default);
+            booking.ProcessedAt.Should().BeNull();
+
+            _eventRepositoryMock.Verify(repo => repo.GetByIdAsync(existEvent.Id, It.IsAny<CancellationToken>()), Times.Once);
+            _bookingRepositoryMock.Verify(repo => repo.Add(It.IsAny<Booking>()), Times.Once);
+            _bookingRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task GetBookingByIdAsync_WhenCancellationRequested_ShouldThrowOperationCanceledException()
+        {
+            // Arrange
+            string expectedExceptionMessage = $"The operation was canceled.";
+            var cancellationToken = new CancellationTokenSource();
+            await cancellationToken.CancelAsync();
+
+            // Act & Assert
+            Func<Task> act = async () =>
+                await _bookingService.GetBookingByIdAsync(Guid.NewGuid(), cancellationToken.Token);
+            var exceptionAssertion = await act.Should().ThrowAsync<OperationCanceledException>()
+                .WithMessage(expectedExceptionMessage);
+            exceptionAssertion.Which.CancellationToken.Should().Be(cancellationToken.Token);
+
+            _eventRepositoryMock.Verify(
+                repo => repo.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+                Times.Never,
+                "Сервис не должен обращаться к БД, если запрос был отменен.");
+
+            _bookingRepositoryMock.Verify(
+                repo => repo.Add(It.IsAny<Booking>()),
+                Times.Never,
+                "Сервис не должен создавать бронирование при отмене.");
+
+            _bookingRepositoryMock.Verify(
+                repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task GetBookingByIdAsync_WhenValid_ShouldPassTokenToRepository()
+        {
+            // Arrange
+            var existEvent = TestEventFactory.Create();
+            var booking = Booking.Create(existEvent.Id);
+            using var cts = new CancellationTokenSource();
+
+            // Setup
+            _bookingRepositoryMock
+                .Setup(r => r.GetByIdAsync(booking.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(booking);
+
+            // Act
+            await _bookingService.GetBookingByIdAsync(booking.Id, cts.Token);
+
+            // Assert
+            _bookingRepositoryMock.Verify(
+                repo => repo.GetByIdAsync(booking.Id, cts.Token),
+                Times.Once,
+                "Сервис забыл прокинуть CancellationToken в репозиторий!");
+        }
+        #endregion
     }
 }

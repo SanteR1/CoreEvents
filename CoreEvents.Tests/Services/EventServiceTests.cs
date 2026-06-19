@@ -1,31 +1,24 @@
-﻿using CoreEvents.Data.DataAccess;
+﻿using System.ComponentModel.DataAnnotations;
+using CoreEvents.Data.Repositories.Interfaces;
+using CoreEvents.Middleware;
+using CoreEvents.Models.Domain;
 using CoreEvents.Models.DTOs;
 using CoreEvents.Services.Implementations;
-using CoreEvents.Services.Interfaces;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using System.ComponentModel.DataAnnotations;
-using CoreEvents.Middleware;
+using CoreEvents.Tests.Infrastructure;
+using FluentAssertions;
+using Moq;
 
 namespace CoreEvents.Tests.Services
 {
-    public class EventServiceTests : IDisposable
+    public class EventServiceTests
     {
-        private readonly IEventService _eventService;
-        private readonly IServiceScope _scope;
-        private readonly ServiceProvider _serviceProvider;
+        private readonly Mock<IEventRepository> _eventRepositoryMock;
+        private readonly EventService _eventService;
 
         public EventServiceTests()
         {
-            var dbName = Guid.NewGuid().ToString();
-            var services = new ServiceCollection();
-            services.AddDbContext<AppDbContext>(options =>
-                options.UseInMemoryDatabase(dbName));
-            services.AddScoped<IEventService, EventService>();
-
-            _serviceProvider = services.BuildServiceProvider();
-            _scope = _serviceProvider.CreateScope();
-            _eventService = _scope.ServiceProvider.GetRequiredService<IEventService>();
+            _eventRepositoryMock = new Mock<IEventRepository>();
+            _eventService = new EventService(_eventRepositoryMock.Object);
         }
 
         #region CreateEventAsync Tests
@@ -43,11 +36,13 @@ namespace CoreEvents.Tests.Services
                 EndAt: futureDate.AddHours(2),
                 TotalSeats: 10);
 
-            // Act
-            var exception = await Assert.ThrowsAsync<ValidationException>(() => _eventService.CreateEventAsync(createEvent));
+            // Act & Assert
+            Func<Task> act = async () => await _eventService.CreateEventAsync(createEvent, TestContext.Current.CancellationToken);
+            var exceptionAssertion = await act.Should().ThrowAsync<ValidationException>();
+            exceptionAssertion.Which.ValidationResult.MemberNames.Should().Contain("title");
 
-            // Assert
-            Assert.Contains("title", exception.ValidationResult.MemberNames);
+            _eventRepositoryMock.Verify(repo => repo.Add(It.IsAny<Event>()), Times.Never);
+            _eventRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
         }
 
         [Fact]
@@ -55,17 +50,19 @@ namespace CoreEvents.Tests.Services
         {
             // Arrange
             var futureDate = DateTime.UtcNow.AddDays(1);
-            var createEvent = new EventCreateDto(
+            var createEventDto = new EventCreateDto(
                 Title: "Test Event",
                 StartAt: futureDate,
                 EndAt: futureDate.AddHours(-1),
                 TotalSeats: 10);
 
-            // Act
-            var exception = await Assert.ThrowsAsync<ValidationException>(() => _eventService.CreateEventAsync(createEvent));
+            // Act & Assert
+            Func<Task> act = async () => await _eventService.CreateEventAsync(createEventDto);
+            var exceptionAssertion = await act.Should().ThrowAsync<ValidationException>();
+            exceptionAssertion.Which.ValidationResult.MemberNames.Should().Contain("endAt");
 
-            // Assert
-            Assert.Contains("endAt", exception.ValidationResult.MemberNames);
+            _eventRepositoryMock.Verify(repo => repo.Add(It.IsAny<Event>()), Times.Never);
+            _eventRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
         }
 
         [Fact]
@@ -79,12 +76,13 @@ namespace CoreEvents.Tests.Services
                 EndAt: futureDate,
                 TotalSeats: 10);
 
-            // Act
-            var exception = await Assert.ThrowsAsync<ValidationException>(() => _eventService.CreateEventAsync(createEvent));
+            // Act & Assert
+            Func<Task> act = async () => await _eventService.CreateEventAsync(createEvent);
+            var exceptionAssertion = await act.Should().ThrowAsync<ValidationException>();
+            exceptionAssertion.Which.ValidationResult.MemberNames.Should().Contain("startAt").And.Contain("endAt");
 
-            // Assert
-            Assert.Contains("startAt", exception.ValidationResult.MemberNames);
-            Assert.Contains("endAt", exception.ValidationResult.MemberNames);
+            _eventRepositoryMock.Verify(repo => repo.Add(It.IsAny<Event>()), Times.Never);
+            _eventRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
         }
 
         [Fact]
@@ -99,11 +97,13 @@ namespace CoreEvents.Tests.Services
                 EndAt: futureDate.AddDays(-1),
                 TotalSeats: 1);
 
-            // Act
-            var exception = await Assert.ThrowsAsync<ValidationException>(() => _eventService.CreateEventAsync(createEvent));
+            // Act & Assert
+            Func<Task> act = async () => await _eventService.CreateEventAsync(createEvent);
+            var exceptionAssertion = await act.Should().ThrowAsync<ValidationException>();
+            exceptionAssertion.Which.ValidationResult.MemberNames.Should().Contain("endAt");
 
-            // Assert
-            Assert.Contains("endAt", exception.ValidationResult.MemberNames);
+            _eventRepositoryMock.Verify(repo => repo.Add(It.IsAny<Event>()), Times.Never);
+            _eventRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
         }
 
         [Fact]
@@ -117,11 +117,13 @@ namespace CoreEvents.Tests.Services
                 EndAt: pastDate.AddHours(2),
                 TotalSeats: 10);
 
-            // Act
-            var exception = await Assert.ThrowsAsync<ValidationException>(() => _eventService.CreateEventAsync(createEvent));
+            // Act & Assert
+            Func<Task> act = async () => await _eventService.CreateEventAsync(createEvent);
+            var exceptionAssertion = await act.Should().ThrowAsync<ValidationException>();
+            exceptionAssertion.Which.ValidationResult.MemberNames.Should().Contain("startAt");
 
-            // Assert
-            Assert.Contains("startAt", exception.ValidationResult.MemberNames);
+            _eventRepositoryMock.Verify(repo => repo.Add(It.IsAny<Event>()), Times.Never);
+            _eventRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
         }
 
         [Fact]
@@ -136,10 +138,12 @@ namespace CoreEvents.Tests.Services
                 TotalSeats: 10);
 
             // Act
-            var result = await _eventService.CreateEventAsync(createEvent);
+            var result = await _eventService.CreateEventAsync(createEvent, TestContext.Current.CancellationToken);
 
             // Assert
-            Assert.Equal("Test Event", result.Title);
+            result.Title.Should().Be("Test Event");
+            _eventRepositoryMock.Verify(repo => repo.Add(It.IsAny<Event>()), Times.Once);
+            _eventRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
@@ -155,62 +159,96 @@ namespace CoreEvents.Tests.Services
                 TotalSeats: 10);
 
             // Act
-            var result = await _eventService.CreateEventAsync(dto);
+            var result = await _eventService.CreateEventAsync(dto, TestContext.Current.CancellationToken);
 
             // Assert
-            Assert.NotNull(result);
-            Assert.NotEqual(Guid.Empty, result.Id);
-            Assert.Equal("Title", result.Title);
-            Assert.Equal("Desc", result.Description);
-            Assert.Equal(futureDate, result.StartAt);
-            Assert.Equal(futureDate.AddHours(2), result.EndAt);
-            Assert.Equal(dto.TotalSeats, result.TotalSeats);
+            result.Should().NotBeNull();
+            result.Id.Should().NotBe(Guid.Empty);
+            result.Title.Should().Be("Title");
+            result.Description.Should().Be("Desc");
+            result.StartAt.Should().Be(futureDate);
+            result.EndAt.Should().Be(futureDate.AddHours(2));
+            result.TotalSeats.Should().Be(dto.TotalSeats);
+
+            _eventRepositoryMock.Verify(repo => repo.Add(It.IsAny<Event>()), Times.Once);
+            _eventRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task CreateEventAsync_WhenValid_ShouldPassTokenToRepository()
+        {
+            // Arrange
+            var futureDate = DateTime.UtcNow.AddDays(1);
+            var dto = new EventCreateDto(
+                Title: "Title",
+                Description: "Desc",
+                StartAt: futureDate,
+                EndAt: futureDate.AddHours(2),
+                TotalSeats: 10);
+            using var cts = new CancellationTokenSource();
+            var cancellationToken = cts.Token;
+
+            // Act
+            await _eventService.CreateEventAsync(dto, cancellationToken);
+
+            // Assert
+            _eventRepositoryMock.Verify(
+                repo => repo.SaveChangesAsync(cancellationToken),
+                Times.Once,
+                "Сервис забыл прокинуть CancellationToken в репозиторий!");
+        }
+
+        [Fact]
+        public async Task CreateEventAsync_WhenCancellationRequested_ShouldThrowOperationCanceledException()
+        {
+            // Arrange
+            string expectedExceptionMessage = $"The operation was canceled.";
+            var futureDate = DateTime.UtcNow.AddDays(1);
+            var dto = new EventCreateDto(
+                Title: "Title",
+                Description: "Desc",
+                StartAt: futureDate,
+                EndAt: futureDate.AddHours(2),
+                TotalSeats: 10);
+            using var cts = new CancellationTokenSource();
+            await cts.CancelAsync();
+            var cancellationToken = cts.Token;
+
+            // Setup
+            _eventRepositoryMock
+                .Setup(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new OperationCanceledException());
+
+            // Act & Assert
+            Func<Task> act = async () => await _eventService.CreateEventAsync(dto, cancellationToken);
+            await act.Should().ThrowAsync<OperationCanceledException>().WithMessage(expectedExceptionMessage);
+
+            _eventRepositoryMock.Verify(
+                repo => repo.SaveChangesAsync(cancellationToken),
+                Times.Once);
         }
         #endregion
 
         #region DeleteEventAsync Tests
 
         [Fact]
-        public async Task DeleteEventAsync_DeletedEventCannotBeRetrieved()
+        public async Task DeleteEventAsync_WithExistingId_ShouldRemoveEventAndReturnTrue()
         {
             // Arrange
-            var futureDate = DateTime.UtcNow.AddDays(1);
-            var createdEvent = await _eventService.CreateEventAsync(
-                new EventCreateDto(
-                Title: "Event to Delete",
-                StartAt: futureDate,
-                EndAt: futureDate.AddHours(2),
-                TotalSeats: 10));
+            var existEvent = TestEventFactory.Create();
+
+            // Setup
+            _eventRepositoryMock
+                .Setup(repo => repo.GetByIdAsync(existEvent.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(existEvent);
 
             // Act
-            await _eventService.DeleteEventAsync(createdEvent.Id);
+            var result = await _eventService.DeleteEventAsync(existEvent.Id, TestContext.Current.CancellationToken);
 
-            // Assert
-            await Assert.ThrowsAsync<NotFoundException>(() =>
-                _eventService.GetEventByIdAsync(createdEvent.Id));
-        }
-
-        [Fact]
-        public async Task DeleteEventAsync_WithExistingId_ShouldRemoveEvent()
-        {
-            // Arrange
-            var futureDate = DateTime.UtcNow.AddDays(1);
-            var createdEvent = await _eventService.CreateEventAsync(new EventCreateDto(
-                Title: "Title",
-                Description: "Desc",
-                StartAt: futureDate,
-                EndAt: futureDate.AddHours(2),
-                TotalSeats: 10));
-
-            var initialCount = (await _eventService.GetAllEventsAsync(new EventFilter())).TotalCount;
-
-            // Act
-            await _eventService.DeleteEventAsync(createdEvent.Id);
-            var allEventAfterDelete = await _eventService.GetAllEventsAsync(new EventFilter());
-
-            // Assert
-            Assert.DoesNotContain(allEventAfterDelete.Items, x => x.Id == createdEvent.Id);
-            Assert.Equal(initialCount - 1, allEventAfterDelete.TotalCount);
+            result.Should().BeTrue();
+            _eventRepositoryMock.Verify(repo => repo.GetByIdAsync(existEvent.Id, It.IsAny<CancellationToken>()), Times.Once);
+            _eventRepositoryMock.Verify(repo => repo.Delete(existEvent), Times.Once);
+            _eventRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
@@ -219,801 +257,373 @@ namespace CoreEvents.Tests.Services
             // Arrange
             var invalidId = Guid.NewGuid();
 
+            // Setup
+            _eventRepositoryMock
+                .Setup(repo => repo.GetByIdAsync(invalidId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync((Event?)null);
+
             // Act
-            var result = await _eventService.DeleteEventAsync(invalidId);
+            var result = await _eventService.DeleteEventAsync(invalidId, TestContext.Current.CancellationToken);
 
             // Assert
-            Assert.False(result);
+            result.Should().BeFalse();
+
+            _eventRepositoryMock.Verify(repo => repo.GetByIdAsync(invalidId, It.IsAny<CancellationToken>()), Times.Once);
+            _eventRepositoryMock.Verify(repo => repo.Delete(It.IsAny<Event>()), Times.Never);
+            _eventRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        }
+        [Fact]
+        public async Task DeleteEventAsync_WhenValid_ShouldPassTokenToRepository()
+        {
+            // Arrange
+            var existEvent = TestEventFactory.Create();
+            using var cts = new CancellationTokenSource();
+            var cancellationToken = cts.Token;
+
+            // Act
+            await _eventService.DeleteEventAsync(existEvent.Id, cancellationToken);
+
+            // Assert
+            _eventRepositoryMock.Verify(
+                repo => repo.GetByIdAsync(existEvent.Id, cancellationToken),
+                Times.Once,
+                "Сервис забыл прокинуть CancellationToken в репозиторий!");
         }
 
         [Fact]
-        public async Task DeleteEventAsync_WithValidId_ReturnsTrue()
+        public async Task DeleteEventAsync_WhenCancellationRequested_ShouldThrowOperationCanceledException()
         {
             // Arrange
-            var futureDate = DateTime.UtcNow.AddDays(1);
-            var createdEvent = await _eventService.CreateEventAsync(
-                new EventCreateDto(
-                Title: "Event to Delete",
-                StartAt: futureDate,
-                EndAt: futureDate.AddHours(2),
-                TotalSeats: 10));
+            var existEvent = TestEventFactory.Create();
+            string expectedExceptionMessage = $"The operation was canceled.";
+            using var cts = new CancellationTokenSource();
+            var cancellationToken = cts.Token;
 
-            // Act
-            var result = await _eventService.DeleteEventAsync(createdEvent.Id);
+            // Setup
+            _eventRepositoryMock
+                .Setup(repo => repo.GetByIdAsync(existEvent.Id, It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new OperationCanceledException());
 
-            // Assert
-            Assert.True(result);
+            // Act & Assert
+            Func<Task> act = async () => await _eventService.DeleteEventAsync(existEvent.Id, cancellationToken);
+            await act.Should().ThrowAsync<OperationCanceledException>().WithMessage(expectedExceptionMessage);
+
+            _eventRepositoryMock.Verify(
+                repo => repo.GetByIdAsync(existEvent.Id, cancellationToken),
+                Times.Once);
         }
-
         #endregion
 
-        public void Dispose()
-        {
-            _scope.Dispose();
-            _serviceProvider.Dispose();
-        }
+        #region GetAllEventsAsync
 
-        #region GetAllEventsAsync Filter Tests
         [Fact]
-        public async Task GetAllEventsAsync_WithTitleFilter_ShouldReturnFilteredEvents()
+        public async Task GetAllEventsAsync_WithNullDates_ShouldPassNullDatesToRepository()
         {
             // Arrange
-            var futureDate = DateTime.UtcNow.AddDays(1);
-            var createdEvent1 = await _eventService.CreateEventAsync(new EventCreateDto(
-                Title: "Main Events 1",
-                Description: "Desc",
-                StartAt: futureDate,
-                EndAt: futureDate.AddHours(2),
-                TotalSeats: 10));
-            await _eventService.CreateEventAsync(new EventCreateDto(
-                Title: "Main Events 2",
-                Description: "Desc",
-                StartAt: futureDate,
-                EndAt: futureDate.AddHours(2),
-                TotalSeats: 10));
-
-            EventFilter eventFilter = new EventFilter() { Title = createdEvent1.Title };
-
-            // Act
-            var result = await _eventService.GetAllEventsAsync(eventFilter);
-
-            // Assert
-            Assert.Equal(1, result.TotalCount);
-
-            var items = result.Items.ToList();
-            Assert.Single(items);
-
-            var actualEvent = items.First();
-            Assert.Equal(eventFilter.Title, actualEvent.Title);
-        }
-
-        [Fact]
-        public async Task GetAllEventsAsync_WithTitleFilter_ShouldReturnMatching()
-        {
-            // Arrange
-            var futureDate = DateTime.UtcNow.AddDays(1);
-            await _eventService.CreateEventAsync(new EventCreateDto(
-                Title: "Programming 1C",
-                StartAt: futureDate,
-                EndAt: futureDate.AddHours(2),
-                TotalSeats: 10));
-            await _eventService.CreateEventAsync(new EventCreateDto(
-                Title: "Other",
-                StartAt: futureDate,
-                EndAt: futureDate.AddHours(2),
-                TotalSeats: 10));
-            await _eventService.CreateEventAsync(new EventCreateDto(
-                Title: "Programming Python",
-                StartAt: futureDate,
-                EndAt: futureDate.AddHours(2),
-                TotalSeats: 10));
-
-            var filter = new EventFilter { Title = "Programming" };
-
-            // Act
-            var result = await _eventService.GetAllEventsAsync(filter);
-
-            // Assert
-            Assert.Equal(2, result.TotalCount);
-            Assert.All(result.Items, e => Assert.Contains("Programming", e.Title));
-        }
-
-        [Fact]
-        public async Task GetAllEventsAsync_WithFromAndToFilter_ShouldIncludeAllEventsForThatDay()
-        {
-            // Arrange
-            var futureDate = DateTime.UtcNow.AddDays(1);
-            var createdEvent1 = await _eventService.CreateEventAsync(new EventCreateDto(
-                Title: "Event 2026 01 02",
-                Description: "For City",
-                StartAt: futureDate,
-                EndAt: futureDate.AddHours(2),
-                TotalSeats: 10));
-            var createdEvent2 = await _eventService.CreateEventAsync(new EventCreateDto(
-                Title: "Event 2026 01 02",
-                Description: "For City",
-                StartAt: futureDate.AddDays(1),
-                EndAt: futureDate.AddDays(1).AddHours(2),
-                TotalSeats: 10));
-
-
-            int expectedCount = 1;
-            EventFilter eventFilter = new EventFilter() { From = futureDate, To = futureDate.AddHours(2) };
-
-
-            // Act
-            var result = await _eventService.GetAllEventsAsync(eventFilter);
-
-            // Assert
-            Assert.Equal(expectedCount, result.TotalCount);
-
-            var items = result.Items;
-            Assert.Single(result.Items);
-
-            var actualEvent = items.First();
-            Assert.Equal(createdEvent1.Title, actualEvent.Title);
-            Assert.Equal(createdEvent1.Description, actualEvent.Description);
-            Assert.Equal(createdEvent1.StartAt, actualEvent.StartAt);
-            Assert.Equal(createdEvent1.EndAt, actualEvent.EndAt);
-        }
-
-        [Fact]
-        public async Task GetAllEventsAsync_WithFromFilter_ReturnsFilteredEvents()
-        {
-            var futureDate1 = DateTime.UtcNow.AddDays(1);
-            var futureDate2 = DateTime.UtcNow.AddDays(2);
-            var filterDate = futureDate1.AddHours(1);
-
-            await _eventService.CreateEventAsync(
-                new EventCreateDto(
-                Title: "Event 1",
-                StartAt: futureDate1,
-                EndAt: futureDate1.AddHours(2),
-                TotalSeats: 10));
-
-            await _eventService.CreateEventAsync(
-                new EventCreateDto(
-                Title: "Event 2",
-                StartAt: futureDate2,
-                EndAt: futureDate2.AddHours(2),
-                TotalSeats: 10));
-
-            var result = await _eventService.GetAllEventsAsync(new EventFilter()
+            EventFilter eventFilter = new EventFilter()
             {
-                From = filterDate
-            });
-
-            Assert.Single(result.Items);
-            Assert.Equal("Event 2", result.Items.First().Title);
-        }
-
-        [Fact]
-        public async Task GetAllEventsAsync_WithToFilter_ReturnsFilteredEvents()
-        {
-            var futureDate1 = DateTime.UtcNow.AddDays(1);
-            var futureDate2 = DateTime.UtcNow.AddDays(2);
-            var filterDate = futureDate2.AddHours(1);
-
-            await _eventService.CreateEventAsync(
-                new EventCreateDto(
-                    Title: "Event 1",
-                    StartAt: futureDate1,
-                    EndAt: futureDate1.AddHours(2),
-                    TotalSeats: 10));
-
-            await _eventService.CreateEventAsync(
-                new EventCreateDto(
-                    Title: "Event 2",
-                    StartAt: futureDate2,
-                    EndAt: futureDate2.AddHours(2),
-                    TotalSeats: 10));
-
-            var result = await _eventService.GetAllEventsAsync(new EventFilter()
-            {
-                To = filterDate
-            });
-
-            Assert.Single(result.Items);
-            Assert.Equal("Event 1", result.Items.First().Title);
-        }
-
-        [Fact]
-        public async Task GetAllEventsAsync_CombinedFilters_ShouldReturnCorrectSubset()
-        {
-            // Arrange
-            var futureDate = DateTime.UtcNow.AddDays(1);
-            var targetTitle = "Target";
-
-            // 1. Подходит под всё
-            await _eventService.CreateEventAsync(new EventCreateDto(
-                Title: "Target",
-                Description: "D",
-                StartAt: futureDate,
-                EndAt: futureDate.AddHours(5),
-                TotalSeats: 10));
-
-            // 2. Подходит по заголовку, но не по дате
-            await _eventService.CreateEventAsync(new EventCreateDto(
-                Title: "Target",
-                Description: "D",
-                StartAt: futureDate.AddDays(1),
-                EndAt: futureDate.AddDays(1).AddHours(2),
-                TotalSeats: 10));
-
-            // 3. Подходит по дате, но не по заголовку
-            await _eventService.CreateEventAsync(new EventCreateDto(
-                Title: "Other",
-                Description: "D",
-                StartAt: futureDate,
-                EndAt: futureDate.AddHours(5),
-                TotalSeats: 10));
-
-            var filter = new EventFilter
-            {
-                Title = targetTitle,
-                From = futureDate,
-                To = futureDate.AddHours(5),
-                Page = 1,
-                PageSize = 10
+                From = null,
+                To = null
             };
 
+            // Setup
+            _eventRepositoryMock
+                .Setup(repo => repo.GetAllAsync(eventFilter, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new PaginatedResult<Event>()
+                {
+                    CurrentPage = 1,
+                    Items = [],
+                    PageSize = 10,
+                    TotalCount = 1
+                });
+
             // Act
-            var result = await _eventService.GetAllEventsAsync(filter);
+            await _eventService.GetAllEventsAsync(eventFilter, TestContext.Current.CancellationToken);
 
             // Assert
-            Assert.Single(result.Items);
-            Assert.Equal(targetTitle, result.Items.First().Title);
-            Assert.Equal(futureDate, result.Items.First().StartAt);
+            _eventRepositoryMock.Verify(
+                x => x.GetAllAsync(
+                    It.Is<EventFilter>(f =>
+                        f.From == null && f.To == null),
+                    It.IsAny<CancellationToken>()),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task GetAllEventsAsync_WithNullTitle_ShouldPassNullTitleToRepository()
+        {
+            // Arrange
+            EventFilter eventFilter = new EventFilter()
+            {
+                Title = null
+            };
+
+            // Setup
+            _eventRepositoryMock
+                .Setup(repo => repo.GetAllAsync(eventFilter, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new PaginatedResult<Event>()
+                {
+                    CurrentPage = 1,
+                    Items = [],
+                    PageSize = 10,
+                    TotalCount = 1
+                });
+
+            // Act
+            await _eventService.GetAllEventsAsync(eventFilter, TestContext.Current.CancellationToken);
+
+            // Assert
+            _eventRepositoryMock.Verify(
+                x => x.GetAllAsync(
+                    It.Is<EventFilter>(f =>
+                        f.Title == null),
+                    It.IsAny<CancellationToken>()),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task GetAllEventsAsync_WithPageAndPageSize_ShouldPassPaginationParameters()
+        {
+            // Arrange
+            EventFilter eventFilter = new EventFilter()
+            {
+                PageSize = 15,
+                Page = 2
+            };
+
+            // Setup
+            _eventRepositoryMock
+                .Setup(repo => repo.GetAllAsync(eventFilter, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new PaginatedResult<Event>()
+                {
+                    CurrentPage = 2,
+                    Items = [],
+                    PageSize = 10,
+                    TotalCount = 15
+                });
+
+            // Act
+            await _eventService.GetAllEventsAsync(eventFilter, TestContext.Current.CancellationToken);
+
+            // Assert
+            _eventRepositoryMock.Verify(
+                x => x.GetAllAsync(
+                    It.Is<EventFilter>(f =>
+                        f.Page == 2 && f.PageSize == 15),
+                    It.IsAny<CancellationToken>()),
+                Times.Once);
+        }
+
+        [Theory]
+        [MemberData(nameof(GetDateNormalizationCases))]
+        public async Task GetAllEventsAsync_ShouldPassUtcDatesToRepository(
+            DateTime? inputFrom, DateTime? inputTo,
+            DateTime? expectedFrom, DateTime? expectedTo)
+        {
+            // Arrange
+            EventFilter eventFilter = new EventFilter()
+            {
+                From = inputFrom,
+                To = inputTo
+            };
+
+            // Setup
+            _eventRepositoryMock
+                .Setup(repo => repo.GetAllAsync(It.IsAny<EventFilter>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new PaginatedResult<Event>()
+                {
+                    CurrentPage = 1,
+                    Items = [],
+                    PageSize = 10,
+                    TotalCount = 1
+                });
+
+            // Act
+            await _eventService.GetAllEventsAsync(eventFilter, TestContext.Current.CancellationToken);
+
+            // Assert
+            _eventRepositoryMock.Verify(
+                x => x.GetAllAsync(
+                    It.Is<EventFilter>(f =>
+                        f.From == expectedFrom &&
+                        f.To == expectedTo &&
+                        (f.From == null || f.From.Value.Kind == DateTimeKind.Utc) &&
+                        (f.To == null || f.To.Value.Kind == DateTimeKind.Utc)
+                    ),
+                    It.IsAny<CancellationToken>()),
+                Times.Once,
+                "Сервис передал в репозиторий некорректно нормализованные даты.");
+        }
+
+        public static TheoryData<DateTime?, DateTime?, DateTime?, DateTime?> GetDateNormalizationCases()
+        {
+            var data = new TheoryData<DateTime?, DateTime?, DateTime?, DateTime?>();
+
+            // Кейс 1: Локальное время. Из From ничего не вычитаем, To без времени -> + 1 день
+            var localFrom = new DateTime(2026, 6, 8, 15, 30, 0, DateTimeKind.Local);
+            var localTo = new DateTime(2026, 6, 8, 0, 0, 0, DateTimeKind.Local);
+            data.Add(
+                localFrom,
+                localTo,
+                localFrom.ToUniversalTime(), // Ожидаем честную конвертацию в UTC
+                localTo.ToUniversalTime().AddDays(1) // Ожидаем конвертацию и сдвиг на день
+            );
+
+            // Кейс 2: Unspecified (например, из Web API). From без времени, To с временем
+            var unspecFrom = new DateTime(2026, 6, 10, 0, 0, 0, DateTimeKind.Unspecified);
+            var unspecTo = new DateTime(2026, 6, 10, 18, 45, 0, DateTimeKind.Unspecified);
+            data.Add(
+                unspecFrom,
+                unspecTo,
+                DateTime.SpecifyKind(unspecFrom, DateTimeKind.Utc), // Ожидаем просто ярлык UTC
+                DateTime.SpecifyKind(unspecTo.AddMicroseconds(1), DateTimeKind.Utc) // Ожидаем ярлык и +1 микросекунду
+            );
+
+            // Кейс 3: Уже UTC (ничего не должно сломаться)
+            var utcFrom = new DateTime(2026, 6, 15, 10, 0, 0, DateTimeKind.Utc);
+            data.Add(
+                utcFrom,
+                null,
+                utcFrom,
+                null
+            );
+
+            return data;
+        }
+
+        [Fact]
+        public async Task GetAllEventsAsync_WithValidEvent_ShouldMapEntitiesToDtos()
+        {
+            // Arrange
+            var existEvent = TestEventFactory.Create(
+                "Main Events 1",
+                description: "Description Main Events",
+                startAt: DateTime.UtcNow.AddDays(1).AddHours(10),
+                endAt: DateTime.UtcNow.AddDays(1).AddHours(12)
+                );
+
+            EventFilter eventFilter = new EventFilter();
+
+            var expectedPagination = new PaginatedResult<Event>
+            {
+                CurrentPage = 1,
+                PageSize = 10,
+                TotalCount = 1,
+                Items = [existEvent]
+            };
+
+            // Setup
+            _eventRepositoryMock
+                .Setup(repo => repo.GetAllAsync(It.IsAny<EventFilter>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(expectedPagination);
+
+            // Act
+            var result = await _eventService.GetAllEventsAsync(eventFilter, TestContext.Current.CancellationToken);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.TotalCount.Should().Be(1);
+            result.CurrentPage.Should().Be(1);
+            result.TotalPages.Should().Be(1);
+            result.PageSize.Should().Be(10);
+            var item = result.Items.Should().ContainSingle().Which;
+            item.Id.Should().Be(existEvent.Id);
+            item.Title.Should().Be(existEvent.Title);
+            item.Description.Should().Be(existEvent.Description);
+            item.AvailableSeats.Should().Be(existEvent.AvailableSeats);
+            item.EndAt.Should().Be(existEvent.EndAt);
+            item.StartAt.Should().Be(existEvent.StartAt);
+            item.TotalSeats.Should().Be(existEvent.TotalSeats);
+
+            _eventRepositoryMock.Verify(repo => repo.GetAllAsync(It.IsAny<EventFilter>(), It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
         public async Task GetAllEventsAsync_WithNoEvents_ReturnsEmptyArray()
         {
-            var result = await _eventService.GetAllEventsAsync(new EventFilter());
-
-            Assert.NotNull(result);
-            Assert.Empty(result.Items);
-            Assert.Equal(0, result.TotalCount);
-        }
-
-        [Theory]
-        [InlineData(null)]
-        [InlineData("")]
-        [InlineData("   ")]
-        public async Task GetAllEventsAsync_EmptyFilter_ShouldReturnAllEvents(string? emptyTitle)
-        {
-            var futureDate = DateTime.UtcNow.AddDays(1);
-            var eventEntity = await _eventService.CreateEventAsync(new EventCreateDto(
-                Title: "Create Title",
-                Description: "Create Description",
-                StartAt: futureDate,
-                EndAt: futureDate.AddHours(2),
-                TotalSeats: 1));
             // Arrange
-            var filter = new EventFilter() { Title = emptyTitle };
-            var allInStore = await _eventService.GetAllEventsAsync(filter);
-            var totalInStore = allInStore.TotalCount;
-
-            // Act
-            var result = await _eventService.GetAllEventsAsync(filter);
-
-            // Assert
-            Assert.Equal(totalInStore, result.TotalCount);
-            Assert.Equal(totalInStore, result.Items.Count());
-        }
-
-        [Fact]
-        public async Task GetAllEventsAsync_WithValidFilters_ShouldReturnAllEvents()
-        {
-            // Arrange
-            var date1 = DateTime.UtcNow.AddDays(1);
-            var date2 = DateTime.UtcNow.AddDays(2);
-
-            await _eventService.CreateEventAsync(new EventCreateDto(
-                Title: "Conference 2026",
-                Description: "",
-                StartAt: date1,
-                EndAt: date1.AddHours(2),
-                TotalSeats: 10));
-
-            await _eventService.CreateEventAsync(new EventCreateDto(
-                Title: "Conference 2027",
-                Description: "",
-                StartAt: date2,
-                EndAt: date2.AddHours(2),
-                TotalSeats: 10));
-
-            var filter = new EventFilter { Title = "Conference 2026" };
-
-            // Act
-            var result = await _eventService.GetAllEventsAsync(filter);
-
-            // Assert
-            Assert.Single(result.Items);
-        }
-        #endregion
-
-        #region GetAllEventsAsync DateBoundary Tests
-        [Theory]
-        [MemberData(nameof(GetDateBoundaryData))]
-        public async Task GetAllEventsAsync_DateBoundaries_ShouldFilterCorrectly(
-            Func<DateTime, DateTime?> startFactory,
-            Func<DateTime, DateTime?> endFactory,
-            int expectedCount,
-            string description)
-        {
-            // Arrange
-            var baseDate = DateTime.UtcNow.Date.AddDays(1);
-
-            // Создаем события относительно baseDate
-            await _eventService.CreateEventAsync(new EventCreateDto(
-                Title: "Event 1", Description: "D",
-                StartAt: baseDate.AddHours(13), EndAt: baseDate.AddHours(18), TotalSeats: 10));
-
-            await _eventService.CreateEventAsync(new EventCreateDto(
-                Title: "Event 2", Description: "D",
-                StartAt: baseDate.AddHours(13), EndAt: baseDate.AddHours(18), TotalSeats: 10));
-
-            await _eventService.CreateEventAsync(new EventCreateDto(
-                Title: "Event 3", Description: "D",
-                StartAt: baseDate.AddDays(1).AddHours(13), EndAt: baseDate.AddDays(1).AddHours(18), TotalSeats: 10));
-
-            var filter = new EventFilter
+            var filter = new EventFilter();
+            var expectedPagination = new PaginatedResult<Event>
             {
-                From = startFactory(baseDate),
-                To = endFactory(baseDate)
+                CurrentPage = 1,
+                PageSize = 10,
+                TotalCount = 0,
+                Items = []
             };
 
+            // Setup
+            _eventRepositoryMock
+                .Setup(repo => repo.GetAllAsync(filter, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(expectedPagination);
+
             // Act
-            var result = await _eventService.GetAllEventsAsync(filter);
+            var result = await _eventService.GetAllEventsAsync(filter, TestContext.Current.CancellationToken);
 
             // Assert
-            Assert.True(expectedCount == result.TotalCount,
-                $"Ошибка в сценарии: {description}. Ожидали {expectedCount}, получили {result.TotalCount}");
+            result.Should().NotBeNull();
+            result.Items.Should().BeEmpty();
+            result.TotalCount.Should().Be(0);
+            result.PageSize.Should().Be(10);
+            result.CurrentPage.Should().Be(1);
 
-            if (expectedCount > 0)
-            {
-                Assert.Equal(expectedCount, result.Items.Count());
-            }
-            else
-            {
-                Assert.Empty(result.Items);
-            }
+            _eventRepositoryMock.Verify(repo => repo.GetAllAsync(filter, It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
-        public async Task GetAllEventsAsync_DateBoundaries_ShouldReturnOnlyEventsWithinWindow()
+        public async Task GetAllEventsAsync_WhenValid_ShouldPassTokenToRepository()
         {
             // Arrange
-            var windowStart = DateTime.UtcNow.Date.AddDays(1);
-            var windowEnd = DateTime.UtcNow.Date.AddDays(2);
-
-            // 1. Внутри окна
-            await _eventService.CreateEventAsync(new EventCreateDto(
-                Title: "Inside",
-                StartAt: windowStart.AddDays(1).AddHours(11),
-                EndAt: windowEnd.AddDays(1).AddHours(14),
-                TotalSeats: 10));
-
-            // 2. До окна
-            await _eventService.CreateEventAsync(new EventCreateDto(
-                Title: "Before",
-                StartAt: windowStart.AddHours(1),
-                EndAt: windowEnd.AddHours(2),
-                TotalSeats: 10));
-
-            // 3. После окна
-            await _eventService.CreateEventAsync(new EventCreateDto(
-                Title: "After",
-                StartAt: windowStart.AddDays(2),
-                EndAt: windowEnd.AddDays(2),
-                TotalSeats: 10));
-
-            var filter = new EventFilter
+            var eventFilter = new EventFilter();
+            var expectedPagination = new PaginatedResult<Event>
             {
-                From = windowStart.AddDays(1).AddHours(11),
-                To = windowEnd.AddDays(1).AddHours(14)
+                CurrentPage = 1,
+                PageSize = 10,
+                TotalCount = 0,
+                Items = []
             };
+            using var cts = new CancellationTokenSource();
+            var cancellationToken = cts.Token;
+
+            // Setup
+            _eventRepositoryMock.Setup(repo => repo.GetAllAsync(eventFilter, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(expectedPagination);
 
             // Act
-            var result = await _eventService.GetAllEventsAsync(filter);
+            await _eventService.GetAllEventsAsync(eventFilter, cancellationToken);
 
             // Assert
-            Assert.Single(result.Items);
-            Assert.Equal("Inside", result.Items.First().Title);
+            _eventRepositoryMock.Verify(
+                repo => repo.GetAllAsync(eventFilter, cancellationToken),
+                Times.Once,
+                "Сервис забыл прокинуть CancellationToken в репозиторий!");
         }
 
         [Fact]
-        public async Task GetAllEventsAsync_DateBoundaries_FromOneSecondLate()
-        {
-            var baseDate = DateTime.UtcNow.Date.AddDays(1);
-
-            await _eventService.CreateEventAsync(new EventCreateDto
-            (
-                Title: "Event 1",
-                Description: "D",
-                StartAt: baseDate.AddHours(13),
-                EndAt: baseDate.AddHours(18),
-                TotalSeats: 10));
-            await _eventService.CreateEventAsync(new EventCreateDto
-            (
-                Title: "Event 2",
-                Description: "D",
-                StartAt: baseDate.AddHours(13),
-                EndAt: baseDate.AddHours(18),
-                TotalSeats: 10));
-            await _eventService.CreateEventAsync(new EventCreateDto
-            (
-                Title: "Event 3",
-                Description: "D",
-                StartAt: baseDate.AddDays(1).AddHours(13),
-                EndAt: baseDate.AddDays(1).AddHours(18),
-                TotalSeats: 10));
-
-            var result = await _eventService.GetAllEventsAsync(new EventFilter()
-            {
-                From = baseDate.AddHours(13).AddSeconds(1)
-            });
-
-            Assert.Equal(1, result.TotalCount);
-        }
-
-        [Fact]
-        public async Task GetAllEventsAsync_DateBoundaries_ToOneSecondEarly()
-        {
-            var baseDate = DateTime.UtcNow.Date.AddDays(1);
-
-            await _eventService.CreateEventAsync(new EventCreateDto
-            (
-                Title: "Event 1",
-                Description: "D",
-                StartAt: baseDate.AddHours(13),
-                EndAt: baseDate.AddHours(18),
-                TotalSeats: 10
-            ));
-            await _eventService.CreateEventAsync(new EventCreateDto
-            (
-                Title: "Event 2",
-                Description: "D",
-                StartAt: baseDate.AddHours(13),
-                EndAt: baseDate.AddHours(18),
-                TotalSeats: 10));
-            await _eventService.CreateEventAsync(new EventCreateDto
-            (
-                Title: "Event 3",
-                Description: "D",
-                StartAt: baseDate.AddDays(1).AddHours(13),
-                EndAt: baseDate.AddDays(1).AddHours(18),
-                TotalSeats: 10));
-
-            var result = await _eventService.GetAllEventsAsync(new EventFilter() { To = baseDate.AddHours(18).AddSeconds(-1) });
-
-            Assert.Empty(result.Items);
-        }
-
-        public static TheoryData<Func<DateTime, DateTime?>, Func<DateTime, DateTime?>, int, string> GetDateBoundaryData() =>
-            new()
-            {
-                // 1. Идеальное совпадение границ (13:00 - 18:00)
-                {
-                    baseDate => baseDate.AddHours(13),
-                    baseDate => baseDate.AddHours(18),
-                    2,
-                    "Должны найти 2 события, которые точно вписались в границы"
-                },
-
-                // 2. Только "From" (С 13:00)
-                {
-                    baseDate => baseDate.AddHours(13),
-                    baseDate => null,
-                    3,
-                    "Все события начинаются не раньше 13:00"
-                },
-
-                // 3. Только "To" (До 18:00)
-                {
-                    baseDate => null,
-                    baseDate => baseDate.AddHours(18),
-                    2,
-                    "Только первые два события успевают закончиться до 18:00"
-                },
-
-                // 4. ГРАНИЦА: Опоздали на секунду (From = 13:00:01)
-                {
-                    baseDate => baseDate.AddHours(13).AddSeconds(1),
-                    baseDate => null,
-                    1, // Останется только Event 3, который будет на следующий день
-                    "События 1 и 2 отсеиваются, т.к. начинаются в 13:00:00 (раньше фильтра)"
-                },
-
-                // 5. ГРАНИЦА: Не успели закончить (To = 17:59:59)
-                {
-                    baseDate => null,
-                    baseDate => baseDate.AddHours(18).AddSeconds(-1),
-                    0,
-                    "Ни одно событие не закончено к этому времени"
-                }
-            };
-        #endregion
-
-        #region GetAllEventsAsync Pagination Tests
-        [Fact]
-        public async Task GetAllEventsAsync_ByPagination_ShouldReturnCorrectSlice()
+        public async Task GetAllEventsAsync_WhenCancellationRequested_ShouldThrowOperationCanceledException()
         {
             // Arrange
-            // Добавляем 3 события с разными датами, чтобы проверить сортировку и пропуск
-            var futureDate = DateTime.UtcNow.AddDays(1);
-            await _eventService.CreateEventAsync(new EventCreateDto(
-                Title: "Event 1",
-                Description: "D",
-                StartAt: futureDate,
-                EndAt: futureDate.AddDays(1),
-                TotalSeats: 10));
+            var eventFilter = new EventFilter();
+            string expectedExceptionMessage = $"The operation was canceled.";
+            using var cts = new CancellationTokenSource();
+            var cancellationToken = cts.Token;
 
-            await _eventService.CreateEventAsync(new EventCreateDto(
-                Title: "Event 2",
-                Description: "D",
-                StartAt: futureDate.AddDays(2),
-                EndAt: futureDate.AddDays(3),
-                TotalSeats: 10));
+            // Setup
+            _eventRepositoryMock.Setup(repo => repo.GetAllAsync(eventFilter, It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new OperationCanceledException());
 
-            await _eventService.CreateEventAsync(new EventCreateDto(
-                Title: "Event 3",
-                Description: "D",
-                StartAt: futureDate.AddDays(4),
-                EndAt: futureDate.AddDays(5),
-                TotalSeats: 10));
+            // Act & Assert
+            Func<Task> act = async () => await _eventService.GetAllEventsAsync(eventFilter, cancellationToken);
+            await act.Should().ThrowAsync<OperationCanceledException>().WithMessage(expectedExceptionMessage);
 
-            var filter = new EventFilter { Page = 2, PageSize = 1 };
-
-            // Act
-            var result = await _eventService.GetAllEventsAsync(filter);
-
-            // Assert
-            Assert.Equal(3, result.TotalCount);
-            Assert.Single(result.Items);
-            Assert.Equal(2, result.CurrentPage);
-        }
-
-        [Fact]
-        public async Task GetAllEventsAsync_ByPagination_ShouldReturnPaginationEvents()
-        {
-            // Arrange
-            var futureDate = DateTime.UtcNow.AddDays(1);
-            var createdEvent1 = await _eventService.CreateEventAsync(new EventCreateDto
-            (
-                Title: "Event 1",
-                Description: "For City 1",
-                StartAt: futureDate,
-                EndAt: futureDate.AddHours(2),
-                TotalSeats: 10)
-            );
-            var createdEvent2 = await _eventService.CreateEventAsync(new EventCreateDto
-            (
-                Title: "Event 2",
-                Description: "For City 2",
-                StartAt: futureDate,
-                EndAt: futureDate.AddHours(2),
-                TotalSeats: 10)
-            );
-            var createdEvent3 = await _eventService.CreateEventAsync(new EventCreateDto
-            (
-                Title: "Event 3",
-                Description: "For City 3",
-                StartAt: futureDate,
-                EndAt: futureDate.AddHours(2),
-                TotalSeats: 10)
-            );
-
-
-            int currentPage = 2;
-            int pageSize = 1;
-
-
-            var totalEvents = await _eventService.GetAllEventsAsync(new EventFilter());
-            var expectedTotalEvents = totalEvents.TotalCount;
-            var expectedReturnedEventsCount = Math.Min(pageSize, expectedTotalEvents);
-            var eventFilter = new EventFilter { Page = currentPage, PageSize = pageSize };
-
-            // Act
-            var paginatedResult = await _eventService.GetAllEventsAsync(eventFilter);
-
-            // Assert
-            Assert.Equal(expectedTotalEvents, paginatedResult.TotalCount);
-            Assert.Equal(expectedReturnedEventsCount, paginatedResult.Items.Count());
-            Assert.Equal(currentPage, paginatedResult.CurrentPage);
-        }
-
-        [Fact]
-        public async Task GetAllEventsAsync_WithDefaultPagination_ReturnsFirstPageWithDefaultPageSize()
-        {
-            // Arrange
-            var futureDate = DateTime.UtcNow.AddDays(1);
-            for (int i = 1; i <= 15; i++)
-            {
-                await _eventService.CreateEventAsync(new EventCreateDto(
-                    Title: $"Event {i}",
-                    StartAt: futureDate.AddHours(i),
-                    EndAt: futureDate.AddHours(i + 1),
-                    TotalSeats: 10));
-            }
-
-            // Act
-            var result = await _eventService.GetAllEventsAsync(new EventFilter());
-
-            // Assert
-            Assert.Equal(15, result.TotalCount);
-            Assert.Equal(1, result.CurrentPage);
-            Assert.Equal(10, result.PageSize);
-            Assert.Equal(10, result.Items.Count());
-            Assert.Equal(2, result.TotalPages);
-        }
-
-        [Fact]
-        public async Task GetAllEventsAsync_WithCustomPageSize_ReturnsCorrectNumberOfItems()
-        {
-            // Arrange
-            var futureDate = DateTime.UtcNow.AddDays(1);
-            for (int i = 1; i <= 25; i++)
-            {
-                await _eventService.CreateEventAsync(new EventCreateDto
-                (
-                    Title: $"Event {i}",
-                    StartAt: futureDate.AddHours(i),
-                    EndAt: futureDate.AddHours(i + 1),
-                    TotalSeats: 10)
-                );
-            }
-
-            // Act
-            var result = await _eventService.GetAllEventsAsync(new EventFilter() { Page = 1, PageSize = 5 });
-
-            // Assert
-            Assert.Equal(25, result.TotalCount);
-            Assert.Equal(1, result.CurrentPage);
-            Assert.Equal(5, result.PageSize);
-            Assert.Equal(5, result.TotalPages);
-        }
-
-        [Fact]
-        public async Task GetAllEventsAsync_WithLastPagePartialResults_ReturnsRemainingItems()
-        {
-            // Arrange
-            var futureDate = DateTime.UtcNow.AddDays(1);
-            for (int i = 1; i <= 23; i++)
-            {
-                await _eventService.CreateEventAsync(new EventCreateDto
-                (
-                    Title: $"Event {i}",
-                    StartAt: futureDate.AddHours(i),
-                    EndAt: futureDate.AddHours(i + 1),
-                    TotalSeats: 10
-            ));
-            }
-
-            // Act
-            var result = await _eventService.GetAllEventsAsync(new EventFilter() { Page = 3, PageSize = 10 });
-
-
-            // Assert
-            Assert.Equal(23, result.TotalCount);
-            Assert.Equal(3, result.CurrentPage);
-            Assert.Equal(10, result.PageSize);
-            Assert.Equal(3, result.Items.Count());
-            Assert.Equal(3, result.TotalPages);
-        }
-
-        [Fact]
-        public async Task GetAllEventsAsync_WithPageBeyondTotal_ReturnsEmptyItems()
-        {
-            // Arrange
-            var futureDate = DateTime.UtcNow.AddDays(1);
-            for (int i = 1; i <= 5; i++)
-            {
-                await _eventService.CreateEventAsync(new EventCreateDto
-                (
-                    Title: $"Event {i}",
-                    StartAt: futureDate.AddHours(i),
-                    EndAt: futureDate.AddHours(i + 1),
-                    TotalSeats: 10
-                ));
-            }
-
-            // Act
-            var result = await _eventService.GetAllEventsAsync(new EventFilter() { Page = 10, PageSize = 10 });
-
-            // Assert
-            Assert.Equal(5, result.TotalCount);
-            Assert.Equal(10, result.CurrentPage);
-            Assert.Equal(10, result.PageSize);
-            Assert.Empty(result.Items);
-            Assert.Equal(1, result.TotalPages);
-        }
-
-        [Fact]
-        public async Task GetAllEventsAsync_WithPaginationAndFilters_ReturnsPaginatedFilteredResults()
-        {
-            // Arrange
-            var baseDate = DateTime.UtcNow.AddDays(1);
-            for (int i = 1; i <= 30; i++)
-            {
-                await _eventService.CreateEventAsync(new EventCreateDto
-                (
-                    Title: $"Conference {i}",
-                    StartAt: baseDate.AddDays(i),
-                    EndAt: baseDate.AddDays(i).AddHours(2),
-                    TotalSeats: 10
-                ));
-            }
-
-            // Act
-            var result = await _eventService.GetAllEventsAsync(new EventFilter()
-            {
-                Page = 2,
-                PageSize = 5,
-                Title = "Conference"
-            });
-
-            // Assert
-            Assert.Equal(30, result.TotalCount);
-            Assert.Equal(2, result.CurrentPage);
-            Assert.Equal(5, result.PageSize);
-            Assert.Equal(5, result.Items.Count());
-            Assert.Equal(6, result.TotalPages);
-        }
-
-        [Fact]
-        public async Task GetAllEventsAsync_WithSecondPage_ReturnsCorrectItems()
-        {
-            // Arrange
-            var futureDate = DateTime.UtcNow.AddDays(1);
-            for (int i = 1; i <= 25; i++)
-            {
-                await _eventService.CreateEventAsync(new EventCreateDto
-                (
-                    Title: $"Event {i}",
-                    StartAt: futureDate.AddHours(i),
-                    EndAt: futureDate.AddHours(i + 1),
-                    TotalSeats: 10));
-            }
-
-            // Act
-            var result = await _eventService.GetAllEventsAsync(new EventFilter() { Page = 2, PageSize = 10 });
-
-            // Assert
-            Assert.Equal(25, result.TotalCount);
-            Assert.Equal(2, result.CurrentPage);
-            Assert.Equal(10, result.PageSize);
-            Assert.Equal(10, result.Items.Count());
-            Assert.Equal(3, result.TotalPages);
-        }
-
-        [Fact]
-        public async Task GetAllEventsAsync_TotalPagesCalculation_IsCorrect()
-        {
-            // Arrange
-            var futureDate = DateTime.UtcNow.AddDays(1);
-            for (int i = 1; i <= 37; i++)
-            {
-                await _eventService.CreateEventAsync(new EventCreateDto
-                (
-                    Title: $"Event {i}",
-                    StartAt: futureDate.AddHours(i),
-                    EndAt: futureDate.AddHours(i + 1),
-                    TotalSeats: 10
-                ));
-            }
-
-            // Act
-            var result = await _eventService.GetAllEventsAsync(new EventFilter() { PageSize = 10 });
-
-            // Assert
-            Assert.Equal(4, result.TotalPages);
+            _eventRepositoryMock.Verify(
+                repo => repo.GetAllAsync(eventFilter, cancellationToken),
+                Times.Once);
         }
         #endregion
 
         #region GetAllEventsAsync Validation Tests
         [Theory]
+        [InlineData(-1, "Значение должно быть в диапазоне от 1 до 100000")]
         [InlineData(0, "Значение должно быть в диапазоне от 1 до 100000")]
         [InlineData(100001, "Значение должно быть в диапазоне от 1 до 100000")]
         public void GetAllEventsAsync_InvalidPagePagination_ShouldReturnValidationError(int page, string expectedError)
@@ -1027,8 +637,9 @@ namespace CoreEvents.Tests.Services
             bool isValid = Validator.TryValidateObject(filter, context, results, true);
 
             // Assert
-            Assert.False(isValid);
-            Assert.Contains(results, r => r.ErrorMessage == expectedError);
+            isValid.Should().BeFalse();
+            results.Should().ContainSingle(r => r.ErrorMessage == expectedError);
+
         }
 
         [Theory]
@@ -1046,10 +657,9 @@ namespace CoreEvents.Tests.Services
             bool isValid = Validator.TryValidateObject(filter, context, results, true);
 
             // Assert
-            Assert.False(isValid);
-            Assert.Contains(results, r => r.ErrorMessage == expectedError);
+            isValid.Should().BeFalse();
+            results.Should().ContainSingle(r => r.ErrorMessage == expectedError);
         }
-
 
         #endregion
 
@@ -1058,24 +668,27 @@ namespace CoreEvents.Tests.Services
         public async Task GetEventByIdAsync_ExistingId_ShouldRetrieveEventSuccessfully()
         {
             // Arrange
-            var futureDate = DateTime.UtcNow.AddDays(1);
-            var createdEvent = await _eventService.CreateEventAsync(new EventCreateDto(
-                Title: "Title",
-                StartAt: futureDate,
-                EndAt: futureDate.AddHours(2),
-                TotalSeats: 10));
+            var existingEvent = TestEventFactory.Create();
+
+            // Setup
+            _eventRepositoryMock
+                .Setup(repo => repo.GetByIdAsync(existingEvent.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(existingEvent);
 
             // Act
-            var result = await _eventService.GetEventByIdAsync(createdEvent.Id);
+            var result = await _eventService.GetEventByIdAsync(existingEvent.Id, TestContext.Current.CancellationToken);
 
             // Assert
-            Assert.Equal(createdEvent.Id, result.Id);
-            Assert.Equal(createdEvent.Title, result.Title);
-            Assert.Equal(createdEvent.Description, result.Description);
-            Assert.Equal(createdEvent.StartAt, result.StartAt);
-            Assert.Equal(createdEvent.EndAt, result.EndAt);
-            Assert.Equal(createdEvent.TotalSeats, result.TotalSeats);
-            Assert.Equal(createdEvent.AvailableSeats, result.AvailableSeats);
+            result.Should().NotBeNull();
+            result.Id.Should().Be(existingEvent.Id);
+            result.Title.Should().Be(existingEvent.Title);
+            result.Description.Should().Be(existingEvent.Description);
+            result.StartAt.Should().Be(existingEvent.StartAt);
+            result.EndAt.Should().Be(existingEvent.EndAt);
+            result.TotalSeats.Should().Be(existingEvent.TotalSeats);
+            result.AvailableSeats.Should().Be(existingEvent.AvailableSeats);
+
+            _eventRepositoryMock.Verify(repo => repo.GetByIdAsync(existingEvent.Id, It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
@@ -1083,16 +696,62 @@ namespace CoreEvents.Tests.Services
         {
             // Arrange
             Guid expectedId = Guid.NewGuid();
-
             string expectedExceptionMessage = $"Событие с ID {expectedId} не найдено.";
 
+            // Setup
+            _eventRepositoryMock
+                .Setup(repo => repo.GetByIdAsync(expectedId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync((Event?)null);
+
             // Act & Assert
-            var exception = await Assert.ThrowsAsync<NotFoundException>(async () =>
-                await _eventService.GetEventByIdAsync(expectedId)
-            );
+            Func<Task> act = async () => await _eventService.GetEventByIdAsync(expectedId);
+            await act.Should().ThrowAsync<NotFoundException>().WithMessage(expectedExceptionMessage);
+
+            _eventRepositoryMock.Verify(repo => repo.GetByIdAsync(expectedId, It.IsAny<CancellationToken>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task GetEventByIdAsync_WhenValid_ShouldPassTokenToRepository()
+        {
+            // Arrange
+            var existEvent = TestEventFactory.Create();
+            using var cts = new CancellationTokenSource();
+            var cancellationToken = cts.Token;
+
+            // Setup
+            _eventRepositoryMock.Setup(repo => repo.GetByIdAsync(existEvent.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(existEvent);
+
+            // Act
+            await _eventService.GetEventByIdAsync(existEvent.Id, cancellationToken);
 
             // Assert
-            Assert.Equal(expectedExceptionMessage, exception.Message);
+            _eventRepositoryMock.Verify(
+                repo => repo.GetByIdAsync(existEvent.Id, cancellationToken),
+                Times.Once,
+                "Сервис забыл прокинуть CancellationToken в репозиторий!");
+        }
+
+        [Fact]
+        public async Task GetEventByIdAsync_WhenCancellationRequested_ShouldThrowOperationCanceledException()
+        {
+            // Arrange
+            var existEvent = TestEventFactory.Create();
+            string expectedExceptionMessage = $"The operation was canceled.";
+            using var cts = new CancellationTokenSource();
+            var cancellationToken = cts.Token;
+
+            // Setup
+            _eventRepositoryMock.Setup(repo => repo.GetByIdAsync(existEvent.Id, It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new OperationCanceledException());
+
+            // Act & Assert
+            Func<Task> act = async () => await _eventService.GetEventByIdAsync(existEvent.Id, cancellationToken);
+            await act.Should().ThrowAsync<OperationCanceledException>().WithMessage(expectedExceptionMessage);
+
+            _eventRepositoryMock.Verify(
+                repo => repo.GetByIdAsync(existEvent.Id, cancellationToken),
+                Times.Once);
         }
         #endregion
 
@@ -1111,138 +770,134 @@ namespace CoreEvents.Tests.Services
                 EndAt: futureDate.AddHours(2),
                 Description: "Update Description");
 
-            // Act & Assert
-            var exception = await Assert.ThrowsAsync<NotFoundException>(async () =>
-                await _eventService.UpdateEventAsync(expectedId, entityDto)
-            );
+            // Setup
+            _eventRepositoryMock
+                .Setup(repo => repo.GetByIdAsync(expectedId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync((Event?)null);
 
-            // Assert
-            Assert.Equal(expectedExceptionMessage, exception.Message);
+            // Act & Assert
+            Func<Task> act = async () => await _eventService.UpdateEventAsync(expectedId, entityDto);
+            await act.Should().ThrowAsync<NotFoundException>().WithMessage(expectedExceptionMessage);
+
+            _eventRepositoryMock.Verify(repo => repo.GetByIdAsync(expectedId, It.IsAny<CancellationToken>()), Times.Once);
+            _eventRepositoryMock.Verify(repo => repo.Update(It.IsAny<Event>()), Times.Never);
+            _eventRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
         }
 
         [Fact]
-        public async Task UpdateEventAsync_WithExistingId_ShouldModifyEventInList()
+        public async Task UpdateEventAsync_WithExistingId_ShouldModifyEvent()
         {
             // Arrange
-            var futureDate = DateTime.UtcNow.AddDays(1);
-            var createdEvent = await _eventService.CreateEventAsync(new EventCreateDto(
-                Title: "Title",
-                Description: "Desc",
-                StartAt: futureDate,
-                EndAt: futureDate.AddHours(2),
-                TotalSeats: 10));
+            var existingEvent = TestEventFactory.Create();
 
-            var dto = new EventUpdateDto(
+            var updateDto = new EventUpdateDto(
                 Title: "Title Update",
-                StartAt: futureDate.AddDays(1),
-                EndAt: futureDate.AddDays(2));
+                Description: "Updated Description",
+                StartAt: DateTime.UtcNow.AddDays(2),
+                EndAt: DateTime.UtcNow.AddDays(3));
+
+            // Setup
+            _eventRepositoryMock
+                .Setup(repo => repo.GetByIdAsync(existingEvent.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(existingEvent);
 
             // Act
-            await _eventService.UpdateEventAsync(createdEvent.Id, dto);
+            var result = await _eventService.UpdateEventAsync(existingEvent.Id, updateDto, TestContext.Current.CancellationToken);
 
-            // Assert
-            var updated = await _eventService.GetEventByIdAsync(createdEvent.Id);
-            Assert.Equal(dto.Title, updated.Title);
-            Assert.Equal(dto.Description, updated.Description);
-            Assert.Equal(dto.StartAt, updated.StartAt);
-            Assert.Equal(dto.EndAt, updated.EndAt);
+            // Assert Mapping
+            result.Id.Should().Be(existingEvent.Id);
+            result.Title.Should().Be(updateDto.Title);
+            result.Description.Should().Be(updateDto.Description);
+            result.StartAt.Should().Be(updateDto.StartAt);
+            result.EndAt.Should().Be(updateDto.EndAt);
+            result.TotalSeats.Should().Be(10);
+            result.AvailableSeats.Should().Be(10);
+
+            _eventRepositoryMock.Verify(repo => repo.GetByIdAsync(existingEvent.Id, It.IsAny<CancellationToken>()), Times.Once);
+            _eventRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
         public async Task UpdateEventAsync_WithEndAtBeforeStartAt_ShouldThrowValidationException()
         {
             // Arrange
-            var futureDate = DateTime.UtcNow.AddDays(1);
-            EventCreateDto createDto = new EventCreateDto(
-                Title: "Create Title",
-                Description: "Create Description",
-                StartAt: futureDate,
-                EndAt: futureDate.AddDays(1),
-                TotalSeats: 1);
-            var eventEntity = await _eventService.CreateEventAsync(createDto);
+            var existingEvent = TestEventFactory.Create();
+            var updateDto = new EventUpdateDto(
+                Title: "Update Title",
+                Description: "Update Description",
+                StartAt: DateTime.UtcNow.AddDays(1),
+                EndAt: DateTime.UtcNow.AddDays(-1));
 
-            string title = "Update Title";
-            string description = "Update Description";
-
-            EventUpdateDto updateDto = new EventUpdateDto(
-                Title: title,
-                Description: description,
-                StartAt: futureDate,
-                EndAt: futureDate.AddDays(-1));
+            // Setup
+            _eventRepositoryMock
+                .Setup(repo => repo.GetByIdAsync(existingEvent.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(existingEvent);
 
             // Act & Assert
-            var exception = await Assert.ThrowsAsync<ValidationException>(async () =>
-                await _eventService.UpdateEventAsync(eventEntity.Id, updateDto)
-            );
+            Func<Task> act = async () => await _eventService.UpdateEventAsync(existingEvent.Id, updateDto);
+            var exceptionAssertion = await act.Should().ThrowAsync<ValidationException>();
+            exceptionAssertion.Which.ValidationResult.MemberNames.Should().Contain("endAt");
 
-            // Assert
-            Assert.Contains("endAt", exception.ValidationResult.MemberNames);
+            _eventRepositoryMock.Verify(repo => repo.GetByIdAsync(existingEvent.Id, It.IsAny<CancellationToken>()), Times.Once);
+            _eventRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
         }
 
         [Fact]
         public async Task UpdateEventAsync_WithNullTitle_ThrowsValidationException()
         {
             // Arrange
-            var futureDate = DateTime.UtcNow.AddDays(1);
-            var createdEvent = await _eventService.CreateEventAsync(new EventCreateDto
-            (
-                Title: "Original Event",
-                StartAt: futureDate,
-                EndAt: futureDate.AddHours(2),
-                TotalSeats: 10));
-
-            var updateEvent = new EventUpdateDto
+            var existingEvent = TestEventFactory.Create();
+            var updateDto = new EventUpdateDto
             (
                 Title: null,
-                StartAt: futureDate,
-                EndAt: futureDate.AddHours(2));
+                StartAt: DateTime.UtcNow.AddDays(1),
+                EndAt: DateTime.UtcNow.AddDays(1).AddHours(2));
 
-            // Act
-            var exception = await Assert.ThrowsAsync<ValidationException>(() =>
-                _eventService.UpdateEventAsync(createdEvent.Id, updateEvent));
+            // Setup
+            _eventRepositoryMock
+                .Setup(repo => repo.GetByIdAsync(existingEvent.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(existingEvent);
 
-            // Assert
-            Assert.Contains("title", exception.ValidationResult.MemberNames);
+            // Act & Assert
+            Func<Task> act = async () => await _eventService.UpdateEventAsync(existingEvent.Id, updateDto);
+            var exceptionAssertion = await act.Should().ThrowAsync<ValidationException>();
+            exceptionAssertion.Which.ValidationResult.MemberNames.Should().Contain("title");
+
+            _eventRepositoryMock.Verify(repo => repo.GetByIdAsync(existingEvent.Id, It.IsAny<CancellationToken>()), Times.Once);
+            _eventRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
         }
 
         [Fact]
         public async Task UpdateEventAsync_WithPastStartAt_ThrowsValidationException()
         {
             // Arrange
-            var futureDate = DateTime.UtcNow.AddDays(1);
-            var createdEvent = await _eventService.CreateEventAsync(new EventCreateDto
-            (
-                Title: "Original Event",
-                StartAt: futureDate,
-                EndAt: futureDate.AddHours(2),
-                TotalSeats: 10));
+            var existingEvent = TestEventFactory.Create();
 
             var pastDate = DateTime.UtcNow.AddDays(-1);
-            var updateEvent = new EventUpdateDto(
+            var updateDto = new EventUpdateDto(
                 Title: "Updated Event",
                 StartAt: pastDate,
                 EndAt: pastDate.AddHours(2));
 
-            // Act
-            var exception = await Assert.ThrowsAsync<ValidationException>(() =>
-                _eventService.UpdateEventAsync(createdEvent.Id, updateEvent));
+            // Setup
+            _eventRepositoryMock
+                .Setup(repo => repo.GetByIdAsync(existingEvent.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(existingEvent);
 
-            // Assert
-            Assert.Contains("startAt", exception.ValidationResult.MemberNames);
+            // Act & Assert
+            Func<Task> act = async () => await _eventService.UpdateEventAsync(existingEvent.Id, updateDto);
+            var exceptionAssertion = await act.Should().ThrowAsync<ValidationException>();
+            exceptionAssertion.Which.ValidationResult.MemberNames.Should().Contain("startAt");
+
+            _eventRepositoryMock.Verify(repo => repo.GetByIdAsync(existingEvent.Id, It.IsAny<CancellationToken>()), Times.Once);
+            _eventRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
         }
 
         [Fact]
         public async Task UpdateEventAsync_WithValidData_UpdatesEvent()
         {
             // Arrange
-            var futureDate = DateTime.UtcNow.AddDays(1);
-            var createdEvent = await _eventService.CreateEventAsync(new EventCreateDto
-            (
-                Title: "Original Event",
-                Description: "Original Description",
-                StartAt: futureDate,
-                EndAt: futureDate.AddHours(2),
-                TotalSeats: 10));
+            var existingEvent = TestEventFactory.Create();
 
             var newFutureDate = DateTime.UtcNow.AddDays(2);
             var updateEvent = new EventUpdateDto(
@@ -1251,15 +906,78 @@ namespace CoreEvents.Tests.Services
                 StartAt: newFutureDate,
                 EndAt: newFutureDate.AddHours(3));
 
+            // Setup
+            _eventRepositoryMock
+                .Setup(repo => repo.GetByIdAsync(existingEvent.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(existingEvent);
+
             // Act
-            var result = await _eventService.UpdateEventAsync(createdEvent.Id, updateEvent);
+            var result = await _eventService.UpdateEventAsync(existingEvent.Id, updateEvent, TestContext.Current.CancellationToken);
 
             // Assert
-            Assert.Equal(createdEvent.Id, result.Id);
-            Assert.Equal("Updated Event", result.Title);
-            Assert.Equal("Updated Description", result.Description);
-            Assert.Equal(newFutureDate, result.StartAt);
-            Assert.Equal(newFutureDate.AddHours(3), result.EndAt);
+            result.Id.Should().Be(existingEvent.Id);
+            result.Title.Should().Be(updateEvent.Title);
+            result.Description.Should().Be(updateEvent.Description);
+            result.StartAt.Should().Be(newFutureDate);
+            result.EndAt.Should().Be(newFutureDate.AddHours(3));
+            
+            _eventRepositoryMock.Verify(repo => repo.GetByIdAsync(existingEvent.Id, It.IsAny<CancellationToken>()), Times.Once);
+            _eventRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task UpdateEventAsync_WhenValid_ShouldPassTokenToRepository()
+        {
+            // Arrange
+            var existEvent = TestEventFactory.Create();
+            using var cts = new CancellationTokenSource();
+            var cancellationToken = cts.Token;
+            var updateEvent = new EventUpdateDto(
+                Title: "Updated Event",
+                Description: "Updated Description",
+                StartAt: DateTime.UtcNow.AddDays(2),
+                EndAt: DateTime.UtcNow.AddDays(2).AddHours(3));
+
+            // Setup
+            _eventRepositoryMock.Setup(repo => repo.GetByIdAsync(existEvent.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(existEvent);
+
+            // Act
+            await _eventService.UpdateEventAsync(existEvent.Id, updateEvent, cancellationToken);
+
+            // Assert
+            _eventRepositoryMock.Verify(
+                repo => repo.GetByIdAsync(existEvent.Id, cancellationToken),
+                Times.Once,
+                "Сервис забыл прокинуть CancellationToken в репозиторий!");
+        }
+
+        [Fact]
+        public async Task UpdateEventAsync_WhenCancellationRequested_ShouldThrowOperationCanceledException()
+        {
+            // Arrange
+            var existEvent = TestEventFactory.Create();
+            string expectedExceptionMessage = $"The operation was canceled.";
+            using var cts = new CancellationTokenSource();
+            var cancellationToken = cts.Token;
+            var updateEvent = new EventUpdateDto(
+                Title: "Updated Event",
+                Description: "Updated Description",
+                StartAt: DateTime.UtcNow.AddDays(2),
+                EndAt: DateTime.UtcNow.AddDays(2).AddHours(3));
+
+            // Setup
+            _eventRepositoryMock.Setup(repo => repo.GetByIdAsync(existEvent.Id, It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new OperationCanceledException());
+
+            // Act & Assert
+            Func<Task> act = async () =>
+                await _eventService.UpdateEventAsync(existEvent.Id, updateEvent, cancellationToken);
+            await act.Should().ThrowAsync<OperationCanceledException>().WithMessage(expectedExceptionMessage);
+
+            _eventRepositoryMock.Verify(
+                repo => repo.GetByIdAsync(existEvent.Id, cancellationToken),
+                Times.Once);
         }
         #endregion
     }
