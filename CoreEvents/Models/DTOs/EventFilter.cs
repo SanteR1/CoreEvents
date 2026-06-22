@@ -1,6 +1,6 @@
 ﻿namespace CoreEvents.Models.DTOs
 {
-    public class EventFilter : PagedFilter
+    public record EventFilter : PagedFilter
     {
         public string? Title { get; init; }
         public DateTime? From { get; init; }

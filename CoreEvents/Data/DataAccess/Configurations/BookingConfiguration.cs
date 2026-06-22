@@ -12,6 +12,10 @@ namespace CoreEvents.Data.DataAccess.Configurations
 
             builder.HasKey(b => b.Id);
 
+            builder
+                .HasIndex(x => x.CreatedAt)
+                .HasFilter("\"status\" = 'Pending'");
+
             builder.Property(b => b.Id)
                 .HasColumnName("id")
                 .ValueGeneratedNever();

@@ -1,4 +1,5 @@
 <Solution>
+  <Project Path="CoreEvents.IntegrationTests/CoreEvents.IntegrationTests.csproj" Id="301c7a8a-1346-4544-a5f4-99e0be3a9866" />
   <Project Path="CoreEvents.Tests/CoreEvents.Tests.csproj" Id="ad2de470-f7e4-407f-9c54-66ec09341044" />
   <Project Path="CoreEvents/CoreEvents.csproj" />
 </Solution>

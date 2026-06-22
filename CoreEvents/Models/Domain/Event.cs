@@ -105,7 +105,7 @@ namespace CoreEvents.Models.Domain
                     validatingAttribute: null,
                     value: endAt);
 
-            if (startAt < DateTime.UtcNow)
+            if (startAt <= DateTime.UtcNow.AddMilliseconds(-100))
                 throw new ValidationException(
                     new ValidationResult("Событие не может начинаться в прошлом.", [nameof(startAt)]),
                     validatingAttribute: null,

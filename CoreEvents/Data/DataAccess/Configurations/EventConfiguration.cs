@@ -10,10 +10,18 @@ namespace CoreEvents.Data.DataAccess.Configurations
         {
             builder.ToTable("events");
 
+            builder.ToTable(x=> x.HasCheckConstraint("CK_events_dates", "\"start_at\" < \"end_at\""));
+            
             builder.HasKey(x=> x.Id);
 
-            builder.HasIndex(x => x.Title);
-            builder.HasIndex(x => x.StartAt);
+            // Композитный индекс для фильтрации и сортировки дат
+            builder.HasIndex(e => new { e.StartAt, e.EndAt })
+                .IsDescending(true, false); // StartAt по убыванию, EndAt по возрастанию
+
+            // GIN индекс для быстрого регистронезависимого поиска по подстроке
+            builder.HasIndex(e => e.Title)
+                .HasMethod("gin")
+                .HasOperators("gin_trgm_ops");
 
             builder.Property(x => x.Id)
                 .ValueGeneratedNever();
