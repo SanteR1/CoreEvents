@@ -35,7 +35,7 @@ namespace CoreEvents.IntegrationTests.Repositories
                 hasPendingChanges.Should().BeFalse("Модель изменилась, нужно запустить 'dotnet ef migrations add'");
             });
         }
-        
+
         [Fact]
         public async Task CancellationToken_ShouldPropagateToPostgreSqlDriverAndAbortQuery()
         {
@@ -104,25 +104,24 @@ namespace CoreEvents.IntegrationTests.Repositories
                     foreach (var prop in entity.GetProperties())
                     {
                         var columnName = prop.GetColumnName(StoreObjectIdentifier.Table(tableName, entity.GetSchema()));
-                        var rawDefaultValue = prop.GetDefaultValueSql() ?? prop.GetDefaultValue()?.ToString();
-                        output.WriteLine(
-                            $"✅ Найдено в БД: {tableName}: колонка: {columnName} с типом: {rawDefaultValue}");
-                        // 2. Очищаем известные артефакты CLR-типов EF Core
-                        var clrDefaults = new[]
-                        {
-                            "00000000-0000-0000-0000-000000000000", // Guid.Empty (артефакт для id)
-                            "01.01.0001 00:00:00", // DateTime.MinValue (артефакт для created_at)
-                            "Pending", // Enum Status
-                            "0" //  int, long, byte
-                            //"False" // На будущее: для bool
-                        };
 
-                        // Если EF Core отдает системный дефолт, приравниваем его к null, 
-                        // так как в физической БД PostgreSQL его быть не должно.
-                        if (rawDefaultValue != null && clrDefaults.Contains(rawDefaultValue))
+                        var defaultObj = prop.GetDefaultValue();
+
+                        // 1. Проверяем, является ли свойство значимым типом (не-nullable int, bool, enum, Guid и т.д.)
+                        if (defaultObj != null && prop.ClrType.IsValueType && Nullable.GetUnderlyingType(prop.ClrType) == null)
                         {
-                            rawDefaultValue = null;
+                            // Динамически создаем дефолтное значение для этого типа (эквивалент default(T))
+                            var clrDefaultInstance = Activator.CreateInstance(prop.ClrType);
+                            // Если значение от EF Core совпадает с системным нулем C#, игнорируем его
+                            if (defaultObj.Equals(clrDefaultInstance))
+                            {
+                                defaultObj = null;
+                            }
                         }
+                        // 2. Приводим к строке только реальные дефолты
+                        var rawDefaultValue = prop.GetDefaultValueSql() ?? defaultObj?.ToString();
+                        output.WriteLine(
+                            $"✅ Найдено в БД: {tableName}: колонка: {columnName} с дефолтом: {rawDefaultValue ?? "NULL"}");
 
                         efColumns.Add(new ColumnSchemaDef(
                             TableName: tableName,
@@ -138,14 +137,14 @@ namespace CoreEvents.IntegrationTests.Repositories
                     {
                         foreach (var prop in index.Properties)
                         {
+                            var columnName = prop.GetColumnName(StoreObjectIdentifier.Table(tableName, entity.GetSchema()));
+
                             efUniques.Add(new UniqueConstraintDef(
                                 TableName: tableName,
-                                ColumnName: prop.GetColumnName(
-                                    StoreObjectIdentifier.Table(tableName, entity.GetSchema()))
+                                ColumnName: columnName
                             ));
                             output.WriteLine(
-                                $"✅ Найдено Уникальные ограничения (IsUnique) в БД: {tableName}: колонка: {prop.GetColumnName(
-                                    StoreObjectIdentifier.Table(tableName, entity.GetSchema()))}");
+                                $"✅ Найдено Уникальные ограничения (IsUnique) в БД: {tableName}: колонка: {columnName}");
                         }
                     }
 
@@ -213,9 +212,10 @@ namespace CoreEvents.IntegrationTests.Repositories
                     var dbCol = dbColumns.SingleOrDefault(c =>
                         c.TableName == efCol.TableName &&
                         c.ColumnName == efCol.ColumnName);
-                    
-                    dbCol.Should().NotBeNull();
-                    dbCol.IsNullable.Should().Be(efCol.IsNullable);
+
+                    dbCol.Should().NotBeNull($"[Ошибка схемы] Колонка '{efCol.ColumnName}' не найдена в таблице '{efCol.TableName}' в БД.");
+                    dbCol.IsNullable.Should().Be(efCol.IsNullable, $"[Ошибка схемы] Таблица: '{efCol.TableName}', Колонка: '{efCol.ColumnName}'." +
+                                                                   $" EF Core ожидает IsNullable({efCol.IsNullable}), но в физической БД он IsNullable({dbCol.IsNullable})");
                     dbCol.DataType.Should().ContainEquivalentOf(efCol.DataType);
 
                     if (efCol.DefaultValue != null)

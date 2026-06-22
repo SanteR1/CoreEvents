@@ -192,6 +192,41 @@ namespace CoreEvents.IntegrationTests.Repositories
         }
 
         [Fact]
+        public async Task GetAllAsync_ValidPageAndPageSize_ReturnsCorrectPageAndItemsCount()
+        {
+            // Arrange
+            var fromDate = DateTime.UtcNow.AddDays(1);
+            var toDate = DateTime.UtcNow.AddDays(1).AddHours(1);
+
+            var filter = new EventFilter() { PageSize = 10, Page = 3 };
+            await ExecuteDbContextAsync(async ctx =>
+            {
+                List<Event> events = new List<Event>(27);
+                for (int i = 0; i < 27; i++)
+                {
+                    events.Add(Event.Create("Event " + i, fromDate, toDate, 10));
+                }
+                ctx.Events.AddRange(events);
+                await ctx.SaveChangesAsync();
+            });
+
+            // Act
+            var result = await ExecuteScopeAsync(async sp =>
+            {
+                var repo = sp.GetRequiredService<IEventRepository>();
+
+                return await repo.GetAllAsync(filter, CancellationToken.None);
+            });
+
+            // Assert
+            result.Should().NotBeNull();
+            result.CurrentPage.Should().Be(3);
+            result.PageSize.Should().Be(10);
+            result.TotalCount.Should().Be(27);
+            result.Items.Should().HaveCount(7);
+        }
+
+        [Fact]
         public async Task GetByIdAsync_ShouldRetrieveEvent()
         {
             // Arrange

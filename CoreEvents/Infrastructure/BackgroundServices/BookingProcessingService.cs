@@ -65,12 +65,12 @@ namespace CoreEvents.Infrastructure.BackgroundServices
                 {
                     _logger.LogWarning("Событие не найдено. Отмена брони {Id}.", booking.Id);
                     booking.Reject();
-                    await eventRepository.SaveChangesAsync(stoppingToken);
+                    await bookingRepository.SaveChangesAsync(stoppingToken);
                     return;
                 }
 
                 booking.Confirm();
-                await eventRepository.SaveChangesAsync(stoppingToken);
+                await bookingRepository.SaveChangesAsync(stoppingToken);
 
                 _logger.LogInformation("Бронь {Id} успешно подтверждена для события {EventId}", booking.Id, booking.EventId);
             }
@@ -112,7 +112,7 @@ namespace CoreEvents.Infrastructure.BackgroundServices
                     _logger.LogWarning("Бронь {Id} отменена (откат). Событие не найдено, места не возвращены.", booking.Id);
                 }
 
-                await eventRepository.SaveChangesAsync(stoppingToken);
+                await bookingRepository.SaveChangesAsync(stoppingToken);
             }
             catch (Exception rollbackEx)
             {
