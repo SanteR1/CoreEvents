@@ -252,22 +252,21 @@ namespace CoreEvents.Tests.Services
         }
 
         [Fact]
-        public async Task DeleteEventAsync_WithInvalidId_ReturnsFalse()
+        public async Task DeleteEventAsync_WithInvalidId_ShouldThrowNotFoundException()
         {
             // Arrange
             var invalidId = Guid.NewGuid();
+            string expectedExceptionMessage = $"Событие с ID {invalidId} не найдено.";
 
             // Setup
             _eventRepositoryMock
                 .Setup(repo => repo.GetByIdAsync(invalidId, It.IsAny<CancellationToken>()))
                 .ReturnsAsync((Event?)null);
 
-            // Act
-            var result = await _eventService.DeleteEventAsync(invalidId, TestContext.Current.CancellationToken);
-
-            // Assert
-            result.Should().BeFalse();
-
+            // Act & Assert
+            Func<Task> act = async () => await _eventService.DeleteEventAsync(invalidId, TestContext.Current.CancellationToken);
+            await act.Should().ThrowAsync<NotFoundException>().WithMessage(expectedExceptionMessage);
+            
             _eventRepositoryMock.Verify(repo => repo.GetByIdAsync(invalidId, It.IsAny<CancellationToken>()), Times.Once);
             _eventRepositoryMock.Verify(repo => repo.Delete(It.IsAny<Event>()), Times.Never);
             _eventRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -279,6 +278,11 @@ namespace CoreEvents.Tests.Services
             var existEvent = TestEventFactory.Create();
             using var cts = new CancellationTokenSource();
             var cancellationToken = cts.Token;
+
+            // Setup
+            _eventRepositoryMock
+                .Setup(repo => repo.GetByIdAsync(existEvent.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(existEvent);
 
             // Act
             await _eventService.DeleteEventAsync(existEvent.Id, cancellationToken);
@@ -761,7 +765,7 @@ namespace CoreEvents.Tests.Services
         {
             // Arrange
             Guid expectedId = Guid.NewGuid();
-            string expectedExceptionMessage = "Событие не найдено.";
+            string expectedExceptionMessage = $"Событие с ID {expectedId} не найдено.";
             var futureDate = DateTime.UtcNow.AddDays(1);
 
             EventUpdateDto entityDto = new EventUpdateDto(

@@ -31,13 +31,13 @@ namespace CoreEvents.IntegrationTests.Services
             var result = await ExecuteScopeAsync(sp =>
             {
                 var service = sp.GetRequiredService<IEventService>();
-                return service.GetAllEventsAsync(new EventFilter { Page = 1000, PageSize = 1000 }, CancellationToken.None);
+                return service.GetAllEventsAsync(new EventFilter { Page = 1, PageSize = 10000 }, CancellationToken.None);
             });
 
             // Assert
             result.TotalCount.Should().Be(1000);
             result.Items.Should().HaveCount(100);
-            result.CurrentPage.Should().Be(10);
+            result.CurrentPage.Should().Be(1);
             result.PageSize.Should().Be(100);
         }
 

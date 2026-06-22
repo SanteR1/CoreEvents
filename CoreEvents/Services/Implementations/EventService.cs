@@ -67,7 +67,7 @@ namespace CoreEvents.Services.Implementations
                 ? Math.Min(dtoFilter.PageSize, 100)
                 : 10;
             int page = dtoFilter.Page > 0
-                ? Math.Min(dtoFilter.Page, 10)
+                ? Math.Min(dtoFilter.Page, 100000)
                 : 1;
 
             var eventFilter = dtoFilter with {From = startInclusive, To = endExclusive,PageSize = pageSize, Page = page };
@@ -101,7 +101,7 @@ namespace CoreEvents.Services.Implementations
         public async Task<EventResponseDto> UpdateEventAsync(Guid id, EventUpdateDto entityDto, CancellationToken ct = default)
         {
             var existing = await _eventRepository.GetByIdAsync(id, ct);
-            if (existing == null) throw new NotFoundException("Событие не найдено.");
+            if (existing == null) throw new NotFoundException($"Событие с ID {id} не найдено.");
 
             existing.Update(
                 entityDto.Title,
@@ -117,8 +117,7 @@ namespace CoreEvents.Services.Implementations
         public async Task<bool> DeleteEventAsync(Guid id, CancellationToken ct = default)
         {
             var existing = await _eventRepository.GetByIdAsync(id, ct);
-            if (existing == null)
-                return false;
+            if (existing == null) throw new NotFoundException($"Событие с ID {id} не найдено.");
 
             _eventRepository.Delete(existing);
             await _eventRepository.SaveChangesAsync(ct);
