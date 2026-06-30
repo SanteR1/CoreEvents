@@ -1,4 +1,4 @@
-﻿namespace CoreEvents.Middleware
+﻿namespace CoreEvents.Api.Middleware
 {
     public static class MiddlewareExtensions
     {

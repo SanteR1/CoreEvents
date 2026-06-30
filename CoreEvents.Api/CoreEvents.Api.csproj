@@ -18,8 +18,7 @@
 		<PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.1" />
 	</ItemGroup>
 	<ItemGroup>
-		<InternalsVisibleTo Include="CoreEvents.Tests" />
-		<InternalsVisibleTo Include="CoreEvents.IntegrationTests" />
-		<InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
+		<ProjectReference Include="..\CoreEvents.Application\CoreEvents.Application.csproj" />
+		<ProjectReference Include="..\CoreEvents.Infrastructure\CoreEvents.Infrastructure.csproj" />
 	</ItemGroup>
 </Project>

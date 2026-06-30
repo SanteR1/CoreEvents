@@ -1,7 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using CoreEvents.Domain.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 
-namespace CoreEvents.Middleware
+namespace CoreEvents.Api.Middleware
 {
     public class ExceptionHandlingMiddleware
     {

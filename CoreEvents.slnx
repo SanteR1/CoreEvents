@@ -1,5 +1,8 @@
 <Solution>
+  <Project Path="CoreEvents.Application/CoreEvents.Application.csproj" Id="651f94dc-587c-4c4f-b75f-94bc43b35af4" />
   <Project Path="CoreEvents.IntegrationTests/CoreEvents.IntegrationTests.csproj" Id="301c7a8a-1346-4544-a5f4-99e0be3a9866" />
   <Project Path="CoreEvents.Tests/CoreEvents.Tests.csproj" Id="ad2de470-f7e4-407f-9c54-66ec09341044" />
-  <Project Path="CoreEvents/CoreEvents.csproj" />
+  <Project Path="CoreEvents.Domain/CoreEvents.Domain.csproj" Id="2ba11fe1-4fcd-432d-9dc1-dcecbecc4db7" />
+  <Project Path="CoreEvents.Infrastructure/CoreEvents.Infrastructure.csproj" Id="472de9fe-ecb0-4fd4-b2f5-8a2351a32c04" />
+  <Project Path="CoreEvents.Api/CoreEvents.Api.csproj" />
 </Solution>

@@ -1,8 +1,8 @@
-﻿using CoreEvents.Models.DTOs;
-using CoreEvents.Services.Interfaces;
+﻿using CoreEvents.Application.DTOs;
+using CoreEvents.Application.Services;
 using Microsoft.AspNetCore.Mvc;
 
-namespace CoreEvents.Controllers
+namespace CoreEvents.Api.Controllers
 {
     [Route("[controller]")]
     [ApiController]
