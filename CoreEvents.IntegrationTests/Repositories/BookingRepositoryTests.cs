@@ -1,6 +1,7 @@
-﻿using CoreEvents.Data.Repositories.Interfaces;
+﻿using CoreEvents.Application.Interfaces.Repositories;
+using CoreEvents.Domain.Entities;
+using CoreEvents.Domain.Enums;
 using CoreEvents.IntegrationTests.Infrastructure;
-using CoreEvents.Models.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using FluentAssertions;

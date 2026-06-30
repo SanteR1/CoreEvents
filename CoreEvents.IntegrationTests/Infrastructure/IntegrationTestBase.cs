@@ -1,4 +1,6 @@
-﻿using CoreEvents.Data.DataAccess;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
+using CoreEvents.Infrastructure.Data;
 using EfSchemaCompare;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
@@ -142,4 +144,23 @@ public abstract class IntegrationTestBase : IAsyncLifetime
         // False, так как hasErrors == true означает наличие проблем
         hasErrors.Should().BeFalse(comparer.GetAllErrors);
     }
+
+    /// <summary>
+    /// Стандартные параметры десериализации JSON для чтения ответов от тестового HTTP-клиента.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Конфигурация базируется на <see cref="JsonSerializerDefaults.Web"/>, что автоматически включает 
+    /// игнорирование регистра при чтении (PropertyNameCaseInsensitive = true) и использование camelCase.
+    /// </para>
+    /// <para>
+    /// В список конвертеров добавлен <see cref="JsonStringEnumConverter"/>. Это гарантирует, что 
+    /// перечисления (Enums), которые API отдает в виде строк (например, "Pending" или "Accepted"), 
+    /// будут корректно преобразованы в строго типизированные Enum в тестах, предотвращая <see cref="JsonException"/>.
+    /// </para>
+    /// </remarks>
+    protected static readonly JsonSerializerOptions DefaultJsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        Converters = { new JsonStringEnumConverter() }
+    };
 }

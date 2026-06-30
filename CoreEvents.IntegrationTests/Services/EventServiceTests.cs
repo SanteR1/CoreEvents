@@ -1,13 +1,13 @@
-﻿using CoreEvents.IntegrationTests.Infrastructure;
-using CoreEvents.Models.Domain;
-using CoreEvents.Models.DTOs;
-using CoreEvents.Services.Interfaces;
+﻿using CoreEvents.Application.DTOs;
+using CoreEvents.Application.Services;
+using CoreEvents.Domain.Entities;
+using CoreEvents.IntegrationTests.Infrastructure;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CoreEvents.IntegrationTests.Services
 {
-    public class EventServicesTests(IntegrationTestFactory factory) : IntegrationTestBase(factory)
+    public class EventServiceTests(IntegrationTestFactory factory) : IntegrationTestBase(factory)
     {
         [Fact]
         public async Task GetAllEventsAsync_WithLargeDataset_ShouldExecuteEfficientSkipTakeWithoutMemoryOverflow()
