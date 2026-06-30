@@ -1,7 +1,8 @@
-﻿using CoreEvents.IntegrationTests.Infrastructure;
-using CoreEvents.Models.Domain;
-using CoreEvents.Models.DTOs;
-using CoreEvents.Services.Interfaces;
+﻿using CoreEvents.Application.DTOs;
+using CoreEvents.Application.Services;
+using CoreEvents.Domain.Entities;
+using CoreEvents.Domain.Enums;
+using CoreEvents.IntegrationTests.Infrastructure;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 

@@ -1,4 +1,5 @@
-﻿using CoreEvents.Models.Domain;
+﻿using CoreEvents.Domain.Entities;
+using CoreEvents.Domain.Enums;
 using FluentAssertions;
 
 namespace CoreEvents.Tests.Domain

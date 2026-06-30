@@ -1,9 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using CoreEvents.Data.Repositories.Interfaces;
-using CoreEvents.Middleware;
-using CoreEvents.Models.Domain;
-using CoreEvents.Models.DTOs;
-using CoreEvents.Services.Implementations;
+using CoreEvents.Application.DTOs;
+using CoreEvents.Application.Interfaces.Repositories;
+using CoreEvents.Application.Services;
+using CoreEvents.Domain.Entities;
+using CoreEvents.Domain.Exceptions;
 using CoreEvents.Tests.Infrastructure;
 using FluentAssertions;
 using Moq;

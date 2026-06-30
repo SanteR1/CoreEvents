@@ -1,8 +1,8 @@
-﻿using CoreEvents.Data.DataAccess;
-using CoreEvents.Data.Repositories.Interfaces;
+﻿using CoreEvents.Application.DTOs;
+using CoreEvents.Application.Interfaces.Repositories;
+using CoreEvents.Domain.Entities;
+using CoreEvents.Infrastructure.Data;
 using CoreEvents.IntegrationTests.Infrastructure;
-using CoreEvents.Models.Domain;
-using CoreEvents.Models.DTOs;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
