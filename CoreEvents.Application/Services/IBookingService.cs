@@ -1,6 +1,6 @@
-﻿using CoreEvents.Models.DTOs;
+﻿using CoreEvents.Application.DTOs;
 
-namespace CoreEvents.Services.Interfaces
+namespace CoreEvents.Application.Services
 {
     public interface IBookingService
     {

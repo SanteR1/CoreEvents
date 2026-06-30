@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace CoreEvents.Models.DTOs
+namespace CoreEvents.Application.DTOs
 {
     public record BookingCreateDto(
         [Required]

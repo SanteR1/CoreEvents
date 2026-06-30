@@ -1,10 +1,9 @@
-﻿using CoreEvents.Data.Repositories.Interfaces;
-using CoreEvents.Middleware;
-using CoreEvents.Models.Domain;
-using CoreEvents.Models.DTOs;
-using CoreEvents.Services.Interfaces;
+﻿using CoreEvents.Application.DTOs;
+using CoreEvents.Application.Interfaces.Repositories;
+using CoreEvents.Domain.Entities;
+using CoreEvents.Domain.Exceptions;
 
-namespace CoreEvents.Services.Implementations
+namespace CoreEvents.Application.Services
 {
     internal sealed class EventService : IEventService
     {

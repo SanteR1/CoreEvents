@@ -1,4 +1,4 @@
-﻿namespace CoreEvents.Models.DTOs
+﻿namespace CoreEvents.Application.DTOs
 {
     public record PaginatedResult<T>
     {

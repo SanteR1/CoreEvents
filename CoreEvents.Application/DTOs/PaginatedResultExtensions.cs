@@ -1,4 +1,4 @@
-﻿namespace CoreEvents.Models.DTOs
+﻿namespace CoreEvents.Application.DTOs
 {
     public static class PaginatedResultExtensions
     {

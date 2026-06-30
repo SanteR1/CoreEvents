@@ -1,7 +1,7 @@
 ﻿using System.Linq.Expressions;
-using CoreEvents.Models.Domain;
+using CoreEvents.Domain.Entities;
 
-namespace CoreEvents.Models.DTOs
+namespace CoreEvents.Application.DTOs
 {
     public record EventResponseDto(
         Guid Id,
@@ -13,7 +13,7 @@ namespace CoreEvents.Models.DTOs
         int AvailableSeats
     )
     {
-        internal static Expression<Func<Event, EventResponseDto>> ToDto => entity => new EventResponseDto(
+        public static Expression<Func<Event, EventResponseDto>> ToDto => entity => new EventResponseDto(
             entity.Id,
             entity.Title,
             entity.Description,
@@ -23,7 +23,7 @@ namespace CoreEvents.Models.DTOs
             entity.AvailableSeats
         );
 
-        internal static EventResponseDto FromEntity(Event entity) => new(
+        public static EventResponseDto FromEntity(Event entity) => new(
             entity.Id,
             entity.Title,
             entity.Description,

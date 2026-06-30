@@ -1,9 +1,9 @@
-﻿using CoreEvents.Models.Domain;
-using CoreEvents.Models.DTOs;
+﻿using CoreEvents.Application.DTOs;
+using CoreEvents.Domain.Entities;
 
-namespace CoreEvents.Data.Repositories.Interfaces
+namespace CoreEvents.Application.Interfaces.Repositories
 {
-    internal interface IEventRepository
+    public interface IEventRepository
     {
         Task<PaginatedResult<Event>> GetAllAsync(EventFilter eventFilter, CancellationToken ct = default);
         Task<Event?> GetByIdAsync(Guid id, CancellationToken ct = default);

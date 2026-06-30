@@ -1,8 +1,8 @@
-﻿using CoreEvents.Models.Domain;
+﻿using CoreEvents.Domain.Entities;
 
-namespace CoreEvents.Data.Repositories.Interfaces
+namespace CoreEvents.Application.Interfaces.Repositories
 {
-    internal interface IBookingRepository
+    public interface IBookingRepository
     {
         Task<Booking?> GetByIdAsync(Guid id, CancellationToken ct = default);
         Task<int> SaveChangesAsync(CancellationToken ct = default);
