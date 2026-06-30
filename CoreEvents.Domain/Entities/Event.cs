@@ -1,17 +1,17 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace CoreEvents.Models.Domain
+namespace CoreEvents.Domain.Entities
 {
-    internal sealed class Event
+    public sealed class Event
     {
-        internal Guid Id { get; private set; }
-        internal string Title { get; private set; }
-        internal string? Description { get; private set; }
-        internal DateTime StartAt { get; private set; }
-        internal DateTime EndAt { get; private set; }
-        internal int TotalSeats { get; private set; }
-        internal int AvailableSeats { get; private set; }
-        internal ICollection<Booking> Bookings { get; private set; } = [];
+        public Guid Id { get; private set; }
+        public string Title { get; private set; }
+        public string? Description { get; private set; }
+        public DateTime StartAt { get; private set; }
+        public DateTime EndAt { get; private set; }
+        public int TotalSeats { get; private set; }
+        public int AvailableSeats { get; private set; }
+        public ICollection<Booking> Bookings { get; private set; } = [];
 
         // Приватный конструктор, чтобы никто не создал объект в обход метода Create
         private Event()
@@ -35,7 +35,7 @@ namespace CoreEvents.Models.Domain
             Description = description;
         }
 
-        internal static Event Create(
+        public static Event Create(
             string? title,
             DateTime? startAt,
             DateTime? endAt,
@@ -53,7 +53,7 @@ namespace CoreEvents.Models.Domain
                 description: description);
         }
 
-        internal void Update(
+        public void Update(
             string? title,
             DateTime? startAt,
             DateTime? endAt,
@@ -67,15 +67,19 @@ namespace CoreEvents.Models.Domain
             Description = description;
         }
 
-        internal bool TryReserveSeats(int count = 1)
+        public bool TryReserveSeats(int count = 1)
         {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(count);
+
             if (AvailableSeats < count) return false;
             AvailableSeats -= count;
             return true;
         }
 
-        internal bool ReleaseSeats(int count = 1)
+        public bool ReleaseSeats(int count = 1)
         {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(count);
+
             if (AvailableSeats + count > TotalSeats)
             {
                 return false;

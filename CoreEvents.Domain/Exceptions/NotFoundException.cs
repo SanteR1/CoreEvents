@@ -1,4 +1,4 @@
-﻿namespace CoreEvents.Middleware
+﻿namespace CoreEvents.Domain.Exceptions
 {
     public class NotFoundException : Exception
     {

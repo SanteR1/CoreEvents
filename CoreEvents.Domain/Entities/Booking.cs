@@ -1,18 +1,19 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using CoreEvents.Domain.Enums;
 
-namespace CoreEvents.Models.Domain
+namespace CoreEvents.Domain.Entities
 {
-    internal sealed class Booking
+    public sealed class Booking
     {
-        internal Guid Id { get; private set; }
-        internal Guid EventId { get; private set; }
-        internal BookingStatus Status { get; private set; }
-        internal DateTime CreatedAt { get; private set; }
-        internal DateTime? ProcessedAt { get; private set; }
-        internal Event? Event { get; private set; }
+        public Guid Id { get; private set; }
+        public Guid EventId { get; private set; }
+        public BookingStatus Status { get; private set; }
+        public DateTime CreatedAt { get; private set; }
+        public DateTime? ProcessedAt { get; private set; }
+        public Event? Event { get; private set; }
         private Booking() { }
 
-        internal static Booking Create(Guid eventId)
+        public static Booking Create(Guid eventId)
         {
             if (eventId == Guid.Empty)
                 throw new ValidationException(
@@ -28,8 +29,8 @@ namespace CoreEvents.Models.Domain
                 CreatedAt = DateTime.UtcNow
             };
         }
-        internal void Confirm() => ChangeStatus(BookingStatus.Confirmed);
-        internal void Reject() => ChangeStatus(BookingStatus.Rejected);
+        public void Confirm() => ChangeStatus(BookingStatus.Confirmed);
+        public void Reject() => ChangeStatus(BookingStatus.Rejected);
         private void ChangeStatus(BookingStatus newStatus)
         {
             var allowed = Status switch

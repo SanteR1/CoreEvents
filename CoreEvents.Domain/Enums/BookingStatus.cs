@@ -1,4 +1,4 @@
-﻿namespace CoreEvents.Models.Domain
+﻿namespace CoreEvents.Domain.Enums
 {
     public enum BookingStatus
     {
