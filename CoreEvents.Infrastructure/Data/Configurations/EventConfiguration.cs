@@ -1,8 +1,8 @@
-﻿using CoreEvents.Models.Domain;
+﻿using CoreEvents.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace CoreEvents.Data.DataAccess.Configurations
+namespace CoreEvents.Infrastructure.Data.Configurations
 {
     internal sealed class EventConfiguration: IEntityTypeConfiguration<Event>
     {
@@ -55,9 +55,6 @@ namespace CoreEvents.Data.DataAccess.Configurations
                 .WithOne(b => b.Event)
                 .HasForeignKey(b => b.EventId)
                 .OnDelete(DeleteBehavior.Cascade);
-
-
-
         }
     }
 }

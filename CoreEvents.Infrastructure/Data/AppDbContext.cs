@@ -1,7 +1,7 @@
-﻿using CoreEvents.Models.Domain;
+﻿using CoreEvents.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace CoreEvents.Data.DataAccess
+namespace CoreEvents.Infrastructure.Data
 {
     internal sealed class AppDbContext : DbContext
     {

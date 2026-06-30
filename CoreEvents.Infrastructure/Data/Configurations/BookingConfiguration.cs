@@ -1,8 +1,8 @@
-﻿using CoreEvents.Models.Domain;
+﻿using CoreEvents.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace CoreEvents.Data.DataAccess.Configurations
+namespace CoreEvents.Infrastructure.Data.Configurations
 {
     internal class BookingConfiguration:IEntityTypeConfiguration<Booking>
     {
