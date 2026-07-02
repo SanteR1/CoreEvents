@@ -1,7 +1,3 @@
-using CoreEvents.Application;
-using CoreEvents.Infrastructure;
-using CoreEvents.Infrastructure.Common;
-using CoreEvents.Presentation;
 
 var builder = WebApplication.CreateBuilder(args);
 

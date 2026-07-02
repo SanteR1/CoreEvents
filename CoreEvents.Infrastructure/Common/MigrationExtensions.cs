@@ -1,9 +1,8 @@
 ﻿using CoreEvents.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-namespace CoreEvents.Infrastructure.Common
+namespace Microsoft.Extensions.DependencyInjection
 {
     public static class MigrationExtensions
     {

@@ -2,7 +2,7 @@
 using CoreEvents.Presentation.BackgroundServices;
 using CoreEvents.Presentation.ExceptionHandlers;
 
-namespace CoreEvents.Presentation;
+namespace Microsoft.Extensions.DependencyInjection;
 
 public static class DependencyInjection
 {

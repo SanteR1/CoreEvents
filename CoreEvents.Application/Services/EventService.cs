@@ -78,7 +78,7 @@ namespace CoreEvents.Application.Services
         {
             var eventEntity = await _eventRepository.GetByIdAsync(id, ct);
             if (eventEntity == null)
-                throw new NotFoundException($"Событие с ID {id} не найдено.");
+                throw new DomainNotFoundException(nameof(Event), nameof(id), id);
 
             return EventResponseDto.FromEntity(eventEntity);
         }
@@ -100,7 +100,7 @@ namespace CoreEvents.Application.Services
         public async Task<EventResponseDto> UpdateEventAsync(Guid id, EventUpdateDto entityDto, CancellationToken ct = default)
         {
             var existing = await _eventRepository.GetByIdAsync(id, ct);
-            if (existing == null) throw new NotFoundException($"Событие с ID {id} не найдено.");
+            if (existing == null) throw new DomainNotFoundException(nameof(Event), nameof(id), id);
 
             existing.Update(
                 entityDto.Title,
@@ -116,7 +116,7 @@ namespace CoreEvents.Application.Services
         public async Task<bool> DeleteEventAsync(Guid id, CancellationToken ct = default)
         {
             var existing = await _eventRepository.GetByIdAsync(id, ct);
-            if (existing == null) throw new NotFoundException($"Событие с ID {id} не найдено.");
+            if (existing == null) throw new DomainNotFoundException(nameof(Event), nameof(id), id);
 
             _eventRepository.Delete(existing);
             await _eventRepository.SaveChangesAsync(ct);

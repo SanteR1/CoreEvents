@@ -1,10 +1,11 @@
-﻿using CoreEvents.Application.Interfaces.Repositories;
+﻿using CoreEvents.Application.Interfaces.Locks;
+using CoreEvents.Application.Interfaces.Repositories;
 using CoreEvents.Infrastructure.Data;
+using CoreEvents.Infrastructure.Locks;
 using CoreEvents.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
-
 
 namespace Microsoft.Extensions.DependencyInjection
 {
@@ -33,6 +34,8 @@ namespace Microsoft.Extensions.DependencyInjection
                         .EnableDetailedErrors();
                 }
             });
+
+            services.AddScoped<ILockProvider, PostgresTransactionLockProvider>();
 
             return services;
         }

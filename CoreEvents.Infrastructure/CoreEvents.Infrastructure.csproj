@@ -12,6 +12,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.8" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.8" />
     <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="10.0.8" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.8" />
@@ -25,5 +26,4 @@
   <ItemGroup>
     <ProjectReference Include="..\CoreEvents.Application\CoreEvents.Application.csproj" />
   </ItemGroup>
-
 </Project>
