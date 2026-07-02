@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using CoreEvents.Domain.Exceptions;
 
 namespace CoreEvents.Domain.Entities
 {
@@ -91,47 +92,42 @@ namespace CoreEvents.Domain.Entities
 
         private static void ThrowIfNotValid(string? title, DateTime? startAt, DateTime? endAt, int? totalSeats)
         {
+            var errors = new Dictionary<string, string[]>();
+
+            void AddError(string key, string message)
+            {
+                errors[key] = errors.TryGetValue(key, out var existing)
+                    ? [.. existing, message]
+                    : [message];
+            }
+
             if (string.IsNullOrWhiteSpace(title))
-                throw new ValidationException(
-                    new ValidationResult("Название не может быть пустым.", [nameof(title)]),
-                    validatingAttribute: null,
-                    value: title);
+                AddError(nameof(title), "Название не может быть пустым.");
 
             if (!startAt.HasValue)
-                throw new ValidationException(
-                    new ValidationResult("Дата начала не может быть пустым.", [nameof(startAt)]),
-                    validatingAttribute: null,
-                    value: startAt);
+                AddError(nameof(startAt), "Дата начала не может быть пустой.");
+            else if (startAt <= DateTime.UtcNow.AddMilliseconds(-100))
+                AddError(nameof(startAt), "Событие не может начинаться в прошлом.");
 
             if (!endAt.HasValue)
-                throw new ValidationException(
-                    new ValidationResult("Дата окончания не может быть пустым.", [nameof(endAt)]),
-                    validatingAttribute: null,
-                    value: endAt);
+                AddError(nameof(endAt), "Дата окончания не может быть пустой.");
+            else if (startAt.HasValue && endAt < startAt)
+                AddError(nameof(endAt), "Дата окончания не может быть раньше даты начала.");
 
-            if (startAt <= DateTime.UtcNow.AddMilliseconds(-100))
-                throw new ValidationException(
-                    new ValidationResult("Событие не может начинаться в прошлом.", [nameof(startAt)]),
-                    validatingAttribute: null,
-                    value: startAt);
-
-            if (endAt < startAt)
-                throw new ValidationException(
-                    new ValidationResult("Дата окончания не может быть раньше даты начала.", [nameof(endAt)]),
-                    validatingAttribute: null,
-                    value: endAt);
-
-            if (endAt == startAt)
-                throw new ValidationException(
-                    new ValidationResult("Дата начала и Дата окончания не могут быть одинаковыми.", [nameof(startAt), nameof(endAt)]),
-                    validatingAttribute: null,
-                    value: new { startAt, endAt });
+            if (startAt.HasValue && endAt.HasValue && endAt == startAt)
+            {
+                const string equalityMsg = "Дата начала и дата окончания не могут быть одинаковыми.";
+                AddError(nameof(startAt), equalityMsg);
+                AddError(nameof(endAt), equalityMsg);
+            }
 
             if (!totalSeats.HasValue || totalSeats.Value <= 0)
-                throw new ValidationException(
-                    new ValidationResult("Количество мест должно быть больше 0.", [nameof(totalSeats)]),
-                    validatingAttribute: null,
-                    value: totalSeats);
+                AddError(nameof(totalSeats), "Количество мест должно быть больше 0.");
+
+            if (errors.Count > 0)
+            {
+                throw new DomainValidationException(errors);
+            }
         }
     }
 }

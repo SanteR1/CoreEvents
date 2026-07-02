@@ -1,5 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
-using CoreEvents.Domain.Enums;
+﻿using CoreEvents.Domain.Enums;
+using CoreEvents.Domain.Exceptions;
 
 namespace CoreEvents.Domain.Entities
 {
@@ -16,10 +16,7 @@ namespace CoreEvents.Domain.Entities
         public static Booking Create(Guid eventId)
         {
             if (eventId == Guid.Empty)
-                throw new ValidationException(
-                    new ValidationResult("Событие не может быть пустым.", [nameof(eventId)]),
-                    validatingAttribute: null,
-                    value: eventId);
+                throw new DomainValidationException(nameof(eventId), "Событие не может быть пустым.");
 
             return new Booking()
             {
@@ -47,8 +44,7 @@ namespace CoreEvents.Domain.Entities
 
             if (!allowed)
             {
-                throw new InvalidOperationException(
-                    $"Бронь со статусом {Status} не может быть изменена. Переход {Status} -> {newStatus} запрещён.");
+                throw new DomainInvalidStatusTransitionException(Status, newStatus);
             }
 
             Status = newStatus;

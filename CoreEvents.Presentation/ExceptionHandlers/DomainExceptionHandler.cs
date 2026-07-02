@@ -47,6 +47,14 @@ namespace CoreEvents.Presentation.ExceptionHandlers
                 {
                     problem.Extensions["errors"] = validationEx.Errors;
                 }
+                else if (domainEx is DomainInvalidStatusTransitionException statusEx)
+                {
+                    problem.Extensions["errorData"] = new
+                    {
+                        currentStatus = statusEx.CurrentStatus,
+                        requestedStatus = statusEx.NewStatus
+                    };
+                }
             }
 
             httpContext.Response.StatusCode = statusCode;
@@ -65,6 +73,7 @@ namespace CoreEvents.Presentation.ExceptionHandlers
             DomainValidationException => StatusCodes.Status400BadRequest,
             DomainNotFoundException => StatusCodes.Status404NotFound,
             DomainNoAvailableSeatsException => StatusCodes.Status409Conflict,
+            DomainInvalidStatusTransitionException => StatusCodes.Status409Conflict,
             OperationCanceledException => StatusCodes.Status499ClientClosedRequest,
             _ => StatusCodes.Status400BadRequest 
         };
@@ -74,6 +83,7 @@ namespace CoreEvents.Presentation.ExceptionHandlers
             DomainValidationException => "Validation failed",
             DomainNotFoundException => "Resource not found",
             DomainNoAvailableSeatsException => "No available seats for this event",
+            DomainInvalidStatusTransitionException => "Status transition conflict",
             OperationCanceledException => "The operation was canceled",
             _ => "Domain rule violation"
         };
