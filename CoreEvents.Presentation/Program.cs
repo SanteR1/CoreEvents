@@ -1,6 +1,7 @@
-using CoreEvents.Api;
-using CoreEvents.Api.Middleware;
+using CoreEvents.Application;
+using CoreEvents.Infrastructure;
 using CoreEvents.Infrastructure.Common;
+using CoreEvents.Presentation;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,9 +11,9 @@ builder.Services.AddInfrastructureServices(builder.Configuration, builder.Enviro
 
 var app = builder.Build();
 
-await app.ApplyMigrationsAsync();
+app.UseExceptionHandler();
 
-app.UseExceptionHandling();
+await app.ApplyMigrationsAsync();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

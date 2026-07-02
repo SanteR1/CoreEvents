@@ -1,11 +1,10 @@
 ﻿using CoreEvents.Application.Orchestrators;
 
-namespace CoreEvents.Api.BackgroundServices
+namespace CoreEvents.Presentation.BackgroundServices
 {
     internal sealed class BookingProcessingService : BackgroundService
     {
         private const int PollingIntervalSeconds = 10;
-        private const int ProcessingDelaySeconds = 2;
         private readonly ILogger<BookingProcessingService> _logger;
         private readonly IServiceScopeFactory _scopeFactory;
 
@@ -51,8 +50,6 @@ namespace CoreEvents.Api.BackgroundServices
         {
             try
             {
-                await Task.Delay(TimeSpan.FromSeconds(ProcessingDelaySeconds), stoppingToken);
-
                 using var scope = _scopeFactory.CreateScope();
 
                 var useCase = scope.ServiceProvider.GetRequiredService<IBookingOrchestrator>();

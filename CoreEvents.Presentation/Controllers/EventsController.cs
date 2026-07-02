@@ -2,10 +2,10 @@
 using CoreEvents.Application.Services;
 using Microsoft.AspNetCore.Mvc;
 
-namespace CoreEvents.Api.Controllers
+namespace CoreEvents.Presentation.Controllers
 {
-    [ApiController]
     [Route("[controller]")]
+    [ApiController]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public class EventsController : ControllerBase
     {

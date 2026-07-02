@@ -2,7 +2,7 @@
 using CoreEvents.Application.Services;
 using Microsoft.AspNetCore.Mvc;
 
-namespace CoreEvents.Api.Controllers
+namespace CoreEvents.Presentation.Controllers
 {
     [Route("[controller]")]
     [ApiController]

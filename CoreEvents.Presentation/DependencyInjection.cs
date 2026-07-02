@@ -1,7 +1,8 @@
 ﻿using System.Text.Json.Serialization;
-using CoreEvents.Api.BackgroundServices;
+using CoreEvents.Presentation.BackgroundServices;
+using CoreEvents.Presentation.ExceptionHandlers;
 
-namespace CoreEvents.Api;
+namespace CoreEvents.Presentation;
 
 public static class DependencyInjection
 {
@@ -12,10 +13,14 @@ public static class DependencyInjection
             options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
         });
 
+        services.AddProblemDetails();
+
+        services.AddExceptionHandler<DomainExceptionHandler>();
+        services.AddExceptionHandler<GlobalExceptionHandler>();
+
         services.AddHostedService<BookingProcessingService>();
         services.AddOpenApi();
         services.AddSwaggerGen();
-        services.AddProblemDetails();
 
         return services;
     }

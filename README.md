@@ -7,7 +7,7 @@
 * **CoreEvents.Domain** - Слой ядро системы. Проект с доменными сущностями Event, Booking, Enum, доменными-Exceptions.
 * **CoreEvents.Application** - Слой бизнес-сценариев (Use Cases). Сервисы EventService и BookingService, BookingOrchestrator для обработки бронирования, DTOs, интерфейсы портов (репозиториев).
 * **CoreEvents.Infrastructure** - Инфраструктурный слой. Реализации портов (репозитории), Entity Framework, PostgreSQL, DbContext, Миграции, конфигурация сущностей.
-* **CoreEvents** - (Presentation Layer) Web API, который отвечает за представление сервиса внешнему миру, обработку HTTP-запросов и маршрутизацию, фоновый сервис.
+* **CoreEvents.Presentation** - (Presentation Layer) Web API, который отвечает за представление сервиса внешнему миру, обработку HTTP-запросов и маршрутизацию, фоновый сервис.
 
 
 ## 🛠 Технологический стек
