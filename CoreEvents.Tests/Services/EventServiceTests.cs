@@ -1,9 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using CoreEvents.Data.Repositories.Interfaces;
-using CoreEvents.Middleware;
-using CoreEvents.Models.Domain;
-using CoreEvents.Models.DTOs;
-using CoreEvents.Services.Implementations;
+using CoreEvents.Application.DTOs;
+using CoreEvents.Application.Interfaces.Repositories;
+using CoreEvents.Application.Services;
+using CoreEvents.Domain.Entities;
+using CoreEvents.Domain.Exceptions;
 using CoreEvents.Tests.Infrastructure;
 using FluentAssertions;
 using Moq;
@@ -38,8 +38,10 @@ namespace CoreEvents.Tests.Services
 
             // Act & Assert
             Func<Task> act = async () => await _eventService.CreateEventAsync(createEvent, TestContext.Current.CancellationToken);
-            var exceptionAssertion = await act.Should().ThrowAsync<ValidationException>();
-            exceptionAssertion.Which.ValidationResult.MemberNames.Should().Contain("title");
+            var exceptionAssertion = await act.Should().ThrowAsync<DomainValidationException>();
+
+            exceptionAssertion.Which.ErrorCode.Should().Be("Domain.ValidationFailed");
+            exceptionAssertion.Which.Errors.Should().ContainKey("title");
 
             _eventRepositoryMock.Verify(repo => repo.Add(It.IsAny<Event>()), Times.Never);
             _eventRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -58,8 +60,10 @@ namespace CoreEvents.Tests.Services
 
             // Act & Assert
             Func<Task> act = async () => await _eventService.CreateEventAsync(createEventDto);
-            var exceptionAssertion = await act.Should().ThrowAsync<ValidationException>();
-            exceptionAssertion.Which.ValidationResult.MemberNames.Should().Contain("endAt");
+            var exceptionAssertion = await act.Should().ThrowAsync<DomainValidationException>();
+
+            exceptionAssertion.Which.ErrorCode.Should().Be("Domain.ValidationFailed");
+            exceptionAssertion.Which.Errors.Should().ContainKey("endAt");
 
             _eventRepositoryMock.Verify(repo => repo.Add(It.IsAny<Event>()), Times.Never);
             _eventRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -78,8 +82,10 @@ namespace CoreEvents.Tests.Services
 
             // Act & Assert
             Func<Task> act = async () => await _eventService.CreateEventAsync(createEvent);
-            var exceptionAssertion = await act.Should().ThrowAsync<ValidationException>();
-            exceptionAssertion.Which.ValidationResult.MemberNames.Should().Contain("startAt").And.Contain("endAt");
+            var exceptionAssertion = await act.Should().ThrowAsync<DomainValidationException>();
+
+            exceptionAssertion.Which.ErrorCode.Should().Be("Domain.ValidationFailed");
+            exceptionAssertion.Which.Errors.Should().ContainKey("startAt").And.ContainKey("endAt");
 
             _eventRepositoryMock.Verify(repo => repo.Add(It.IsAny<Event>()), Times.Never);
             _eventRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -99,8 +105,10 @@ namespace CoreEvents.Tests.Services
 
             // Act & Assert
             Func<Task> act = async () => await _eventService.CreateEventAsync(createEvent);
-            var exceptionAssertion = await act.Should().ThrowAsync<ValidationException>();
-            exceptionAssertion.Which.ValidationResult.MemberNames.Should().Contain("endAt");
+            var exceptionAssertion = await act.Should().ThrowAsync<DomainValidationException>();
+
+            exceptionAssertion.Which.ErrorCode.Should().Be("Domain.ValidationFailed");
+            exceptionAssertion.Which.Errors.Should().ContainKey("endAt");
 
             _eventRepositoryMock.Verify(repo => repo.Add(It.IsAny<Event>()), Times.Never);
             _eventRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -119,8 +127,10 @@ namespace CoreEvents.Tests.Services
 
             // Act & Assert
             Func<Task> act = async () => await _eventService.CreateEventAsync(createEvent);
-            var exceptionAssertion = await act.Should().ThrowAsync<ValidationException>();
-            exceptionAssertion.Which.ValidationResult.MemberNames.Should().Contain("startAt");
+            var exceptionAssertion = await act.Should().ThrowAsync<DomainValidationException>();
+
+            exceptionAssertion.Which.ErrorCode.Should().Be("Domain.ValidationFailed");
+            exceptionAssertion.Which.Errors.Should().ContainKey("startAt");
 
             _eventRepositoryMock.Verify(repo => repo.Add(It.IsAny<Event>()), Times.Never);
             _eventRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -256,7 +266,6 @@ namespace CoreEvents.Tests.Services
         {
             // Arrange
             var invalidId = Guid.NewGuid();
-            string expectedExceptionMessage = $"Событие с ID {invalidId} не найдено.";
 
             // Setup
             _eventRepositoryMock
@@ -265,8 +274,13 @@ namespace CoreEvents.Tests.Services
 
             // Act & Assert
             Func<Task> act = async () => await _eventService.DeleteEventAsync(invalidId, TestContext.Current.CancellationToken);
-            await act.Should().ThrowAsync<NotFoundException>().WithMessage(expectedExceptionMessage);
-            
+            var exceptionAssertion = await act.Should().ThrowAsync<DomainNotFoundException>();
+
+            exceptionAssertion.Which.ErrorCode.Should().Be("Event.NotFound");
+            exceptionAssertion.Which.EntityName.Should().Be("Event");
+            exceptionAssertion.Which.ParamName.Should().Be("id");
+            exceptionAssertion.Which.Key.Should().Be(invalidId.ToString());
+
             _eventRepositoryMock.Verify(repo => repo.GetByIdAsync(invalidId, It.IsAny<CancellationToken>()), Times.Once);
             _eventRepositoryMock.Verify(repo => repo.Delete(It.IsAny<Event>()), Times.Never);
             _eventRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -709,7 +723,12 @@ namespace CoreEvents.Tests.Services
 
             // Act & Assert
             Func<Task> act = async () => await _eventService.GetEventByIdAsync(expectedId);
-            await act.Should().ThrowAsync<NotFoundException>().WithMessage(expectedExceptionMessage);
+            var exceptionAssertion = await act.Should().ThrowAsync<DomainNotFoundException>();
+
+            exceptionAssertion.Which.ErrorCode.Should().Be("Event.NotFound");
+            exceptionAssertion.Which.EntityName.Should().Be("Event");
+            exceptionAssertion.Which.ParamName.Should().Be("id");
+            exceptionAssertion.Which.Key.Should().Be(expectedId.ToString());
 
             _eventRepositoryMock.Verify(repo => repo.GetByIdAsync(expectedId, It.IsAny<CancellationToken>()), Times.Once);
         }
@@ -765,7 +784,6 @@ namespace CoreEvents.Tests.Services
         {
             // Arrange
             Guid expectedId = Guid.NewGuid();
-            string expectedExceptionMessage = $"Событие с ID {expectedId} не найдено.";
             var futureDate = DateTime.UtcNow.AddDays(1);
 
             EventUpdateDto entityDto = new EventUpdateDto(
@@ -781,7 +799,12 @@ namespace CoreEvents.Tests.Services
 
             // Act & Assert
             Func<Task> act = async () => await _eventService.UpdateEventAsync(expectedId, entityDto);
-            await act.Should().ThrowAsync<NotFoundException>().WithMessage(expectedExceptionMessage);
+            var exceptionAssertion = await act.Should().ThrowAsync<DomainNotFoundException>();
+
+            exceptionAssertion.Which.ErrorCode.Should().Be("Event.NotFound");
+            exceptionAssertion.Which.EntityName.Should().Be("Event");
+            exceptionAssertion.Which.ParamName.Should().Be("id");
+            exceptionAssertion.Which.Key.Should().Be(expectedId.ToString());
 
             _eventRepositoryMock.Verify(repo => repo.GetByIdAsync(expectedId, It.IsAny<CancellationToken>()), Times.Once);
             _eventRepositoryMock.Verify(repo => repo.Update(It.IsAny<Event>()), Times.Never);
@@ -839,8 +862,10 @@ namespace CoreEvents.Tests.Services
 
             // Act & Assert
             Func<Task> act = async () => await _eventService.UpdateEventAsync(existingEvent.Id, updateDto);
-            var exceptionAssertion = await act.Should().ThrowAsync<ValidationException>();
-            exceptionAssertion.Which.ValidationResult.MemberNames.Should().Contain("endAt");
+            var exceptionAssertion = await act.Should().ThrowAsync<DomainValidationException>();
+
+            exceptionAssertion.Which.ErrorCode.Should().Be("Domain.ValidationFailed");
+            exceptionAssertion.Which.Errors.Should().ContainKey("endAt");
 
             _eventRepositoryMock.Verify(repo => repo.GetByIdAsync(existingEvent.Id, It.IsAny<CancellationToken>()), Times.Once);
             _eventRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -864,8 +889,10 @@ namespace CoreEvents.Tests.Services
 
             // Act & Assert
             Func<Task> act = async () => await _eventService.UpdateEventAsync(existingEvent.Id, updateDto);
-            var exceptionAssertion = await act.Should().ThrowAsync<ValidationException>();
-            exceptionAssertion.Which.ValidationResult.MemberNames.Should().Contain("title");
+            var exceptionAssertion = await act.Should().ThrowAsync<DomainValidationException>();
+
+            exceptionAssertion.Which.ErrorCode.Should().Be("Domain.ValidationFailed");
+            exceptionAssertion.Which.Errors.Should().ContainKey("title");
 
             _eventRepositoryMock.Verify(repo => repo.GetByIdAsync(existingEvent.Id, It.IsAny<CancellationToken>()), Times.Once);
             _eventRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -890,8 +917,10 @@ namespace CoreEvents.Tests.Services
 
             // Act & Assert
             Func<Task> act = async () => await _eventService.UpdateEventAsync(existingEvent.Id, updateDto);
-            var exceptionAssertion = await act.Should().ThrowAsync<ValidationException>();
-            exceptionAssertion.Which.ValidationResult.MemberNames.Should().Contain("startAt");
+            var exceptionAssertion = await act.Should().ThrowAsync<DomainValidationException>();
+            
+            exceptionAssertion.Which.ErrorCode.Should().Be("Domain.ValidationFailed");
+            exceptionAssertion.Which.Errors.Should().ContainKey("startAt");
 
             _eventRepositoryMock.Verify(repo => repo.GetByIdAsync(existingEvent.Id, It.IsAny<CancellationToken>()), Times.Once);
             _eventRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);

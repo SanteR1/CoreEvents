@@ -1,4 +1,4 @@
-﻿using CoreEvents.Models.Domain;
+﻿using CoreEvents.Domain.Entities;
 
 namespace CoreEvents.Tests.Infrastructure
 {
