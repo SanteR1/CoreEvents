@@ -35,7 +35,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\CoreEvents.Api\CoreEvents.Api.csproj" />
+		<ProjectReference Include="..\CoreEvents.Presentation\CoreEvents.Presentation.csproj" />
+		<ProjectReference Include="..\CoreEvents.Application\CoreEvents.Application.csproj" />
+		<ProjectReference Include="..\CoreEvents.Domain\CoreEvents.Domain.csproj" />
 	</ItemGroup>
 	<ItemGroup>
 		<Using Include="Xunit" />
