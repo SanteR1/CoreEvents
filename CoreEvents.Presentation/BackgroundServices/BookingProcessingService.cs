@@ -4,22 +4,25 @@ namespace CoreEvents.Presentation.BackgroundServices
 {
     internal sealed class BookingProcessingService : BackgroundService
     {
-        private const int PollingIntervalSeconds = 10;
+        private readonly int _pollingIntervalMilliseconds;
         private readonly ILogger<BookingProcessingService> _logger;
         private readonly IServiceScopeFactory _scopeFactory;
 
         public BookingProcessingService(
             IServiceScopeFactory scopeFactory,
-            ILogger<BookingProcessingService> logger)
+            ILogger<BookingProcessingService> logger, IConfiguration configuration)
         {
             _scopeFactory = scopeFactory;
             _logger = logger;
+            _pollingIntervalMilliseconds = configuration.GetValue<int>("BackgroundServices:BookingInterval", 10_000);
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(_pollingIntervalMilliseconds));
             _logger.LogInformation("Фоновая служба обработки броней запущена.");
-            while (!stoppingToken.IsCancellationRequested)
+
+            while (await timer.WaitForNextTickAsync(stoppingToken))
             {
                 try
                 {
@@ -30,7 +33,6 @@ namespace CoreEvents.Presentation.BackgroundServices
                     
                     var tasks = idsToProcess.Select(id => ProcessSingleBookingSafeAsync(id, stoppingToken));
                     await Task.WhenAll(tasks);
-                    await Task.Delay(TimeSpan.FromSeconds(PollingIntervalSeconds), stoppingToken);
                 }
                 catch (OperationCanceledException e) when (stoppingToken.IsCancellationRequested)
                 {
@@ -40,7 +42,6 @@ namespace CoreEvents.Presentation.BackgroundServices
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Критическая ошибка в главном цикле фоновой обработки.");
-                    await Task.Delay(TimeSpan.FromSeconds(PollingIntervalSeconds), stoppingToken);
                 }
             }
             _logger.LogInformation("Фоновая служба остановлена.");

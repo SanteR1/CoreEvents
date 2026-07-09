@@ -13,5 +13,6 @@
 	<ItemGroup>
 		<ProjectReference Include="..\CoreEvents.Application\CoreEvents.Application.csproj" />
 		<ProjectReference Include="..\CoreEvents.Infrastructure\CoreEvents.Infrastructure.csproj" />
+		<InternalsVisibleTo Include="CoreEvents.IntegrationTests" />
 	</ItemGroup>
 </Project>
