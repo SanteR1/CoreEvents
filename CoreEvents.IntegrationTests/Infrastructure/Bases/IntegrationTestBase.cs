@@ -1,28 +1,28 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using CoreEvents.Infrastructure.Data;
+using CoreEvents.IntegrationTests.Infrastructure.Factories;
 using EfSchemaCompare;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CoreEvents.IntegrationTests.Infrastructure;
+namespace CoreEvents.IntegrationTests.Infrastructure.Bases;
 
 /// <summary>
 /// Базовый класс для интеграционных тестов системы.
 /// Обеспечивает запуск на единой инфраструктуре (Testcontainers/WebApplicationFactory),
 /// изоляцию DI-контейнеров для каждого этапа теста и автоматическую очистку БД.
 /// </summary>
-[Collection(TestCollections.Shared)]
-public abstract class IntegrationTestBase : IAsyncLifetime
+public abstract class IntegrationTestBase<TFactory> : IAsyncLifetime where TFactory : IntegrationTestFactory
 {
-    protected readonly IntegrationTestFactory Factory;
+    protected readonly TFactory Factory;
 
     /// <summary>
     /// Инициализирует базовый класс тестов, получая глобальный экземпляр фабрики.
     /// </summary>
     /// <param name="factory">Глобальная фабрика, созданная один раз для всей коллекции тестов.</param>
-    protected IntegrationTestBase(IntegrationTestFactory factory)
+    protected IntegrationTestBase(TFactory factory)
     {
         Factory = factory;
     }
@@ -143,6 +143,58 @@ public abstract class IntegrationTestBase : IAsyncLifetime
 
         // False, так как hasErrors == true означает наличие проблем
         hasErrors.Should().BeFalse(comparer.GetAllErrors);
+    }
+
+    /// <summary>
+    /// Асинхронно ожидает выполнения указанного условия, опрашивая его с заданным интервалом,
+    /// пока условие не станет истинным либо не истечёт таймаут.
+    /// </summary>
+    /// <param name="condition"></param>
+    /// <param name="timeout"></param>
+    /// <param name="pollingInterval"></param>
+    /// <param name="testCancellationToken"></param>
+    /// <returns></returns>
+    protected static async Task<bool> WaitUntilAsync(
+        Func<Task<bool>> condition,
+        TimeSpan timeout,
+        TimeSpan pollingInterval,
+        CancellationToken testCancellationToken = default)
+    {
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(testCancellationToken);
+        cts.CancelAfter(timeout);
+
+        try
+        {
+            if (await condition())
+            {
+                return true;
+            }
+
+            using var timer = new PeriodicTimer(pollingInterval);
+
+            while (await timer.WaitForNextTickAsync(cts.Token))
+            {
+                try
+                {
+                    if (await condition())
+                    {
+                        return true;
+                    }
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    // Транзиентная ошибка (например, гонка с Respawn.ResetAsync) —
+                    // не валим тест немедленно, дает шанс на следующий тик до истечения таймаута
+                    TestContext.Current.SendDiagnosticMessage(
+                        $"WaitUntilAsync: transient error while polling condition: {ex}");
+                }
+            }
+        }
+        catch (OperationCanceledException) when (!testCancellationToken.IsCancellationRequested)
+        {
+            return false;
+        }
+        return false;
     }
 
     /// <summary>

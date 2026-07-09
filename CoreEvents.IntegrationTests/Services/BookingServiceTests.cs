@@ -3,14 +3,15 @@ using CoreEvents.Application.Services;
 using CoreEvents.Domain.Entities;
 using CoreEvents.Domain.Enums;
 using CoreEvents.Domain.Exceptions;
-using CoreEvents.IntegrationTests.Infrastructure;
+using CoreEvents.IntegrationTests.Infrastructure.Bases;
+using CoreEvents.IntegrationTests.Infrastructure.Factories;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CoreEvents.IntegrationTests.Services
 {
-    public class BookingServiceTests(IntegrationTestFactory factory) : IntegrationTestBase(factory)
+    public class BookingServiceTests(ApiOnlyIntegrationTestFactory factory) : ApiOnlyIntegrationTestBase(factory)
     {
         [Fact]
         public async Task CreateBookingAsync_WithValidData_ShouldReturnSuccessResultAndSaveToDb()
@@ -95,7 +96,7 @@ namespace CoreEvents.IntegrationTests.Services
                 updatedEvent!.AvailableSeats.Should().Be(0);
             });
         }
-        
+
         [Fact]
         public async Task CreateBookingAsync_MultipleBookingsForSameEvent_ShouldAssignUniqueIds()
         {
@@ -240,7 +241,7 @@ namespace CoreEvents.IntegrationTests.Services
                 updatedEvent!.AvailableSeats.Should().Be(0);
             });
         }
-        
+
         [Fact]
         public async Task GetBookingByIdAsync_WithExistId_ShouldReturnSuccessBooking()
         {

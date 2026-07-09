@@ -1,14 +1,15 @@
 ﻿using CoreEvents.Application.Interfaces.Repositories;
 using CoreEvents.Domain.Entities;
 using CoreEvents.Domain.Enums;
-using CoreEvents.IntegrationTests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using FluentAssertions;
+using CoreEvents.IntegrationTests.Infrastructure.Bases;
+using CoreEvents.IntegrationTests.Infrastructure.Factories;
 
 namespace CoreEvents.IntegrationTests.Repositories
 {
-    public class BookingRepositoryTests(IntegrationTestFactory factory) : IntegrationTestBase(factory)
+    public class BookingRepositoryTests(ApiOnlyIntegrationTestFactory factory) : ApiOnlyIntegrationTestBase(factory)
     {
         [Fact]
         public async Task Add_ExistEventId_ShouldInsertBookingWithPendingStatus()

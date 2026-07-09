@@ -10,9 +10,8 @@ using Respawn;
 using Respawn.Graph;
 using Testcontainers.PostgreSql;
 
-namespace CoreEvents.IntegrationTests.Infrastructure;
-
-public sealed class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLifetime
+namespace CoreEvents.IntegrationTests.Infrastructure.Factories;
+public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     private readonly PostgreSqlContainer _dbContainer = new PostgreSqlBuilder("postgres:18-alpine")
         .WithDatabase("core_events_tests")
@@ -51,6 +50,8 @@ public sealed class IntegrationTestFactory : WebApplicationFactory<Program>, IAs
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("IntegrationTesting");
+
+        builder.UseSetting("BackgroundServices:BookingInterval", "10");
 
         builder.ConfigureTestServices(services =>
         {

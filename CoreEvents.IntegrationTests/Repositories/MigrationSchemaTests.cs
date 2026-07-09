@@ -1,4 +1,5 @@
-﻿using CoreEvents.IntegrationTests.Infrastructure;
+﻿using CoreEvents.IntegrationTests.Infrastructure.Bases;
+using CoreEvents.IntegrationTests.Infrastructure.Factories;
 using Dapper;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
@@ -7,8 +8,8 @@ using Microsoft.EntityFrameworkCore.Metadata;
 
 namespace CoreEvents.IntegrationTests.Repositories
 {
-    public class MigrationSchemaTests(IntegrationTestFactory factory, ITestOutputHelper output)
-        : IntegrationTestBase(factory)
+    public class MigrationSchemaTests(ApiOnlyIntegrationTestFactory factory, ITestOutputHelper output)
+        : ApiOnlyIntegrationTestBase(factory)
     {
         [Fact]
         public async Task Schema_ShouldBeValid()

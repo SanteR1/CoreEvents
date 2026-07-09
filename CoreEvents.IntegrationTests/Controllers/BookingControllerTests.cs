@@ -3,12 +3,13 @@ using System.Net.Http.Json;
 using CoreEvents.Application.DTOs;
 using CoreEvents.Domain.Entities;
 using CoreEvents.Domain.Enums;
-using CoreEvents.IntegrationTests.Infrastructure;
+using CoreEvents.IntegrationTests.Infrastructure.Bases;
+using CoreEvents.IntegrationTests.Infrastructure.Factories;
 using FluentAssertions;
 
 namespace CoreEvents.IntegrationTests.Controllers
 {
-    public class BookingControllerTests(IntegrationTestFactory factory):IntegrationTestBase(factory)
+    public class BookingControllerTests(ApiOnlyIntegrationTestFactory factory): ApiOnlyIntegrationTestBase(factory)
     {
         private readonly HttpClient _client = factory.CreateClient();
 

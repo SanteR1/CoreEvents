@@ -2,15 +2,16 @@
 using CoreEvents.Application.Interfaces.Repositories;
 using CoreEvents.Domain.Entities;
 using CoreEvents.Infrastructure.Data;
-using CoreEvents.IntegrationTests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using FluentAssertions;
+using CoreEvents.IntegrationTests.Infrastructure.Bases;
+using CoreEvents.IntegrationTests.Infrastructure.Factories;
 
 namespace CoreEvents.IntegrationTests.Repositories
 {
-    public class EventRepositoryTests(IntegrationTestFactory factory) : IntegrationTestBase(factory)
+    public class EventRepositoryTests(ApiOnlyIntegrationTestFactory factory) : ApiOnlyIntegrationTestBase(factory)
     {
         [Fact]
         public async Task AddAndSave_ViaRepository_ShouldPersistEvent()
