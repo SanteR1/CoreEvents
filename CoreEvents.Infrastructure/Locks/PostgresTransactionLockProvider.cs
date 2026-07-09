@@ -25,7 +25,7 @@ namespace CoreEvents.Infrastructure.Locks
 
                 await _dbContext.Database.ExecuteSqlRawAsync(
                     "SELECT pg_advisory_xact_lock({0});",
-                    new object[] { lockId },
+                    [lockId],
                     cancellationToken: ct);
 
                 return new PostgresTransactionLockScope(transaction);
@@ -37,6 +37,33 @@ namespace CoreEvents.Infrastructure.Locks
             }
         }
 
+        public async Task<ILockScope?> TryAcquireLockAsync(string resourceKey, CancellationToken ct = default)
+        {
+            var transaction = await _dbContext.Database.BeginTransactionAsync(ct);
+
+            try
+            {
+                long lockId = GenerateLockId(resourceKey);
+
+                bool lockAcquired = await _dbContext.Database
+                    .SqlQueryRaw<bool>("SELECT pg_try_advisory_xact_lock({0}) AS \"Value\"", lockId)
+                    .SingleAsync(ct);
+
+                if (lockAcquired)
+                {
+                    return new PostgresTransactionLockScope(transaction);
+                }
+
+                await transaction.DisposeAsync();
+                return null;
+            }
+            catch
+            {
+                await transaction.DisposeAsync();
+                throw;
+            }
+        }
+        
         private static long GenerateLockId(string resourceKey)
         {
             byte[] hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(resourceKey));
