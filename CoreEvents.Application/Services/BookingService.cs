@@ -1,6 +1,7 @@
 ﻿using CoreEvents.Application.DTOs;
 using CoreEvents.Application.Interfaces.Locks;
 using CoreEvents.Application.Interfaces.Repositories;
+using CoreEvents.Application.Locks;
 using CoreEvents.Domain.Entities;
 using CoreEvents.Domain.Exceptions;
 
@@ -21,9 +22,12 @@ namespace CoreEvents.Application.Services
         {
             ct.ThrowIfCancellationRequested();
 
-            var lockKey = $"event:{bookingDto.EventId}";
+            var lockKey = LockKeys.Event(bookingDto.EventId);
 
-            await using var lockScope = await _lockProvider.AcquireLockAsync(lockKey, ct);
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            cts.CancelAfter(TimeSpan.FromSeconds(30));
+
+            await using var lockScope = await _lockProvider.AcquireLockAsync(lockKey, cts.Token);
 
             var existEvent = await _eventRepository.GetByIdAsync(bookingDto.EventId, ct);
             if (existEvent is null) throw new DomainNotFoundException(nameof(Event), nameof(bookingDto.EventId), bookingDto.EventId.ToString());
@@ -33,9 +37,9 @@ namespace CoreEvents.Application.Services
             var booking = Booking.Create(bookingDto.EventId);
             _bookingRepository.Add(booking);
 
-            await _bookingRepository.SaveChangesAsync(ct);
+            await _bookingRepository.SaveChangesAsync(cts.Token);
 
-            await lockScope.CompleteAsync(ct);
+            await lockScope.CompleteAsync(cts.Token);
 
             return BookingResponseDto.FromEntity(booking);
         }

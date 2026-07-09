@@ -1,96 +1,140 @@
-﻿using CoreEvents.Application.Interfaces.Repositories;
+﻿using CoreEvents.Application.Interfaces.Locks;
+using CoreEvents.Application.Interfaces.Repositories;
+using CoreEvents.Application.Locks;
 using CoreEvents.Domain.Enums;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace CoreEvents.Application.Orchestrators
 {
     internal class BookingOrchestrator : IBookingOrchestrator
     {
-        private readonly IBookingRepository _bookingRepository;
-        private readonly IEventRepository _eventRepository;
+        private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger<BookingOrchestrator> _logger;
+        private readonly ILockProvider _lockProvider;
 
         private const int ProcessingDelaySeconds = 2;
 
-        public BookingOrchestrator(IBookingRepository bookingRepository,
-            IEventRepository eventRepository,
-            ILogger<BookingOrchestrator> logger)
+        public BookingOrchestrator(IServiceScopeFactory scopeFactory,
+            ILogger<BookingOrchestrator> logger,
+            ILockProvider lockProvider)
         {
-            _bookingRepository = bookingRepository;
-            _eventRepository = eventRepository;
+            _scopeFactory = scopeFactory;
             _logger = logger;
+            _lockProvider = lockProvider;
         }
 
         public async Task<IReadOnlyCollection<Guid>> GetWorkItemsAsync(CancellationToken cancellationToken)
         {
-            return await _bookingRepository.GetPendingAsync(cancellationToken);
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            var bookingRepository = scope.ServiceProvider.GetRequiredService<IBookingRepository>();
+            return await bookingRepository.GetPendingAsync(cancellationToken);
         }
 
         public async Task ProcessBookingAsync(Guid bookingId, CancellationToken stoppingToken)
         {
-            _logger.LogInformation("Начал обработку брони {id}", bookingId);
+            var lockKey = LockKeys.BookingProcessing(bookingId);
 
-            // Искусственная задержка по условию задания
-            await Task.Delay(TimeSpan.FromSeconds(ProcessingDelaySeconds), stoppingToken);
+            await using var lockScope = await _lockProvider.TryAcquireLockAsync(lockKey, stoppingToken);
+
+            if (lockScope == null)
+            {
+                _logger.LogDebug("Бронь {id} уже в обработке другим инстансом. Пропуск.", bookingId);
+                return;
+            }
+
+            _logger.LogInformation("Начал обработку брони {id} (блокировка получена)", bookingId);
 
             try
             {
-                var booking = await _bookingRepository.GetByIdAsync(bookingId, stoppingToken);
+                // Искусственная задержка по условию задания увеличивает время интеграционных тестов
+                // await Task.Delay(TimeSpan.FromSeconds(ProcessingDelaySeconds), stoppingToken);
+
+                await using var mainScope = _scopeFactory.CreateAsyncScope();
+                var bookingRepository = mainScope.ServiceProvider.GetRequiredService<IBookingRepository>();
+
+                var booking = await bookingRepository.GetByIdAsync(bookingId, stoppingToken);
                 if (booking is null || booking.Status != BookingStatus.Pending) return;
 
-                var existEvent = await _eventRepository.GetByIdAsync(booking.EventId, stoppingToken);
+                var eventRepository = mainScope.ServiceProvider.GetRequiredService<IEventRepository>();
+                var existEvent = await eventRepository.GetByIdAsync(booking.EventId, stoppingToken);
                 if (existEvent is null)
                 {
-                    _logger.LogWarning("Событие не найдено. Отмена брони {Id}.", booking.Id);
+                    _logger.LogWarning("Событие не найдено. Отмена брони {id}.", booking.Id);
                     booking.Reject();
-                    await _bookingRepository.SaveChangesAsync(stoppingToken);
+                    await bookingRepository.SaveChangesAsync(stoppingToken);
+
+                    await lockScope.CompleteAsync(stoppingToken);
                     return;
                 }
 
                 booking.Confirm();
-                await _bookingRepository.SaveChangesAsync(stoppingToken);
+                
+                await bookingRepository.SaveChangesAsync(stoppingToken);
 
-                _logger.LogInformation("Бронь {Id} успешно подтверждена для события {EventId}", booking.Id, booking.EventId);
+                await lockScope.CompleteAsync(stoppingToken);
+
+                _logger.LogInformation("Бронь {id} успешно подтверждена для события {EventId}", booking.Id, booking.EventId);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
-                _logger.LogInformation("Операция брони с ID {Id} была отменена", bookingId);
+                _logger.LogInformation("Операция брони с ID {id} была отменена", bookingId);
                 throw;
             }
             catch (Exception ex)
             {
-                _logger.LogCritical(ex, "Ошибка при обработке бронирования {Id}. Попытка отката...", bookingId);
-                await RollbackBookingAsync(bookingId, stoppingToken);
+                _logger.LogCritical(ex, "Ошибка при обработке бронирования {id}. Попытка отката...", bookingId);
+                await RollbackBookingAsync(bookingId, lockScope, stoppingToken);
             }
             _logger.LogInformation("Закончил обработку брони {id}", bookingId);
         }
 
-        private async Task RollbackBookingAsync(Guid bookingId, CancellationToken stoppingToken)
+        private async Task RollbackBookingAsync(Guid bookingId, ILockScope lockScope, CancellationToken stoppingToken)
         {
             try
             {
-                var booking = await _bookingRepository.GetByIdAsync(bookingId, stoppingToken);
+                await using var rollbackScope = _scopeFactory.CreateAsyncScope();
+                var bookingRepository = rollbackScope.ServiceProvider.GetRequiredService<IBookingRepository>();
+
+                var booking = await bookingRepository.GetByIdAsync(bookingId, stoppingToken);
                 if (booking is null || booking.Status != BookingStatus.Pending) return;
 
-                var existEvent = await _eventRepository.GetByIdAsync(booking.EventId, stoppingToken);
+                var eventLockProvider = rollbackScope.ServiceProvider.GetRequiredService<ILockProvider>();
+
+                var lockKey = LockKeys.Event(booking.EventId);
+
+                await using var eventLock = await eventLockProvider.TryAcquireLockAsync(lockKey, stoppingToken);
+
+                if (eventLock == null)
+                {
+                    _logger.LogWarning("Не удалось захватить блокировку для события {EventId}. Откат брони {id} отложен.", booking.EventId, bookingId);
+                    return;
+                }
+
+                var eventRepository = rollbackScope.ServiceProvider.GetRequiredService<IEventRepository>();
+                var existEvent = await eventRepository.GetByIdAsync(booking.EventId, stoppingToken);
 
                 booking.Reject();
 
                 if (existEvent is not null)
                 {
                     var released = existEvent.ReleaseSeats();
-                    _logger.LogInformation("Бронь {Id} отменена (откат). Места возвращены: {released}.", booking.Id, released);
+
+                    _logger.LogInformation("Бронь {id} отменена (откат). Места возвращены: {released}.", booking.Id, released);
                 }
                 else
                 {
-                    _logger.LogWarning("Бронь {Id} отменена (откат). Событие не найдено, места не возвращены.", booking.Id);
+                    _logger.LogWarning("Бронь {id} отменена (откат). Событие не найдено, места не возвращены.", booking.Id);
                 }
 
-                await _bookingRepository.SaveChangesAsync(stoppingToken);
+                await bookingRepository.SaveChangesAsync(stoppingToken);
+
+                await eventLock.CompleteAsync(stoppingToken);
+                await lockScope.CompleteAsync(stoppingToken);
             }
             catch (Exception rollbackEx)
             {
-                _logger.LogCritical(rollbackEx, "Fatal: Не удалось откатить бронь {Id} после первичной ошибки!", bookingId);
+                _logger.LogCritical(rollbackEx, "Fatal: Не удалось откатить бронь {id} после первичной ошибки!", bookingId);
             }
         }
     }
