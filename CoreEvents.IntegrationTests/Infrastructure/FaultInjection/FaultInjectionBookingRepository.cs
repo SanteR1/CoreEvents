@@ -47,7 +47,7 @@ namespace CoreEvents.IntegrationTests.Infrastructure.FaultInjection
                 }
 
                 // Проверка 2: Падение по конкретному BookingId
-                if (state.TargetBookingIdsForFailures.ContainsKey(booking.Id))
+                if (state.ShouldFailForBooking(booking.Id))
                 {
                     shouldSimulateFailure = true;
                     break;
