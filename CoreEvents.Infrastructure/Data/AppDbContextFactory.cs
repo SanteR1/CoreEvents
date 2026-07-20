@@ -8,15 +8,37 @@ internal sealed class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbCon
 {
     public AppDbContext CreateDbContext(string[] args)
     {
-        var basePath = Path.Combine(Directory.GetCurrentDirectory(), "../CoreEvents");
+        var infrastructurePath = Directory.GetCurrentDirectory();
+        var solutionPath = Directory.GetParent(infrastructurePath)?.FullName;
+
+        if (string.IsNullOrEmpty(solutionPath))
+        {
+            throw new DirectoryNotFoundException("Не удалось определить корневую директорию решения.");
+        }
+
+        var presentationPath = Directory.GetDirectories(solutionPath)
+            .FirstOrDefault(dir =>
+                File.Exists(Path.Combine(dir, "appsettings.json")) &&
+                File.Exists(Path.Combine(dir, "Program.cs")));
+
+        if (presentationPath == null)
+        {
+            throw new FileNotFoundException("Не удалось найти проект слоя Presentation (с файлами appsettings.json и Program.cs).");
+        }
 
         var configuration = new ConfigurationBuilder()
-            .SetBasePath(basePath)
-            .AddJsonFile("appsettings.json")
+            .SetBasePath(presentationPath)
+            .AddJsonFile("appsettings.json", optional: false)
             .AddJsonFile("appsettings.Development.json", optional: true)
+            .AddEnvironmentVariables()
             .Build();
 
         var connectionString = configuration.GetConnectionString("DefaultConnection");
+
+        if (string.IsNullOrEmpty(connectionString))
+        {
+            throw new InvalidOperationException("Строка подключения 'DefaultConnection' не найдена.");
+        }
 
         var builder = new DbContextOptionsBuilder<AppDbContext>();
         builder.UseNpgsql(connectionString);

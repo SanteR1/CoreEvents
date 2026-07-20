@@ -50,11 +50,6 @@ namespace CoreEvents.Infrastructure.Data.Configurations
             builder.Property(x => x.TotalSeats)
                 .HasColumnName("total_seats")
                 .IsRequired();
-
-            builder.HasMany(e => e.Bookings)
-                .WithOne(b => b.Event)
-                .HasForeignKey(b => b.EventId)
-                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }
