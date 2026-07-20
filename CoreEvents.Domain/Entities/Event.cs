@@ -1,5 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-using CoreEvents.Domain.Exceptions;
+﻿using CoreEvents.Domain.Exceptions;
 
 namespace CoreEvents.Domain.Entities
 {
