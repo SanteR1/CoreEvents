@@ -10,7 +10,7 @@ namespace CoreEvents.Tests.Domain
         public void Confirm_ShouldChangeStatusToConfirmed()
         {
             // Arrange
-            var booking = Booking.Create(Guid.NewGuid());
+            var booking = Booking.Create(Guid.NewGuid(), Guid.NewGuid());
 
             // Act & Assert
             booking.ProcessedAt.Should().BeNull();
@@ -23,7 +23,7 @@ namespace CoreEvents.Tests.Domain
         public void Reject_ShouldChangeStatusToRejected()
         {
             // Arrange
-            var booking = Booking.Create(Guid.NewGuid());
+            var booking = Booking.Create(Guid.NewGuid(), Guid.NewGuid());
 
             // Act & Assert
             booking.ProcessedAt.Should().BeNull();
