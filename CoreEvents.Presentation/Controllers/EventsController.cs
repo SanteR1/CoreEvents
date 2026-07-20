@@ -1,5 +1,6 @@
 ﻿using CoreEvents.Application.DTOs;
 using CoreEvents.Application.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CoreEvents.Presentation.Controllers
@@ -37,9 +38,12 @@ namespace CoreEvents.Presentation.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         [Produces("application/json")]
         [ProducesResponseType(typeof(EventResponseDto), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
         public async Task<ActionResult<EventResponseDto>> Create([FromBody] EventCreateDto entity)
         {
             var createdEvent = await _eventService.CreateEventAsync(entity);
@@ -52,9 +56,12 @@ namespace CoreEvents.Presentation.Controllers
         }
 
         [HttpPut("{id:guid}")]
+        [Authorize(Roles = "Admin")]
         [Produces("application/json")]
-        [ProducesResponseType(typeof(IActionResult), StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> Put(Guid id, [FromBody] EventUpdateDto entity)
         {
@@ -63,8 +70,11 @@ namespace CoreEvents.Presentation.Controllers
         }
 
         [HttpDelete("{id:guid}")]
+        [Authorize(Roles = "Admin")]
         [Produces("application/json")]
-        [ProducesResponseType(typeof(IActionResult), StatusCodes.Status204NoContent)]
+        [ProducesResponseType( StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> Delete(Guid id)
         {
@@ -73,8 +83,11 @@ namespace CoreEvents.Presentation.Controllers
         }
 
         [HttpPost("{id:guid}/book")]
+        [Authorize]
         [Produces("application/json")]
         [ProducesResponseType(typeof(BookingResponseDto), StatusCodes.Status202Accepted)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
         public async Task<ActionResult<BookingResponseDto>> CreateBooking([FromRoute] Guid id, CancellationToken ct)

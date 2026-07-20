@@ -26,11 +26,16 @@ namespace CoreEvents.Presentation.ExceptionHandlers
 
             httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
 
-            await problemDetailsService.WriteAsync(new ProblemDetailsContext
+            var successfullyWrote = await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
             {
                 HttpContext = httpContext,
                 ProblemDetails = problem
             });
+
+            if (!successfullyWrote)
+            {
+                await httpContext.Response.WriteAsJsonAsync(problem, cancellationToken);
+            }
 
             return true;
         }

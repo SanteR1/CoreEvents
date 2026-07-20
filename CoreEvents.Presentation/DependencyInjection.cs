@@ -1,6 +1,10 @@
 ﻿using System.Text.Json.Serialization;
+using CoreEvents.Application.Interfaces;
 using CoreEvents.Presentation.BackgroundServices;
 using CoreEvents.Presentation.ExceptionHandlers;
+using CoreEvents.Presentation.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.OpenApi;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -8,6 +12,9 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddPresentationServices(this IServiceCollection services)
     {
+        services.AddHttpContextAccessor();
+        services.AddScoped<IUserContext, UserContext>();
+
         services.AddControllers().AddJsonOptions(options =>
         {
             options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
@@ -18,9 +25,27 @@ public static class DependencyInjection
         services.AddExceptionHandler<DomainExceptionHandler>();
         services.AddExceptionHandler<GlobalExceptionHandler>();
 
+        services.AddHttpContextAccessor();
+        services.AddScoped<IUserContext, UserContext>();
+
         services.AddHostedService<BookingProcessingService>();
         services.AddOpenApi();
-        services.AddSwaggerGen();
+        services.AddSwaggerGen(option => 
+        {
+            option.AddSecurityDefinition(JwtBearerDefaults.AuthenticationScheme, new OpenApiSecurityScheme
+            {
+                Description = "Введите JWT токен",
+                Name = "Authorization",
+                In = ParameterLocation.Header,
+                Type = SecuritySchemeType.Http,
+                Scheme = JwtBearerDefaults.AuthenticationScheme,
+                BearerFormat = "JWT"
+            });
+            option.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+            {
+                [new OpenApiSecuritySchemeReference(JwtBearerDefaults.AuthenticationScheme, document)] = []
+            });
+        });
 
         return services;
     }
