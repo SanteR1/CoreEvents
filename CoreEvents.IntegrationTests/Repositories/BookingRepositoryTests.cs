@@ -15,14 +15,17 @@ namespace CoreEvents.IntegrationTests.Repositories
         public async Task Add_ExistEventId_ShouldInsertBookingWithPendingStatus()
         {
             // Arrange
+            var user = User.Create("Test", "123");
             var eventId = await ExecuteDbContextAsync(async ctx =>
             {
+                ctx.Users.Add(user);
+                await ctx.SaveChangesAsync();
                 var e = Event.Create("Booking Test", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(2), 10);
                 ctx.Events.Add(e);
                 await ctx.SaveChangesAsync();
                 return e.Id;
             });
-            var booking = Booking.Create(eventId);
+            var booking = Booking.Create(eventId, user.Id);
 
             // Act
             await ExecuteScopeAsync(async sp =>
@@ -49,7 +52,7 @@ namespace CoreEvents.IntegrationTests.Repositories
             // Arrange
             var eventId = Guid.NewGuid();
 
-            var booking = Booking.Create(eventId);
+            var booking = Booking.Create(eventId, Guid.NewGuid());
 
             // Act & Assert
             await ExecuteScopeAsync(async sp =>
@@ -70,11 +73,14 @@ namespace CoreEvents.IntegrationTests.Repositories
         public async Task Delete_ShouldRemoveBooking()
         {
             // Arrange
+            var user = User.Create("Test", "123");
             var bookingId = await ExecuteDbContextAsync(async ctx =>
             {
+                ctx.Users.Add(user);
+                await ctx.SaveChangesAsync();
                 var eventId = Event.Create("Delete Booking", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(2), 10);
                 ctx.Events.Add(eventId);
-                var b = Booking.Create(eventId.Id);
+                var b = Booking.Create(eventId.Id, user.Id);
                 ctx.Bookings.Add(b);
                 await ctx.SaveChangesAsync();
                 return b.Id;
@@ -102,11 +108,14 @@ namespace CoreEvents.IntegrationTests.Repositories
         public async Task GetByIdAsync_ExistEventId_ShouldRetrieveBookingByIdAndReturnEntity()
         {
             // Arrange
+            var user = User.Create("Test", "123");
             var bookingId = await ExecuteDbContextAsync(async ctx =>
             {
+                ctx.Users.Add(user);
+                await ctx.SaveChangesAsync();
                 var eventId = Event.Create("Get By Id", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(2), 10);
                 ctx.Events.Add(eventId);
-                var b = Booking.Create(eventId.Id);
+                var b = Booking.Create(eventId.Id, user.Id);
                 ctx.Bookings.Add(b);
                 await ctx.SaveChangesAsync();
                 return b.Id;
@@ -126,12 +135,15 @@ namespace CoreEvents.IntegrationTests.Repositories
         public async Task GetPendingAsync_ShouldReturnOnlyPendingBookingIds()
         {
             // Arrange
+            var user = User.Create("Test", "123");
             await ExecuteDbContextAsync(async ctx =>
             {
+                ctx.Users.Add(user);
+                await ctx.SaveChangesAsync();
                 var eventId = Event.Create("Pending Filter", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(2), 10);
                 ctx.Events.Add(eventId);
-                var b1 = Booking.Create(eventId.Id);
-                var b2 = Booking.Create(eventId.Id);
+                var b1 = Booking.Create(eventId.Id, user.Id);
+                var b2 = Booking.Create(eventId.Id, user.Id);
                 ctx.Bookings.AddRange(b1,b2);
                 await ctx.SaveChangesAsync();
             });
@@ -150,11 +162,14 @@ namespace CoreEvents.IntegrationTests.Repositories
         public async Task LoadBookingWithEvent_ReturnsCorrectEvent()
         {
             // Arrange
+            var user = User.Create("Test", "123");
             var bookingId = await ExecuteDbContextAsync(async ctx =>
             {
+                ctx.Users.Add(user);
+                await ctx.SaveChangesAsync();
                 var eventId = Event.Create("Event 1 for Include", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(2), 10);
                 ctx.Events.Add(eventId);
-                var booking = Booking.Create(eventId.Id);
+                var booking = Booking.Create(eventId.Id, user.Id);
                 ctx.Bookings.Add(booking);
                 await ctx.SaveChangesAsync();
                 return booking.Id;
@@ -176,11 +191,14 @@ namespace CoreEvents.IntegrationTests.Repositories
         public async Task Update_ShouldPersistBookingStatusChange()
         {
             // Arrange
+            var user = User.Create("Test", "123");
             var bookingId = await ExecuteDbContextAsync(async ctx =>
             {
+                ctx.Users.Add(user);
+                await ctx.SaveChangesAsync();
                 var eventId = Event.Create("Status Update", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(2), 10);
                 ctx.Events.Add(eventId);
-                var b = Booking.Create(eventId.Id);
+                var b = Booking.Create(eventId.Id, user.Id);
                 ctx.Bookings.Add(b);
                 await ctx.SaveChangesAsync();
                 return b.Id;

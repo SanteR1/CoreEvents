@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Npgsql;
@@ -11,6 +12,7 @@ using Respawn.Graph;
 using Testcontainers.PostgreSql;
 
 namespace CoreEvents.IntegrationTests.Infrastructure.Factories;
+
 public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     private readonly PostgreSqlContainer _dbContainer = new PostgreSqlBuilder("postgres:18-alpine")
@@ -28,7 +30,7 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLife
     {
         await _dbContainer.StartAsync();
         _connectionString = _dbContainer.GetConnectionString();
-        
+
         using (var scope = Services.CreateScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -61,9 +63,24 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLife
                 options.UseNpgsql(ConnectionString)
                     .EnableSensitiveDataLogging()
                     .EnableDetailedErrors()
-                    // Для тестирования можно игнорировать 
-                    //.ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning))
+                // Для тестирования можно игнорировать 
+                //.ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning))
                 );
+        });
+
+
+        builder.ConfigureAppConfiguration((context, configBuilder) =>
+        {
+            var testConfig = new Dictionary<string, string?>
+            {
+                // Задаем фиксированный фейковый JWT-секрет только для тестов
+                { "Jwt:SecretKey", "test_environment_secret_key_minimum_32_characters_long_12345" },
+                { "Jwt:Issuer", "CoreEventsApi" },
+                { "Jwt:Audience", "CoreEventsClient" },
+                { "Jwt:ExpirationInMinutes", "60" }
+            };
+
+            configBuilder.AddInMemoryCollection(testConfig);
         });
     }
 
@@ -80,7 +97,7 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLife
 
     public override async ValueTask DisposeAsync()
     {
-		await _dbContainer.StopAsync();
+        await _dbContainer.StopAsync();
         await _dbContainer.DisposeAsync();
         await base.DisposeAsync();
     }
