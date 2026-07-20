@@ -1,4 +1,5 @@
 ﻿using CoreEvents.Application.DTOs;
+using CoreEvents.Application.Interfaces;
 using CoreEvents.Application.Interfaces.Repositories;
 using CoreEvents.Domain.Entities;
 using CoreEvents.Domain.Exceptions;
