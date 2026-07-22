@@ -23,7 +23,7 @@ namespace CoreEvents.Migrations
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "pg_trgm");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("CoreEvents.Models.Domain.Booking", b =>
+            modelBuilder.Entity("CoreEvents.Domain.Entities.Booking", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid")
@@ -47,6 +47,10 @@ namespace CoreEvents.Migrations
                         .HasColumnType("character varying(20)")
                         .HasColumnName("status");
 
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedAt")
@@ -54,10 +58,12 @@ namespace CoreEvents.Migrations
 
                     b.HasIndex("EventId");
 
+                    b.HasIndex("UserId", "Status");
+
                     b.ToTable("bookings", (string)null);
                 });
 
-            modelBuilder.Entity("CoreEvents.Models.Domain.Event", b =>
+            modelBuilder.Entity("CoreEvents.Domain.Entities.Event", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
@@ -105,18 +111,62 @@ namespace CoreEvents.Migrations
                         });
                 });
 
-            modelBuilder.Entity("CoreEvents.Models.Domain.Booking", b =>
+            modelBuilder.Entity("CoreEvents.Domain.Entities.User", b =>
                 {
-                    b.HasOne("CoreEvents.Models.Domain.Event", "Event")
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("passwordhash");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("role");
+
+                    b.Property<string>("UserName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("user");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserName")
+                        .IsUnique();
+
+                    b.ToTable("users", (string)null);
+                });
+
+            modelBuilder.Entity("CoreEvents.Domain.Entities.Booking", b =>
+                {
+                    b.HasOne("CoreEvents.Domain.Entities.Event", "Event")
                         .WithMany("Bookings")
                         .HasForeignKey("EventId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("CoreEvents.Domain.Entities.User", "User")
+                        .WithMany("Bookings")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("Event");
+
+                    b.Navigation("User");
                 });
 
-            modelBuilder.Entity("CoreEvents.Models.Domain.Event", b =>
+            modelBuilder.Entity("CoreEvents.Domain.Entities.Event", b =>
+                {
+                    b.Navigation("Bookings");
+                });
+
+            modelBuilder.Entity("CoreEvents.Domain.Entities.User", b =>
                 {
                     b.Navigation("Bookings");
                 });

@@ -33,7 +33,7 @@ namespace CoreEvents.Application.Orchestrators
 
         public async Task ProcessBookingAsync(Guid bookingId, CancellationToken stoppingToken)
         {
-            var lockKey = LockKeys.BookingProcessing(bookingId);
+            var lockKey = LockKeys.Booking(bookingId);
 
             await using var lockScope = await _lockProvider.TryAcquireLockAsync(lockKey, stoppingToken);
 

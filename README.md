@@ -16,6 +16,7 @@
 * **API:** ASP.NET Core Web API
 * **DI Container:** Встроенный .NET Dependency Injection
 * **База Данных:** PostgreSQL
+* **Authorization:** JWT Bearer
 * **Documentation:** Swagger / OpenAPI
 * **Testing:** xUnit, Moq, Testcontainers + Docker
 * **Format:** JSON (Problem Details RFC 7807)
@@ -98,6 +99,44 @@ dotnet tool install --global dotnet-ef
 > ⚠️ **Важно:** Перед применением миграций убедитесь, что в файле конфигурации `appsettings.json` (или `appsettings.Development.json`) указана корректная строка подключения к вашему локальному серверу или Docker-контейнеру PostgreSQL.
 ---
 
+## 🛡️ Ролевая модель и матрица доступа
+В сервисе две роли: Admin и User. Администратор управляет событиями — создаёт, редактирует, удаляет их и может отменять любые брони. Обычный пользователь может только бронировать события и отменять собственные брони.
+> ⚠️ **Важно:** Пользователь может отменить только свою бронь; администратор — любую.
+
+| Эндпоинт (Метод API) | Роль: Гость (Без токена) | Роль: User | Роль: Admin |
+| :--- | :--- | :--- | :--- | :--- |
+| **POST `/auth/register`** | ✅ Доступно | ✅ Доступно | ✅ Доступно |
+| **POST `/auth/login`** | ✅ Доступно | ✅ Доступно | ✅ Доступно |
+| **POST `/events/{id}/book`** | ❌ Запрещено (401) | ✅ Доступно | ✅ Доступно |
+| **POST `/events/`** | ❌ Запрещено (401) | ❌ Запрещено (403) | ✅ Доступно |
+| **PUT `/events/{id}`** | ❌ Запрещено (401) | ❌ Запрещено (403) | ✅ Доступно |
+| **DELETE `/events/{id}`** | ❌ Запрещено (401) | ❌ Запрещено (403) | ✅ Доступно |
+| **GET `/bookings/{id}`** | ❌ Запрещено (401) | ✅ Доступно | ✅ Доступно |
+| **DELETE `/bookings/{id}`** | ❌ Запрещено (401) | ❌ Чужая бронь<br> Запрещено (403) | ✅ Доступно |
+
+### Получение JWT-токена через Swagger
+1. Необходимо пройти регистрацию `/auth/register` с указанием логина и пароля.
+2. Пройти Авторизацию `/auth/login` c указанием ранее введенного логина и пароля, в ответ при успешной авторизации будет отпавлен токен.
+3. В Swagger нажать кнопку "Authorize" и в поле `value` указать этот токен, далее подтвердить нажатием кнопки "Authorize".
+
+### Настройки JWT-токена в конфигурации
+
+Для настроек используется класс `JwtOptions`.\
+Все три параметра обязательны, при запуске приложения будут проверены (fail-fast подход).
+SecretKey - Секретный ключ JWT
+Issuer - Идентификатор сервера, выпустившего токен
+Audience - Идентификатор получателя токена
+
+#### В локальной разработке лучше использовать User Secrets:
+Для инициализации пользовательских секретов, нужно находиться в каталоге `Presentantion` и выполнить команду<br> `dotnet user-secrets init`.<br>
+Для добавления параметров используется к примеру такая команда:<br> `dotnet user-secrets set "Jwt:SecretKey" "ваш_ключ_минимум_32_символа"`
+#### В продакшене лучше использовать переменные окружения
+Запуск из терминала Linux:<br>
+`export SecretKey="my-super-secret-key-from-env"`<br>
+`dotnet run`<br>
+> ⚠️ **Важно:** В продакшене используйте только надежный ключ минимум 32 символа.
+
+---
 ## 🔬 Как запустить тесты (два варианта):
 В тестах используется Testcontainers и docker
 Нужно находиться в каталоге с проектом (`cd CoreEvents`)
@@ -295,6 +334,43 @@ curl -X 'GET' \
   "processedAt": "2026-04-27T14:50:09.5672134+05:00"
 }
 ```
+
+### Пример запроса **<code>POST /auth/register</code>** для регистрации
+
+Для создания пользователя, указываем логин и пароль (Role по умолчанию User):
+Можно передать "role": "Admin"
+```curl
+curl -X 'POST' \
+  'https://localhost:7111/Auth/register' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "userName": "UserName1",
+  "password": "123"
+}'
+```
+**В ответ 204 No Content**
+
+### Пример запроса **<code>POST /auth/login</code>** для авторизации
+
+Для авторизации указываем логин и пароль из регистрации:
+
+```curl
+curl -X 'POST' \
+  'https://localhost:7111/Auth/login' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "userName": "UserName1",
+  "password": "123"
+}'
+```
+
+**Пример тела ответа содержащий JWT-токен:**
+
+```json
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IlVzZXJOYW1lMSIsImFkbWluIjpmYWxzZSwiaWF0IjoxNTE2MjM5MDIyfQ.eJvviYuixQdiv8K6nVL9KROsobF6AuqROwlUgeeLFAw"
+```
 ---
 
 ## Модель данных: `Booking`
@@ -315,6 +391,7 @@ curl -X 'GET' \
 | ⏳ Ожидание | `"Pending"` |  Бронь создана, ожидает обработки |
 | ✅ Подтверждено | `"Confirmed"` | Бронь подтверждена |
 | ❌ Отклонено | `"Rejected"` | Бронь отклонена |
+| 🚫 Отмена | `"Cancelled"` | Бронь отменена |
 
 ---
 
@@ -354,9 +431,7 @@ curl -X 'GET' \
 ---
 ## Описание примитивов синхронизации и их назначения
 
-В проекте для обеспечения потокобезопасности и предотвращения состояния гонки (Race Condition) используется SemaphoreSlim в конфигурации (1, 1).
-
-`SemaphoreSlim(1, 1)` представляет собой легковесный асинхронный двоичный семафор (мьютекс). Он инициализируется с начальным счетчиком 1 и максимальным счетчиком 1, что означает, что одновременно доступ к критической секции кода может получить только один поток. В отличие от классического lock (который блокирует текущий поток ОС), `SemaphoreSlim` поддерживает метод `WaitAsync()`, что позволяет освобождать поток (Thread Pool) во время ожидания своей очереди, обеспечивая высокую масштабируемость асинхронного приложения.
+В проекте для обеспечения потокобезопасности и предотвращения состояния гонки (Race Condition) используется  PostgreSQL распределённая Transaction-level блокировка `pg_advisory_xact_lock`.
 
 ## 🧪 Валидация и ошибки (Data Annotations)
 
@@ -395,13 +470,19 @@ curl -X 'GET' \
 | Поле | Тип | Обязательно | Описание | Валидация |
 | :--- | :--- | :---: | :--- | :--- |
 | **EventId** | `GUID` | ✅ Да | ID события для которого создается бронь. | `Required` Не может быть пустым. |
+| **UserId** | `GUID` | ✅ Да | ID пользователя который создает бронь. | `Required` Не может быть пустым. |
 
 ## ⚠️ Формат ошибок (Problem Details)
 В случае ошибки API возвращает стандартизированный ответ (Problem Details RFC 7807):
-- 400 Bad Request — Ошибка валидации данных.
-- 404 Not Found — Ресурс не найден.
-- 409 Conflict — Мест больше нет.
-- 499 Client Closed Request - Операция была отменена пользователем.
+- DomainValidationException => 400
+- DomainPastEventBookingException => 400
+- DomainUnauthorizedAccessException => 401
+- DomainNotBookingOwnerException => 403
+- DomainNotFoundException => 404
+- DomainNoAvailableSeatsException => 409
+- DomainInvalidStatusTransitionException => 409
+- DomainActiveBookingLimitExceededException => 409
+- OperationCanceledException => 499
 
 ```json
 {

@@ -19,9 +19,9 @@ namespace CoreEvents.Infrastructure.Repositories
             return await _context.Bookings.FindAsync([id], ct);
         }
 
-        public async Task<int> SaveChangesAsync(CancellationToken ct = default)
+        public async Task<int> GetBookingCountForUserAsync(Guid userId, CancellationToken ct = default)
         {
-            return await _context.SaveChangesAsync(ct);
+            return await _context.Bookings.CountAsync(e => e.UserId == userId && e.Status == BookingStatus.Confirmed, ct);
         }
 
         public async Task<IReadOnlyList<Guid>> GetPendingAsync(CancellationToken ct = default)
@@ -31,6 +31,11 @@ namespace CoreEvents.Infrastructure.Repositories
                 .OrderBy(x=> x.CreatedAt)
                 .Select(x => x.Id)
                 .ToListAsync(ct);
+        }
+
+        public async Task<int> SaveChangesAsync(CancellationToken ct = default)
+        {
+            return await _context.SaveChangesAsync(ct);
         }
 
         public void Add(Booking booking)

@@ -15,14 +15,16 @@ namespace CoreEvents.IntegrationTests.BackgroundServices
         public async Task Concurrency_ThreeServers_ShouldProcess90Bookings_WithoutDataCorruption()
         {
             // Arrange
+            var user = User.Create("Test", "123", "Admin");
             var eventId = await ExecuteDbContextAsync(async db =>
             {
+                db.Users.Add(user);
                 var testEvent = Event.Create("Load Test Event", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(2), 100);
                 db.Events.Add(testEvent);
 
                 for (int i = 0; i < 90; i++)
                 {
-                    var booking = Booking.Create(testEvent.Id);
+                    var booking = Booking.Create(testEvent.Id, user.Id);
                     db.Bookings.Add(booking);
                 }
 

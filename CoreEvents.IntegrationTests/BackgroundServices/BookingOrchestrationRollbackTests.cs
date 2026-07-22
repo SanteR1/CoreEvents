@@ -14,9 +14,10 @@ namespace CoreEvents.IntegrationTests.BackgroundServices
         {
             // Arrange
             var bookingIds = new List<Guid>();
-
+            var user = User.Create("Test", "123", "Admin");
             var eventId = await ExecuteDbContextAsync(async db =>
             {
+                db.Users.Add(user);
                 var testEvent = Event.Create("Load Test Event", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(2), 100);
                 db.Events.Add(testEvent);
 
@@ -24,7 +25,7 @@ namespace CoreEvents.IntegrationTests.BackgroundServices
 
                 for (int i = 0; i < 90; i++)
                 {
-                    var booking = Booking.Create(testEvent.Id);
+                    var booking = Booking.Create(testEvent.Id, user.Id);
                     bookingList.Add(booking);
                     bookingIds.Add(booking.Id);
                 }

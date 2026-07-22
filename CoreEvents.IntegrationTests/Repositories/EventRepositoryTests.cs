@@ -68,8 +68,11 @@ namespace CoreEvents.IntegrationTests.Repositories
             // Arrange
             var eventId = await ExecuteDbContextAsync(async ctx =>
             {
+                var user = User.Create("Test", "123");
+                ctx.Users.Add(user);
+                await ctx.SaveChangesAsync();
                 var e = Event.Create("Cascade Test", DateTime.UtcNow, DateTime.UtcNow.AddHours(2), 5);
-                var b = Booking.Create(e.Id);
+                var b = Booking.Create(e.Id, user.Id);
                 ctx.Events.Add(e);
                 ctx.Bookings.Add(b);
                 await ctx.SaveChangesAsync();
@@ -271,10 +274,13 @@ namespace CoreEvents.IntegrationTests.Repositories
             // Arrange
             var eventId = await ExecuteDbContextAsync(async ctx =>
             {
+                var user = User.Create("Test", "123");
+                ctx.Users.Add(user);
+                await ctx.SaveChangesAsync();
                 var eventId = Event.Create("Event 1 for Include", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(2), 10);
                 ctx.Events.Add(eventId);
-                var booking1 = Booking.Create(eventId.Id);
-                var booking2 = Booking.Create(eventId.Id);
+                var booking1 = Booking.Create(eventId.Id, user.Id);
+                var booking2 = Booking.Create(eventId.Id, user.Id);
                 ctx.Bookings.AddRange(booking1, booking2);
                 await ctx.SaveChangesAsync();
                 return eventId.Id;

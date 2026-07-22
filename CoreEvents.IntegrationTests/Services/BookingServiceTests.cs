@@ -1,4 +1,6 @@
-﻿using CoreEvents.Application.DTOs;
+﻿using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using CoreEvents.Application.DTOs;
 using CoreEvents.Application.Services;
 using CoreEvents.Domain.Entities;
 using CoreEvents.Domain.Enums;
@@ -6,6 +8,7 @@ using CoreEvents.Domain.Exceptions;
 using CoreEvents.IntegrationTests.Infrastructure.Bases;
 using CoreEvents.IntegrationTests.Infrastructure.Factories;
 using FluentAssertions;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -17,8 +20,10 @@ namespace CoreEvents.IntegrationTests.Services
         public async Task CreateBookingAsync_WithValidData_ShouldReturnSuccessResultAndSaveToDb()
         {
             // Arrange 
+            var user = User.Create("Test", "123");
             var eventId = await ExecuteDbContextAsync(async db =>
             {
+                db.Users.Add(user);
                 var event1 = Event.Create("TEST Event", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(2), 10);
                 db.Events.Add(event1);
                 await db.SaveChangesAsync();
@@ -29,6 +34,8 @@ namespace CoreEvents.IntegrationTests.Services
             // Act
             var result = await ExecuteScopeAsync(sp =>
             {
+                AuthenticateInScope(sp, user.Id, "User");
+
                 var bookingService = sp.GetRequiredService<IBookingService>();
                 return bookingService.CreateBookingAsync(requestDto);
             });
@@ -53,8 +60,10 @@ namespace CoreEvents.IntegrationTests.Services
         {
             // Arrange 
             const int initialSeats = 10;
+            var user = User.Create("Test", "123");
             var eventId = await ExecuteDbContextAsync(async db =>
             {
+                db.Users.Add(user);
                 var event1 = Event.Create("TEST Event", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(2), initialSeats);
                 db.Events.Add(event1);
                 await db.SaveChangesAsync();
@@ -67,6 +76,8 @@ namespace CoreEvents.IntegrationTests.Services
                 Enumerable.Range(0, initialSeats)
                     .Select(_ => Task.Run(() => ExecuteScopeAsync(async sp =>
                         {
+                            AuthenticateInScope(sp, user.Id, "User");
+
                             var bookingService = sp.GetRequiredService<IBookingService>();
                             return await bookingService.CreateBookingAsync(requestDto);
                         }))));
@@ -102,8 +113,10 @@ namespace CoreEvents.IntegrationTests.Services
         {
             // Arrange 
             const int initialSeats = 10;
+            var user = User.Create("Test", "123");
             var existEvent = await ExecuteDbContextAsync(async db =>
             {
+                db.Users.Add(user);
                 var evet1 = Event.Create("TEST Event", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(2), initialSeats);
                 db.Events.Add(evet1);
                 await db.SaveChangesAsync();
@@ -116,6 +129,7 @@ namespace CoreEvents.IntegrationTests.Services
                 Enumerable.Range(0, initialSeats)
                     .Select(_ => Task.Run(() => ExecuteScopeAsync(async sp =>
                     {
+                        AuthenticateInScope(sp, user.Id, "User");
                         var bookingService = sp.GetRequiredService<IBookingService>();
                         return await bookingService.CreateBookingAsync(requestDto);
                     }))));
@@ -146,8 +160,10 @@ namespace CoreEvents.IntegrationTests.Services
             const int initialSeats = 10;
             const int totalRequests = 10;
             const int expectedSuccesses = 10;
+            var user = User.Create("Test", "123");
             var existEvent = await ExecuteDbContextAsync(async db =>
             {
+                db.Users.Add(user);
                 var evet1 = Event.Create("TEST Event", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(2), initialSeats);
                 db.Events.Add(evet1);
                 await db.SaveChangesAsync();
@@ -160,6 +176,7 @@ namespace CoreEvents.IntegrationTests.Services
                 Enumerable.Range(0, totalRequests)
                     .Select(_ => Task.Run(() => ExecuteScopeAsync(async sp =>
                     {
+                        AuthenticateInScope(sp, user.Id, "User");
                         var bookingService = sp.GetRequiredService<IBookingService>();
                         return await bookingService.CreateBookingAsync(requestDto);
                     }))));
@@ -190,8 +207,10 @@ namespace CoreEvents.IntegrationTests.Services
             const int initialSeats = 5;
             const int totalRequests = 20;
             const int expectedSuccesses = 5;
+            var user = User.Create("Test", "123");
             var existEvent = await ExecuteDbContextAsync(async db =>
             {
+                db.Users.Add(user);
                 var evet1 = Event.Create("TEST Event", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(2), initialSeats);
                 db.Events.Add(evet1);
                 await db.SaveChangesAsync();
@@ -203,6 +222,7 @@ namespace CoreEvents.IntegrationTests.Services
             var tasks = Enumerable.Range(0, totalRequests)
                     .Select(_ => Task.Run(() => ExecuteScopeAsync(async sp =>
                     {
+                        AuthenticateInScope(sp, user.Id, "User");
                         var bookingService = sp.GetRequiredService<IBookingService>();
                         return await bookingService.CreateBookingAsync(requestDto);
                     })))
@@ -246,8 +266,10 @@ namespace CoreEvents.IntegrationTests.Services
         public async Task GetBookingByIdAsync_WithExistId_ShouldReturnSuccessBooking()
         {
             // Arrange 
+            var user = User.Create("Test", "123");
             var eventId = await ExecuteDbContextAsync(async db =>
             {
+                db.Users.Add(user);
                 var event1 = Event.Create("TEST Event", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(2), 10);
                 db.Events.Add(event1);
                 await db.SaveChangesAsync();
@@ -256,6 +278,7 @@ namespace CoreEvents.IntegrationTests.Services
             var requestDto = new BookingCreateDto(eventId);
             var existBooking = await ExecuteScopeAsync(sp =>
             {
+                AuthenticateInScope(sp, user.Id, "User");
                 var bookingService = sp.GetRequiredService<IBookingService>();
                 return bookingService.CreateBookingAsync(requestDto);
             });
@@ -263,6 +286,7 @@ namespace CoreEvents.IntegrationTests.Services
             // Act
             var result = await ExecuteScopeAsync(sp =>
             {
+                //AuthenticateInScope(sp, user.Id, "User");
                 var bookingService = sp.GetRequiredService<IBookingService>();
                 return bookingService.GetBookingByIdAsync(existBooking.Id);
             });
@@ -272,6 +296,29 @@ namespace CoreEvents.IntegrationTests.Services
             result.Id.Should().Be(existBooking.Id);
             result.EventId.Should().Be(existBooking.EventId);
             result.Status.Should().Be(existBooking.Status);
+        }
+
+        private void AuthenticateInScope(IServiceProvider sp, Guid userId, string role = "User")
+        {
+            var httpContextAccessor = sp.GetRequiredService<IHttpContextAccessor>();
+
+            var claims = new List<Claim>
+            {
+                new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
+                new Claim("role", role)
+            };
+
+            var identity = new ClaimsIdentity(
+                claims,
+                authenticationType: "jwtbearer",
+                nameType: JwtRegisteredClaimNames.Sub,
+                roleType: "role"
+            );
+
+            httpContextAccessor.HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(identity)
+            };
         }
     }
 }

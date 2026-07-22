@@ -1,4 +1,5 @@
-﻿using CoreEvents.Domain.Entities;
+﻿using System.Reflection;
+using CoreEvents.Domain.Entities;
 
 namespace CoreEvents.Tests.Infrastructure
 {
@@ -18,6 +19,36 @@ namespace CoreEvents.Tests.Infrastructure
                 endAt: endAt ?? DateTime.UtcNow.AddDays(1).AddHours(2),
                 totalSeats: seats
             );
+        }
+
+        internal static Event CreatePast(
+            int hoursInPast,
+            string title = "Прошедшее событие",
+            string description = "Описание по умолчанию",
+            int seats = 10)
+        {
+            // Получаем ссылку на приватный конструктор
+            var constructor = typeof(Event).GetConstructor(
+                BindingFlags.NonPublic | BindingFlags.Instance,
+                null,
+                [typeof(Guid), typeof(string), typeof(DateTime), typeof(DateTime), typeof(int), typeof(string)],
+                null);
+
+            if (constructor == null)
+            {
+                Assert.Fail("Приватный конструктор Event не найден. Проверьте сигнатуру.");
+            }
+
+            // Вызываем конструктор напрямую, передавая даты в прошлом
+            return (Event)constructor.Invoke(new object[]
+            {
+                Guid.NewGuid(),
+                title,
+                DateTime.UtcNow.AddHours(-hoursInPast),
+                DateTime.UtcNow.AddHours(-hoursInPast + 2),
+                seats,
+                description
+            });
         }
     }
 }

@@ -59,11 +59,16 @@ namespace CoreEvents.Presentation.ExceptionHandlers
 
             httpContext.Response.StatusCode = statusCode;
 
-            await problemDetailsService.WriteAsync(new ProblemDetailsContext
+            var successfullyWrote = await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
             {
                 HttpContext = httpContext,
                 ProblemDetails = problem
             });
+
+            if (!successfullyWrote)
+            {
+                await httpContext.Response.WriteAsJsonAsync(problem, cancellationToken);
+            }
 
             return true;
         }
@@ -71,9 +76,16 @@ namespace CoreEvents.Presentation.ExceptionHandlers
         private static int GetStatusCode(Exception ex) => ex switch
         {
             DomainValidationException => StatusCodes.Status400BadRequest,
+            DomainPastEventBookingException => StatusCodes.Status400BadRequest,
+            DomainUnauthorizedAccessException => StatusCodes.Status401Unauthorized,
+            DomainNotBookingOwnerException => StatusCodes.Status403Forbidden,
             DomainNotFoundException => StatusCodes.Status404NotFound,
+            DomainAuthorizationException => StatusCodes.Status404NotFound,
             DomainNoAvailableSeatsException => StatusCodes.Status409Conflict,
+            DomainUserAlreadyExistsException => StatusCodes.Status409Conflict,
             DomainInvalidStatusTransitionException => StatusCodes.Status409Conflict,
+            DomainActiveBookingLimitExceededException => StatusCodes.Status409Conflict,
+            DomainReleaseSeatsException => StatusCodes.Status409Conflict,
             OperationCanceledException => StatusCodes.Status499ClientClosedRequest,
             _ => StatusCodes.Status400BadRequest 
         };
@@ -81,9 +93,16 @@ namespace CoreEvents.Presentation.ExceptionHandlers
         private static string GetTitle(Exception ex) => ex switch
         {
             DomainValidationException => "Validation failed",
+            DomainPastEventBookingException => "Event already started or passed",
+            DomainUnauthorizedAccessException => "Authorized access only",
+            DomainNotBookingOwnerException => "Not have permission",
             DomainNotFoundException => "Resource not found",
+            DomainAuthorizationException => "Wrong authorization",
             DomainNoAvailableSeatsException => "No available seats for this event",
+            DomainUserAlreadyExistsException => "User already exists",
             DomainInvalidStatusTransitionException => "Status transition conflict",
+            DomainActiveBookingLimitExceededException => "Exceeded maximum number of bookings",
+            DomainReleaseSeatsException => "Failed to release seats",
             OperationCanceledException => "The operation was canceled",
             _ => "Domain rule violation"
         };
