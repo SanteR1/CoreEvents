@@ -14,10 +14,10 @@ namespace CoreEvents.IntegrationTests.Infrastructure.FaultInjection
             return await inner.GetByIdAsync(id, cancellationToken);
         }
 
-        public async Task<int> GetBookingCountForUserAsync(Guid eventId, Guid userId, CancellationToken cancellationToken = default)
+        public async Task<int> GetBookingCountForUserAsync(Guid userId, CancellationToken cancellationToken = default)
         {
             await CheckForTimeoutsAsync(cancellationToken);
-            return await inner.GetBookingCountForUserAsync(eventId, userId, cancellationToken);
+            return await inner.GetBookingCountForUserAsync(userId, cancellationToken);
         }
 
         public async Task<IReadOnlyList<Guid>> GetPendingAsync(CancellationToken ct = default)

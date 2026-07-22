@@ -16,6 +16,9 @@ namespace CoreEvents.Infrastructure.Data.Configurations
                 .HasIndex(x => x.CreatedAt)
                 .HasFilter("\"status\" = 'Pending'");
 
+            builder
+                .HasIndex(x => new { x.UserId, x.Status });
+
             builder.Property(b => b.Id)
                 .HasColumnName("id")
                 .ValueGeneratedNever();

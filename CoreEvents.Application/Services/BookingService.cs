@@ -50,7 +50,7 @@ namespace CoreEvents.Application.Services
 
             if (existEvent.StartAt <= DateTime.UtcNow) throw new DomainPastEventBookingException(existEvent.Id);
 
-            var bookingCount = await _bookingRepository.GetBookingCountForUserAsync(bookingDto.EventId, currentUserId, cts.Token);
+            var bookingCount = await _bookingRepository.GetBookingCountForUserAsync(currentUserId, cts.Token);
             if (bookingCount >= _bookingSettings.MaxBookingsPerUser) throw new DomainActiveBookingLimitExceededException(_bookingSettings.MaxBookingsPerUser);
 
             if (!existEvent.TryReserveSeats()) throw new DomainNoAvailableSeatsException(existEvent.Id);

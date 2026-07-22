@@ -312,7 +312,7 @@ namespace CoreEvents.Tests.Services
                 .Setup(repo => repo.UserId)
                 .Returns(userId);
 
-            _bookingRepositoryMock.Setup(repo => repo.GetBookingCountForUserAsync(existEvent.Id, userId, It.IsAny<CancellationToken>()))
+            _bookingRepositoryMock.Setup(repo => repo.GetBookingCountForUserAsync(userId, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(userCountBooking);
             
             // Act & Assert
@@ -348,9 +348,9 @@ namespace CoreEvents.Tests.Services
                 .Setup(repo => repo.UserId)
                 .Returns(()=> currentUser);
 
-            _bookingRepositoryMock.Setup(repo => repo.GetBookingCountForUserAsync(existEvent.Id, userOne, It.IsAny<CancellationToken>()))
+            _bookingRepositoryMock.Setup(repo => repo.GetBookingCountForUserAsync(userOne, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(userOneCountBooking);
-            _bookingRepositoryMock.Setup(repo => repo.GetBookingCountForUserAsync(existEvent.Id, userTwo, It.IsAny<CancellationToken>()))
+            _bookingRepositoryMock.Setup(repo => repo.GetBookingCountForUserAsync(userTwo, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(userTwoCountBooking);
 
             // Act & Assert

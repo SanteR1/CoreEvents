@@ -80,9 +80,12 @@ namespace CoreEvents.Presentation.ExceptionHandlers
             DomainUnauthorizedAccessException => StatusCodes.Status401Unauthorized,
             DomainNotBookingOwnerException => StatusCodes.Status403Forbidden,
             DomainNotFoundException => StatusCodes.Status404NotFound,
+            DomainAuthorizationException => StatusCodes.Status404NotFound,
             DomainNoAvailableSeatsException => StatusCodes.Status409Conflict,
+            DomainUserAlreadyExistsException => StatusCodes.Status409Conflict,
             DomainInvalidStatusTransitionException => StatusCodes.Status409Conflict,
             DomainActiveBookingLimitExceededException => StatusCodes.Status409Conflict,
+            DomainReleaseSeatsException => StatusCodes.Status409Conflict,
             OperationCanceledException => StatusCodes.Status499ClientClosedRequest,
             _ => StatusCodes.Status400BadRequest 
         };
@@ -94,9 +97,12 @@ namespace CoreEvents.Presentation.ExceptionHandlers
             DomainUnauthorizedAccessException => "Authorized access only",
             DomainNotBookingOwnerException => "Not have permission",
             DomainNotFoundException => "Resource not found",
+            DomainAuthorizationException => "Wrong authorization",
             DomainNoAvailableSeatsException => "No available seats for this event",
+            DomainUserAlreadyExistsException => "User already exists",
             DomainInvalidStatusTransitionException => "Status transition conflict",
             DomainActiveBookingLimitExceededException => "Exceeded maximum number of bookings",
+            DomainReleaseSeatsException => "Failed to release seats",
             OperationCanceledException => "The operation was canceled",
             _ => "Domain rule violation"
         };

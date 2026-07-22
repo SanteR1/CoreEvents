@@ -5,7 +5,7 @@ namespace CoreEvents.Application.Interfaces.Repositories
     public interface IBookingRepository
     {
         Task<Booking?> GetByIdAsync(Guid id, CancellationToken ct = default);
-        Task<int> GetBookingCountForUserAsync(Guid eventId, Guid userId, CancellationToken ct = default);
+        Task<int> GetBookingCountForUserAsync(Guid userId, CancellationToken ct = default);
         Task<IReadOnlyList<Guid>> GetPendingAsync(CancellationToken ct = default);
         Task<int> SaveChangesAsync(CancellationToken ct = default);
         void Add(Booking booking);
