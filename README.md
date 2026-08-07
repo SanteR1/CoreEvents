@@ -1,38 +1,67 @@
 # CoreEvents API 📅
 
 Современный *RESTful API* для управления событиями, построенный на базе **ASP.NET Core 10.0** с использование паттерна **Clean Architecture**. 
-В основе проекта лежит принцип инверсии зависимостей: внутренние слои (**Domain**) ничего не знают о внешних слоях (**Infrastructure**, **Presentation**). Направление зависимостей всегда идет снаружи внутрь.
+В основе проекта лежит принцип инверсии зависимостей и слабой связанности (**Loose Coupling**): каждый микросервис полностью автономен, имеет собственное хранилище данных и общается с другими частями системы через брокер сообщений.
 
-## 🏛 Архитектура и структура проекта:
-* **CoreEvents.Domain** - Слой ядро системы. Проект с доменными сущностями Event, Booking, Enum, доменными-Exceptions.
-* **CoreEvents.Application** - Слой бизнес-сценариев (Use Cases). Сервисы EventService и BookingService, BookingOrchestrator для обработки бронирования, DTOs, интерфейсы портов (репозиториев).
-* **CoreEvents.Infrastructure** - Инфраструктурный слой. Реализации портов (репозитории), Entity Framework, PostgreSQL, DbContext, Миграции, конфигурация сущностей.
-* **CoreEvents.Presentation** - (Presentation Layer) Web API, который отвечает за представление сервиса внешнему миру, обработку HTTP-запросов и маршрутизацию, фоновый сервис.
+## 🏛 Состав системы (Микросервисы):
+Монолитное приложение было разделено на 3 независимых сервиса (паттерн Database-per-service).
+1. **Users Service (Сервис пользователей)**
+* **Порт**: 5003 (HTTP)
+* **База данных**: PostgreSQL (coreevents-users)
+* **Ответственность**: Управление аутентификацией, регистрация пользователей, генерация JWT-токенов, ролевая модель (Admin/User).
 
+2. **Events Service (Сервис событий)**
+* **Порт**: 5004 (HTTP)
+* **База данных**: PostgreSQL (coreevents-events)
+* **Ответственность**: Создание, редактирование и удаление мероприятий. Управление квотами и доступными местами (AvailableSeats).
 
+3. **Bookings Service (Сервис бронирований)**
+* **Порт**: 5005 (HTTP)
+* **База данных**: PostgreSQL (coreevents-bookings)
+* **Ответственность**: Оркестрация процесса бронирования. Управление статусами (Pending, Confirmed, Rejected, Cancelled), валидация бизнес-правил владения бронью.
+---
+## 🔄 Асинхронное взаимодействие и поток BookingConfirmed
+Для обеспечения надежности и согласованности данных в распределенной системе используется Apache Kafka в связке с паттернами Transactional Outbox и Inbox (для дедупликации).
+**Жизненный цикл события BookingConfirmed**
+**Кто публикует: Bookings Service.**
+* Триггер: После того как бизнес-логика (`ConfirmBookingHandler`) подтверждает бронь, запись о смене статуса и само событие BookingConfirmed атомарно сохраняются в базу данных bookings_db (в таблицу Outbox). Фоновый диспетчер считывает таблицу Outbox и публикует сообщение в топик Kafka.
+
+**Кто подписан: Events Service.**
+* Механизм: Сервис слушает топик Kafka, принимает сообщение и сначала фиксирует его в своей таблице Inbox, чтобы гарантировать обработку Exactly-Once.
+
+**Что происходит при получении:**
+* Внутри **Events Service** запускается транзакция.
+* Система находит целевое событие (`Event`) по `EventId`.
+* Количество доступных мест (`AvailableSeats`) окончательно декрементируется.
+
+Если обнаруживается конфликт (например, мест уже не осталось из-за гонки транзакций), Events Service может инициировать компенсирующее событие BookingRejected для отката состояния в Bookings Service (паттерн Saga).
+
+---
 ## 🛠 Технологический стек
 
 *  __.NET 10.0__
-* **API:** ASP.NET Core Web API
+* **Микросервисы:** ASP.NET Core Web API
 * **DI Container:** Встроенный .NET Dependency Injection
-* **База Данных:** PostgreSQL
+* **Базы Данных:** PostgreSQL (Entity Framework Core 10, Code-First)
+* **Message Broker:** Apache Kafka
+* **Resilience:** Polly v8 (retry pipelines)
+* **Architecture Patterns:** Clean Architecture, CQRS (MediatR), Outbox/Inbox
 * **Authorization:** JWT Bearer
 * **Documentation:** Swagger / OpenAPI
 * **Testing:** xUnit, Moq, Testcontainers + Docker
 * **Format:** JSON (Problem Details RFC 7807)
+
 ---
 
-## 🚦 Как запустить проект (How to Run)
+## 🚦 Инструкция по запуску (Docker Compose)
 
-Для запуска приложения вам понадобится установленный **.NET 10.0 SDK** и **PostgreSQL**.
-В проекте используется **Entity Framework Core** с использованием подхода **Code-First** для управления схемой базы данных PostgreSQL.
+Для удобного запуска всей микросервисной инфраструктуры локально используется Docker Compose. Вам понадобится установленный Docker Desktop (или Docker Engine).
 
 ### 1. Клонирование репозитория
 Откройте терминал и выполните команду:
 ```sh
 git clone https://github.com/SanteR1/CoreEvents.git
 cd CoreEvents
-dotnet build
 ```
 ### 2. Настроить строку подключения к БД PostgreSQL
 Откройте файл `appsettings.json` и отредактируйте параметры `ConnectionStrings`:<br>
@@ -42,21 +71,17 @@ dotnet build
 `Username=postgres` - Имя пользователя<br>
 `Password=postgres"` - Пароль<br>
 При каждом запуске приложения срабатывает метод `MigrateAsync()` - проверяет состояние базы данных, создает саму базу (если её еще нет) и накатывает все недостающие миграции
+* Создать в корне проекта файл .env и заполнить его на примере документа .env.example
 
-### 3. Запуск приложения
-
-#### Предварительные требования
-* Запущен локальный сервер PostgreSQL (или Docker-контейнер) с базой данных, указанной в строке подключения `ConnectionStrings:DefaultConnection` в файле `appsettings.json`.
+### 3. Запуск микросервисов
 
 В терминале выполните команду:
 ```sh
-dotnet run
+docker compose up --build -d
 ```
-После запуска в консоли появятся URL-адреса (например, <code>https://localhost:7111</code>).
-
-**Swagger UI** (Интерактивная документация): Перейдите по адресу: <code>https://localhost:{port}/swagger</code>
-
-**Базовый URL API**: <code>https://localhost:{port}/events</code>
+* `Swagger UI для Users Service: http://localhost:5003/swagger`
+* `Swagger UI для Events Service: http://localhost:5004/swagger`
+* `Swagger UI для Bookings Service: http://localhost:5005/swagger`
 
 ---
 ## Управление базой данных и миграции
@@ -71,9 +96,10 @@ dotnet run
 dotnet tool install --global dotnet-ef
 ```
 
-### Основные команды для работы
+### Применение миграций (накатывание схем БД)
 
-Все команды выполняются из папки проекта **CoreEvents.Infrastructure**:
+Так как базы данных разделены, миграции нужно применить для каждого сервиса отдельно. Находясь в папке нужного сервиса:
+`Users.Infrastructure`,`Events.Infrastructure`,`Bookings.Infrastructure`
 
 * **Создание новой миграции** (выполняйте каждый раз, когда изменили C#-модели):
   ```sh
@@ -99,7 +125,9 @@ dotnet tool install --global dotnet-ef
 > ⚠️ **Важно:** Перед применением миграций убедитесь, что в файле конфигурации `appsettings.json` (или `appsettings.Development.json`) указана корректная строка подключения к вашему локальному серверу или Docker-контейнеру PostgreSQL.
 ---
 
-## 🛡️ Ролевая модель и матрица доступа
+## 🛡️ Ролевая модель и JWT Авторизация
+JWT-токен генерируется в `Users Service`, но валидируется во всех остальных микросервисах с использованием общего публичного ключа или секретного ключа (симметричное шифрование).
+
 В сервисе две роли: Admin и User. Администратор управляет событиями — создаёт, редактирует, удаляет их и может отменять любые брони. Обычный пользователь может только бронировать события и отменять собственные брони.
 > ⚠️ **Важно:** Пользователь может отменить только свою бронь; администратор — любую.
 
@@ -113,6 +141,7 @@ dotnet tool install --global dotnet-ef
 | **DELETE `/events/{id}`** | ❌ Запрещено (401) | ❌ Запрещено (403) | ✅ Доступно |
 | **GET `/bookings/{id}`** | ❌ Запрещено (401) | ✅ Доступно | ✅ Доступно |
 | **DELETE `/bookings/{id}`** | ❌ Запрещено (401) | ❌ Чужая бронь<br> Запрещено (403) | ✅ Доступно |
+> ⚠️ **Важно:** В микросервисной среде параметры Jwt:SecretKey, Jwt:Issuer и Jwt:Audience должны быть синхронизированы в appsettings.json во всех трех сервисах.
 
 ### Получение JWT-токена через Swagger
 1. Необходимо пройти регистрацию `/auth/register` с указанием логина и пароля.
@@ -395,26 +424,6 @@ curl -X 'POST' \
 
 ---
 
-## ✍ Логика фоновой обработки бронирований (Clean Architecture)
-В проекте реализован надежный механизм асинхронной обработки очередей, строго разделенный по слоям в соответствии с принципами Чистой Архитектуры:<br>
-**Слой Presentation (Управление потоками и DI)**
-* Фоновый воркер (BookingProcessingService) периодически (каждые 10 секунд) запрашивает у слоя бизнес-логики список ID бронирований, требующих обработки.
-* Служба работает в режиме параллельной обработки с использованием `Task.WhenAll`.
-* Для предотвращения конфликтов конкурентного доступа к БД, каждая задача запускается в изолированной песочнице (IServiceScope) и работает со своим собственным экземпляром контекста данных и репозиториев.
-* В случае падения отдельной задачи (Task), исключение локализуется и логируется, не прерывая работу главного цикла фоновой службы.
-**Слой Application (Чистая бизнес-логика - IBookingOrchestrator)**
-* Слой приложения определяет пул работы, выбирая бронирования со статусом Pending.
-* Для каждого ID вызывается инкапсулированный метод ProcessBookingAsync, который не зависит от деталей многопоточности.
-* После проверки бизнес-правил (наличие события и свободных мест) бронь переводится в финальный статус: Confirmed или Rejected.
-* При смене статуса автоматически заполняется поле ProcessedAt.
-* Обновленное состояние сущности сохраняется в базу данных через абстракцию IBookingRepository.<br>
-
-#### 🛡️ Отказоустойчивость и Rollback (Компенсация)
-* В систему заложен механизм компенсационных транзакций. Если во время подтверждения брони возникает непреддвиденная критическая ошибка, запускается процесс отката (`RollbackBookingAsync`).
-* При откате бронь принудительно переводится в статус Rejected, а зарезервированное место корректно возвращается в пул доступных мест события (`existEvent.ReleaseSeats()`), предотвращая рассинхронизацию счетчиков.
-
----
-
 ## ▶️ Пример использования
 
 1. Создаем новое событие с указанием общего количества мест
@@ -427,11 +436,7 @@ curl -X 'POST' \
 8. Повторяем запрос полученный из `Location` спустя ~10 секунд
 9. Статус меняется на `Confirmed` или `Rejected`в зависимости от результа обработки
 10. После смены статуса, заполняется поле `ProcessedAt` текущим временем завершения обработки
-
 ---
-## Описание примитивов синхронизации и их назначения
-
-В проекте для обеспечения потокобезопасности и предотвращения состояния гонки (Race Condition) используется  PostgreSQL распределённая Transaction-level блокировка `pg_advisory_xact_lock`.
 
 ## 🧪 Валидация и ошибки (Data Annotations)
 
@@ -474,14 +479,14 @@ curl -X 'POST' \
 
 ## ⚠️ Формат ошибок (Problem Details)
 В случае ошибки API возвращает стандартизированный ответ (Problem Details RFC 7807):
-- DomainValidationException => 400
-- DomainPastEventBookingException => 400
-- DomainUnauthorizedAccessException => 401
-- DomainNotBookingOwnerException => 403
-- DomainNotFoundException => 404
-- DomainNoAvailableSeatsException => 409
-- DomainInvalidStatusTransitionException => 409
-- DomainActiveBookingLimitExceededException => 409
+- ValidationException => 400
+- PastEventBookingException => 400
+- UnauthorizedAccessException => 401
+- NotBookingOwnerException => 403
+- NotFoundException => 404
+- NoAvailableSeatsException => 409
+- InvalidStatusTransitionException => 409
+- ActiveBookingLimitExceededException => 409
 - OperationCanceledException => 499
 
 ```json
