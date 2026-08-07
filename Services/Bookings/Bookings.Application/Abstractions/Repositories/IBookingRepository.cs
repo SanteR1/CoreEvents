@@ -1,0 +1,15 @@
+﻿using Bookings.Domain.Entities;
+
+namespace Bookings.Application.Abstractions.Repositories
+{
+    public interface IBookingRepository
+    {
+        Task<Booking?> GetByIdAsync(Guid id, CancellationToken ct = default);
+        Task<int> GetBookingCountForUserAsync(Guid userId, CancellationToken ct = default);
+        Task<IReadOnlyList<Guid>> GetPendingAsync(CancellationToken ct = default);
+        Task<int> SaveChangesAsync(CancellationToken ct = default);
+        void Add(Booking booking);
+        void Update(Booking booking);
+        void Delete(Booking booking);
+    }
+}
