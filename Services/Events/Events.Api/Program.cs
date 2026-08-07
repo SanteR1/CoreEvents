@@ -11,10 +11,7 @@ if (builder.Environment.IsDevelopment())
 
 builder.Services.AddPresentationServices();
 builder.Services.AddApplicationServices();
-//builder.Services.AddApplicationServices(options =>
-//{
-//    builder.Configuration.GetSection("ApplicationSettings").Bind(options);
-//});
+
 builder.Services.AddInfrastructureServices(builder.Configuration, builder.Environment);
 
 var app = builder.Build();
