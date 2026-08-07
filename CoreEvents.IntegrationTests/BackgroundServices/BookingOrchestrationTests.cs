@@ -32,7 +32,7 @@ namespace CoreEvents.IntegrationTests.BackgroundServices
                 await db.SaveChangesAsync();
                 return testEvent.Id;
             });
-            
+
             var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
 
             var worker1 = ActivatorUtilities.CreateInstance<BookingProcessingService>(Factory.Services);
@@ -45,7 +45,7 @@ namespace CoreEvents.IntegrationTests.BackgroundServices
                 worker2.StartAsync(cts.Token),
                 worker3.StartAsync(cts.Token)
             );
-            
+
             var timeout = TimeSpan.FromSeconds(15);
             var isProcessed = await WaitUntilAsync(
                 condition: async () =>

@@ -6,7 +6,7 @@ namespace CoreEvents.Infrastructure.Identity
     {
         // Имя секции в appsettings / переменных окружения
         public const string SectionName = "Jwt";
-        
+
         [Required(ErrorMessage = "Секретный ключ JWT обязателен.")]
         [MinLength(32, ErrorMessage = "Секретный ключ должен содержать минимум 32 символа.")]
         public string SecretKey { get; init; } = string.Empty;

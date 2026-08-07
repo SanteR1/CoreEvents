@@ -1,11 +1,11 @@
 ﻿using CoreEvents.Application.Interfaces.Repositories;
 using CoreEvents.Domain.Entities;
 using CoreEvents.Domain.Enums;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using FluentAssertions;
 using CoreEvents.IntegrationTests.Infrastructure.Bases;
 using CoreEvents.IntegrationTests.Infrastructure.Factories;
+using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CoreEvents.IntegrationTests.Repositories
 {
@@ -94,7 +94,7 @@ namespace CoreEvents.IntegrationTests.Repositories
                 repo.Delete(booking!);
                 await repo.SaveChangesAsync(CancellationToken.None);
             });
-            
+
             // Assert
             await ExecuteDbContextAsync(async ctx =>
             {
@@ -144,7 +144,7 @@ namespace CoreEvents.IntegrationTests.Repositories
                 ctx.Events.Add(eventId);
                 var b1 = Booking.Create(eventId.Id, user.Id);
                 var b2 = Booking.Create(eventId.Id, user.Id);
-                ctx.Bookings.AddRange(b1,b2);
+                ctx.Bookings.AddRange(b1, b2);
                 await ctx.SaveChangesAsync();
             });
 

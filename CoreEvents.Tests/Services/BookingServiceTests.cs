@@ -281,7 +281,7 @@ namespace CoreEvents.Tests.Services
             _userContextMock
                 .Setup(repo => repo.UserId)
                 .Returns(Guid.NewGuid());
-            
+
             // Act & Assert
             Func<Task> act = async () => await _bookingService.CreateBookingAsync(createDto, TestContext.Current.CancellationToken);
             var exceptionAssertion = await act.Should().ThrowAsync<DomainPastEventBookingException>();
@@ -314,7 +314,7 @@ namespace CoreEvents.Tests.Services
 
             _bookingRepositoryMock.Setup(repo => repo.GetBookingCountForUserAsync(userId, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(userCountBooking);
-            
+
             // Act & Assert
             Func<Task> act = async () => await _bookingService.CreateBookingAsync(createDto);
             var exceptionAssertion = await act.Should().ThrowAsync<DomainActiveBookingLimitExceededException>();
@@ -346,7 +346,7 @@ namespace CoreEvents.Tests.Services
 
             _userContextMock
                 .Setup(repo => repo.UserId)
-                .Returns(()=> currentUser);
+                .Returns(() => currentUser);
 
             _bookingRepositoryMock.Setup(repo => repo.GetBookingCountForUserAsync(userOne, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(userOneCountBooking);
@@ -409,7 +409,7 @@ namespace CoreEvents.Tests.Services
             // Setup
             _eventRepositoryMock.Setup(repo => repo.GetByIdAsync(existEvent.Id, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(existEvent);
-            
+
             _userContextMock
                 .SetupSequence(repo => repo.UserId)
                 .Returns(userOwnerId)

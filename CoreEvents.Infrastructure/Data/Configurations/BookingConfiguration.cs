@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace CoreEvents.Infrastructure.Data.Configurations
 {
-    internal class BookingConfiguration:IEntityTypeConfiguration<Booking>
+    internal class BookingConfiguration : IEntityTypeConfiguration<Booking>
     {
         public void Configure(EntityTypeBuilder<Booking> builder)
         {
@@ -22,7 +22,7 @@ namespace CoreEvents.Infrastructure.Data.Configurations
             builder.Property(b => b.Id)
                 .HasColumnName("id")
                 .ValueGeneratedNever();
-            
+
             builder.Property(b => b.CreatedAt)
                 .HasColumnName("created_at")
                 .IsRequired();

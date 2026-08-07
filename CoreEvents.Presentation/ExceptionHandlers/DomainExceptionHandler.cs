@@ -87,7 +87,7 @@ namespace CoreEvents.Presentation.ExceptionHandlers
             DomainActiveBookingLimitExceededException => StatusCodes.Status409Conflict,
             DomainReleaseSeatsException => StatusCodes.Status409Conflict,
             OperationCanceledException => StatusCodes.Status499ClientClosedRequest,
-            _ => StatusCodes.Status400BadRequest 
+            _ => StatusCodes.Status400BadRequest
         };
 
         private static string GetTitle(Exception ex) => ex switch

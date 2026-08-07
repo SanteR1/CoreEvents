@@ -4,15 +4,15 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace CoreEvents.Infrastructure.Data.Configurations
 {
-    internal sealed class EventConfiguration: IEntityTypeConfiguration<Event>
+    internal sealed class EventConfiguration : IEntityTypeConfiguration<Event>
     {
         public void Configure(EntityTypeBuilder<Event> builder)
         {
             builder.ToTable("events");
 
-            builder.ToTable(x=> x.HasCheckConstraint("CK_events_dates", "\"start_at\" < \"end_at\""));
-            
-            builder.HasKey(x=> x.Id);
+            builder.ToTable(x => x.HasCheckConstraint("CK_events_dates", "\"start_at\" < \"end_at\""));
+
+            builder.HasKey(x => x.Id);
 
             // Композитный индекс для фильтрации и сортировки дат
             builder.HasIndex(e => new { e.StartAt, e.EndAt })

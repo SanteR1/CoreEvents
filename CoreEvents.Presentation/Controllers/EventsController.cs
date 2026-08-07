@@ -72,7 +72,7 @@ namespace CoreEvents.Presentation.Controllers
         [HttpDelete("{id:guid}")]
         [Authorize(Roles = "Admin")]
         [Produces("application/json")]
-        [ProducesResponseType( StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]

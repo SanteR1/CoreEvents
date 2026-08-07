@@ -19,7 +19,7 @@ namespace CoreEvents.Infrastructure.Data.Configurations
                 .HasColumnName("id")
                 .ValueGeneratedNever();
 
-            builder.Property(x=> x.UserName)
+            builder.Property(x => x.UserName)
                 .HasColumnName("user")
                 .HasMaxLength(50)
                 .IsRequired();

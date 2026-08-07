@@ -6,7 +6,7 @@ using CoreEvents.Domain.Exceptions;
 
 namespace CoreEvents.Application.Services
 {
-    internal class UserService: IUserService
+    internal class UserService : IUserService
     {
         private readonly IUserRepository _repository;
         private readonly ITokenProvider _token;

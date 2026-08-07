@@ -6,18 +6,17 @@ using CoreEvents.Domain.Entities;
 using CoreEvents.Domain.Enums;
 using CoreEvents.IntegrationTests.Infrastructure.Bases;
 using CoreEvents.IntegrationTests.Infrastructure.Factories;
-using Docker.DotNet.Models;
 using FluentAssertions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 namespace CoreEvents.IntegrationTests.Controllers
 {
-    public class BookingControllerTests(ApiOnlyIntegrationTestFactory factory): ApiOnlyIntegrationTestBase(factory)
+    public class BookingControllerTests(ApiOnlyIntegrationTestFactory factory) : ApiOnlyIntegrationTestBase(factory)
     {
         private readonly HttpClient _client = factory.CreateClient();
 
         [Fact]
-        public  async Task GetBookingStatus_WithValidRequest_ShouldReturnCreateAnd()
+        public async Task GetBookingStatus_WithValidRequest_ShouldReturnCreateAnd()
         {
             // Arrange
             var eventCreate = await ExecuteDbContextAsync(async ctx =>
@@ -32,7 +31,7 @@ namespace CoreEvents.IntegrationTests.Controllers
                 return eventCreate;
             });
 
-            var registerResponse = await  _client.PostAsJsonAsync(
+            var registerResponse = await _client.PostAsJsonAsync(
                 "/auth/register",
                 new UserRequestDto("testuser", "123", "User"),
                 TestContext.Current.CancellationToken);
@@ -101,7 +100,7 @@ namespace CoreEvents.IntegrationTests.Controllers
 
             // Act & Assert
             var responseCreate = await _client.PostAsync($"/events/{eventCreate.Id}/book", content: null, cancellationToken: TestContext.Current.CancellationToken);
-            
+
             responseCreate.StatusCode.Should().Be(HttpStatusCode.Accepted);
             var returnedCreate = await responseCreate.Content.ReadFromJsonAsync<BookingResponseDto>(DefaultJsonOptions, TestContext.Current.CancellationToken);
 

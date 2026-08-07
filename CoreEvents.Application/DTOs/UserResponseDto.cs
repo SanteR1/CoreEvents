@@ -1,6 +1,6 @@
 ﻿using System.Linq.Expressions;
-using CoreEvents.Domain.Enums;
 using CoreEvents.Domain.Entities;
+using CoreEvents.Domain.Enums;
 
 namespace CoreEvents.Application.DTOs
 {

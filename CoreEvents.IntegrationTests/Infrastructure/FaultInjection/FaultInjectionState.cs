@@ -19,7 +19,7 @@ public class FaultInjectionState
 
     // 5. Возможность пробросить совершенно кастомную ошибку (например, PostgresException)
     public Exception? CustomExceptionToThrow { get; set; }
-    
+
     /// <summary>
     /// Проверяет, нужно ли имитировать сбой для данной брони
     /// </summary>

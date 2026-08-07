@@ -30,7 +30,7 @@ namespace CoreEvents.Presentation.BackgroundServices
 
                     var orchestrator = scope.ServiceProvider.GetRequiredService<IBookingOrchestrator>();
                     var idsToProcess = await orchestrator.GetWorkItemsAsync(stoppingToken);
-                    
+
                     var tasks = idsToProcess.Select(id => ProcessSingleBookingSafeAsync(id, stoppingToken));
                     await Task.WhenAll(tasks);
                 }

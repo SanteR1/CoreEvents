@@ -12,7 +12,7 @@ namespace CoreEvents.Presentation.Services
             get
             {
                 var idClaim = httpContextAccessor.HttpContext?.User.FindFirstValue(JwtRegisteredClaimNames.Sub);
-                
+
                 if (Guid.TryParse(idClaim, out var userId))
                     return userId;
 

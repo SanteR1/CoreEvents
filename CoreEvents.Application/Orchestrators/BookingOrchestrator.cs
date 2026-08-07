@@ -69,7 +69,7 @@ namespace CoreEvents.Application.Orchestrators
                 }
 
                 booking.Confirm();
-                
+
                 await bookingRepository.SaveChangesAsync(stoppingToken);
 
                 await lockScope.CompleteAsync(stoppingToken);

@@ -74,7 +74,7 @@ namespace CoreEvents.Infrastructure.Repositories
 
         public async Task<Event?> GetByIdAsync(Guid id, CancellationToken ct = default)
         {
-            return await _context.Events.FindAsync([id],ct);
+            return await _context.Events.FindAsync([id], ct);
         }
 
         public async Task<int> SaveChangesAsync(CancellationToken ct = default)

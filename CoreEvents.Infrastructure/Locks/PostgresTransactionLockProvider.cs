@@ -63,7 +63,7 @@ namespace CoreEvents.Infrastructure.Locks
                 throw;
             }
         }
-        
+
         private static long GenerateLockId(string resourceKey)
         {
             byte[] hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(resourceKey));

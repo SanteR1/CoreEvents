@@ -84,7 +84,7 @@ namespace CoreEvents.Tests.Domain
             eventEntity.TryReserveSeats(reserveSeats);
 
             // Act
-            var result =  eventEntity.ReleaseSeats(releaseSeats);
+            var result = eventEntity.ReleaseSeats(releaseSeats);
 
             // Assert
             result.Should().BeTrue();

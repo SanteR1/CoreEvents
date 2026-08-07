@@ -21,7 +21,7 @@ namespace CoreEvents.Infrastructure.Repositories
 
         public async Task<User?> GetByUserNameAsync(string userName, CancellationToken ct = default)
         {
-            return await _context.Users.FirstOrDefaultAsync(x=> x.UserName == userName, ct);
+            return await _context.Users.FirstOrDefaultAsync(x => x.UserName == userName, ct);
         }
 
         public void Add(User entity)

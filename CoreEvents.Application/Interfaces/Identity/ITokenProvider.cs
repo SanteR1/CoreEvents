@@ -12,7 +12,7 @@ namespace CoreEvents.Application.Interfaces.Identity
         {
             if (userId == Guid.Empty)
                 throw new ArgumentException("UserId не может быть пустым", nameof(userId));
-            
+
             UserId = userId;
             Role = role;
             Email = email;

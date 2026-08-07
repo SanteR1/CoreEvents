@@ -2,12 +2,12 @@
 using CoreEvents.Application.Interfaces.Repositories;
 using CoreEvents.Domain.Entities;
 using CoreEvents.Infrastructure.Data;
+using CoreEvents.IntegrationTests.Infrastructure.Bases;
+using CoreEvents.IntegrationTests.Infrastructure.Factories;
+using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
-using FluentAssertions;
-using CoreEvents.IntegrationTests.Infrastructure.Bases;
-using CoreEvents.IntegrationTests.Infrastructure.Factories;
 
 namespace CoreEvents.IntegrationTests.Repositories
 {

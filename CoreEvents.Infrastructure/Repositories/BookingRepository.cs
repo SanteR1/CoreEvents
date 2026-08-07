@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CoreEvents.Infrastructure.Repositories
 {
-    internal sealed class BookingRepository: IBookingRepository
+    internal sealed class BookingRepository : IBookingRepository
     {
         private readonly AppDbContext _context;
 
@@ -28,7 +28,7 @@ namespace CoreEvents.Infrastructure.Repositories
         {
             return await _context.Bookings
                 .Where(x => x.Status == BookingStatus.Pending)
-                .OrderBy(x=> x.CreatedAt)
+                .OrderBy(x => x.CreatedAt)
                 .Select(x => x.Id)
                 .ToListAsync(ct);
         }

@@ -1,5 +1,4 @@
 ﻿using CoreEvents.Application.DTOs;
-using CoreEvents.Application.Interfaces;
 using CoreEvents.Application.Interfaces.Repositories;
 using CoreEvents.Domain.Entities;
 using CoreEvents.Domain.Exceptions;
@@ -70,7 +69,7 @@ namespace CoreEvents.Application.Services
                 ? Math.Min(dtoFilter.Page, 100000)
                 : 1;
 
-            var eventFilter = dtoFilter with {From = startInclusive, To = endExclusive,PageSize = pageSize, Page = page };
+            var eventFilter = dtoFilter with { From = startInclusive, To = endExclusive, PageSize = pageSize, Page = page };
             var pagedEvents = await _eventRepository.GetAllAsync(eventFilter, ct);
             return pagedEvents.Map(EventResponseDto.FromEntity);
         }

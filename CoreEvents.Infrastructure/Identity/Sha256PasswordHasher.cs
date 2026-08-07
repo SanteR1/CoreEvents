@@ -4,7 +4,7 @@ using CoreEvents.Application.Interfaces.Identity;
 
 namespace CoreEvents.Infrastructure.Identity
 {
-    public class Sha256PasswordHasher: IPasswordHasher
+    public class Sha256PasswordHasher : IPasswordHasher
     {
         public string Hash(string password)
         {

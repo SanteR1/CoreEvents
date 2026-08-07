@@ -30,7 +30,7 @@ namespace CoreEvents.Domain.Entities
             {
                 "User" => RoleName.User,
                 "Admin" => RoleName.Admin,
-                    _ => RoleName.User
+                _ => RoleName.User
             };
 
             return new User()

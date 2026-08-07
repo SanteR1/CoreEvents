@@ -918,7 +918,7 @@ namespace CoreEvents.Tests.Services
             // Act & Assert
             Func<Task> act = async () => await _eventService.UpdateEventAsync(existingEvent.Id, updateDto);
             var exceptionAssertion = await act.Should().ThrowAsync<DomainValidationException>();
-            
+
             exceptionAssertion.Which.ErrorCode.Should().Be("Domain.ValidationFailed");
             exceptionAssertion.Which.Errors.Should().ContainKey("startAt");
 
@@ -953,7 +953,7 @@ namespace CoreEvents.Tests.Services
             result.Description.Should().Be(updateEvent.Description);
             result.StartAt.Should().Be(newFutureDate);
             result.EndAt.Should().Be(newFutureDate.AddHours(3));
-            
+
             _eventRepositoryMock.Verify(repo => repo.GetByIdAsync(existingEvent.Id, It.IsAny<CancellationToken>()), Times.Once);
             _eventRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         }

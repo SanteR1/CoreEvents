@@ -1,5 +1,4 @@
-﻿using System;
-using Microsoft.EntityFrameworkCore.Migrations;
+﻿using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -17,7 +16,7 @@ namespace CoreEvents.Migrations
                 type: "uuid",
                 nullable: false,
                 defaultValue: new Guid("00000000-0000-0000-0000-000000000000"));
-            
+
             // На момент создания таблица booking уже существовала и по этому EF сгенерировал defaultValue - удаляем
             migrationBuilder.Sql("ALTER TABLE bookings ALTER COLUMN user_id DROP DEFAULT;");
 
