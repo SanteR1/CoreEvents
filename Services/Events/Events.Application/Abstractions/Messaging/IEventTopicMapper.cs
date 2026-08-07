@@ -1,7 +1,6 @@
-﻿namespace Events.Application.Abstractions.Messaging
+﻿namespace Events.Application.Abstractions.Messaging;
+
+public interface IEventTopicMapper
 {
-    public interface IEventTopicMapper
-    {
-        string GetTopicFor<T>();
-    }
+    string GetTopicFor<T>();
 }

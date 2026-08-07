@@ -1,11 +1,10 @@
 ﻿using CoreEvents.Domain.Enums;
 
-namespace CoreEvents.Application.Interfaces
+namespace CoreEvents.Application.Interfaces;
+
+public interface IUserContext
 {
-    public interface IUserContext
-    {
-        Guid? UserId { get; }
-        bool IsAuthenticated { get; }
-        RoleName? Role { get; }
-    }
+    Guid? UserId { get; }
+    bool IsAuthenticated { get; }
+    RoleName? Role { get; }
 }

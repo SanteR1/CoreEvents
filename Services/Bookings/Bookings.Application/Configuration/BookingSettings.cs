@@ -1,7 +1,6 @@
-﻿namespace Bookings.Application.Configuration
+﻿namespace Bookings.Application.Configuration;
+
+public class BookingSettings
 {
-    public class BookingSettings
-    {
-        public int MaxBookingsPerUser { get; set; }
-    }
+    public int MaxBookingsPerUser { get; set; }
 }

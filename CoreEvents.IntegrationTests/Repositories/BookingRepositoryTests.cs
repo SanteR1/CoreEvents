@@ -7,221 +7,220 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CoreEvents.IntegrationTests.Repositories
+namespace CoreEvents.IntegrationTests.Repositories;
+
+public class BookingRepositoryTests(ApiOnlyIntegrationTestFactory factory) : ApiOnlyIntegrationTestBase(factory)
 {
-    public class BookingRepositoryTests(ApiOnlyIntegrationTestFactory factory) : ApiOnlyIntegrationTestBase(factory)
+    [Fact]
+    public async Task Add_ExistEventId_ShouldInsertBookingWithPendingStatus()
     {
-        [Fact]
-        public async Task Add_ExistEventId_ShouldInsertBookingWithPendingStatus()
+        // Arrange
+        var user = User.Create("Test", "123");
+        var eventId = await ExecuteDbContextAsync(async ctx =>
         {
-            // Arrange
-            var user = User.Create("Test", "123");
-            var eventId = await ExecuteDbContextAsync(async ctx =>
-            {
-                ctx.Users.Add(user);
-                await ctx.SaveChangesAsync();
-                var e = Event.Create("Booking Test", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(2), 10);
-                ctx.Events.Add(e);
-                await ctx.SaveChangesAsync();
-                return e.Id;
-            });
-            var booking = Booking.Create(eventId, user.Id);
+            ctx.Users.Add(user);
+            await ctx.SaveChangesAsync();
+            var e = Event.Create("Booking Test", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(2), 10);
+            ctx.Events.Add(e);
+            await ctx.SaveChangesAsync();
+            return e.Id;
+        });
+        var booking = Booking.Create(eventId, user.Id);
 
-            // Act
-            await ExecuteScopeAsync(async sp =>
+        // Act
+        await ExecuteScopeAsync(async sp =>
+        {
+            var repo = sp.GetRequiredService<IBookingRepository>();
+            repo.Add(booking);
+            await repo.SaveChangesAsync();
+        });
+
+        // Assert
+        await ExecuteDbContextAsync(async ctx =>
+        {
+            var exists = await ctx.Bookings.FindAsync(booking.Id);
+
+            exists.Should().NotBeNull();
+            booking.Id.Should().Be(exists.Id);
+            eventId.Should().Be(exists.EventId);
+        });
+    }
+
+    [Fact]
+    public async Task Add_InvalidEventId_ShouldRespectForeignKeyConstraintAndThrowsDbUpdateException()
+    {
+        // Arrange
+        var eventId = Guid.NewGuid();
+
+        var booking = Booking.Create(eventId, Guid.NewGuid());
+
+        // Act & Assert
+        await ExecuteScopeAsync(async sp =>
+        {
+            var repo = sp.GetRequiredService<IBookingRepository>();
+
+            Func<Task> action = async () =>
             {
-                var repo = sp.GetRequiredService<IBookingRepository>();
                 repo.Add(booking);
-                await repo.SaveChangesAsync();
-            });
+                await repo.SaveChangesAsync(TestContext.Current.CancellationToken);
+            };
 
-            // Assert
-            await ExecuteDbContextAsync(async ctx =>
-            {
-                var exists = await ctx.Bookings.FindAsync(booking.Id);
+            await action.Should().ThrowAsync<DbUpdateException>().WithInnerException(typeof(Exception)).WithMessage("*23503*");
+        });
+    }
 
-                exists.Should().NotBeNull();
-                booking.Id.Should().Be(exists.Id);
-                eventId.Should().Be(exists.EventId);
-            });
-        }
-
-        [Fact]
-        public async Task Add_InvalidEventId_ShouldRespectForeignKeyConstraintAndThrowsDbUpdateException()
+    [Fact]
+    public async Task Delete_ShouldRemoveBooking()
+    {
+        // Arrange
+        var user = User.Create("Test", "123");
+        var bookingId = await ExecuteDbContextAsync(async ctx =>
         {
-            // Arrange
-            var eventId = Guid.NewGuid();
+            ctx.Users.Add(user);
+            await ctx.SaveChangesAsync();
+            var eventId = Event.Create("Delete Booking", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(2), 10);
+            ctx.Events.Add(eventId);
+            var b = Booking.Create(eventId.Id, user.Id);
+            ctx.Bookings.Add(b);
+            await ctx.SaveChangesAsync();
+            return b.Id;
+        });
 
-            var booking = Booking.Create(eventId, Guid.NewGuid());
-
-            // Act & Assert
-            await ExecuteScopeAsync(async sp =>
-            {
-                var repo = sp.GetRequiredService<IBookingRepository>();
-
-                Func<Task> action = async () =>
-                {
-                    repo.Add(booking);
-                    await repo.SaveChangesAsync(TestContext.Current.CancellationToken);
-                };
-
-                await action.Should().ThrowAsync<DbUpdateException>().WithInnerException(typeof(Exception)).WithMessage("*23503*");
-            });
-        }
-
-        [Fact]
-        public async Task Delete_ShouldRemoveBooking()
+        // Act
+        await ExecuteScopeAsync(async sp =>
         {
-            // Arrange
-            var user = User.Create("Test", "123");
-            var bookingId = await ExecuteDbContextAsync(async ctx =>
-            {
-                ctx.Users.Add(user);
-                await ctx.SaveChangesAsync();
-                var eventId = Event.Create("Delete Booking", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(2), 10);
-                ctx.Events.Add(eventId);
-                var b = Booking.Create(eventId.Id, user.Id);
-                ctx.Bookings.Add(b);
-                await ctx.SaveChangesAsync();
-                return b.Id;
-            });
+            var repo = sp.GetRequiredService<IBookingRepository>();
+            var booking = await repo.GetByIdAsync(bookingId, CancellationToken.None);
+            repo.Delete(booking!);
+            await repo.SaveChangesAsync(CancellationToken.None);
+        });
 
-            // Act
-            await ExecuteScopeAsync(async sp =>
-            {
-                var repo = sp.GetRequiredService<IBookingRepository>();
-                var booking = await repo.GetByIdAsync(bookingId, CancellationToken.None);
-                repo.Delete(booking!);
-                await repo.SaveChangesAsync(CancellationToken.None);
-            });
-
-            // Assert
-            await ExecuteDbContextAsync(async ctx =>
-            {
-                var exists = await ctx.Bookings.AnyAsync(b => b.Id == bookingId);
-
-                exists.Should().BeFalse();
-            });
-        }
-
-        [Fact]
-        public async Task GetByIdAsync_ExistEventId_ShouldRetrieveBookingByIdAndReturnEntity()
+        // Assert
+        await ExecuteDbContextAsync(async ctx =>
         {
-            // Arrange
-            var user = User.Create("Test", "123");
-            var bookingId = await ExecuteDbContextAsync(async ctx =>
-            {
-                ctx.Users.Add(user);
-                await ctx.SaveChangesAsync();
-                var eventId = Event.Create("Get By Id", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(2), 10);
-                ctx.Events.Add(eventId);
-                var b = Booking.Create(eventId.Id, user.Id);
-                ctx.Bookings.Add(b);
-                await ctx.SaveChangesAsync();
-                return b.Id;
-            });
+            var exists = await ctx.Bookings.AnyAsync(b => b.Id == bookingId);
 
-            // Act
-            var result = await ExecuteScopeAsync(sp =>
-                sp.GetRequiredService<IBookingRepository>()
-                .GetByIdAsync(bookingId, CancellationToken.None));
+            exists.Should().BeFalse();
+        });
+    }
 
-            // Assert
-            result.Should().NotBeNull();
-            bookingId.Should().Be(result.Id);
-        }
-
-        [Fact]
-        public async Task GetPendingAsync_ShouldReturnOnlyPendingBookingIds()
+    [Fact]
+    public async Task GetByIdAsync_ExistEventId_ShouldRetrieveBookingByIdAndReturnEntity()
+    {
+        // Arrange
+        var user = User.Create("Test", "123");
+        var bookingId = await ExecuteDbContextAsync(async ctx =>
         {
-            // Arrange
-            var user = User.Create("Test", "123");
-            await ExecuteDbContextAsync(async ctx =>
-            {
-                ctx.Users.Add(user);
-                await ctx.SaveChangesAsync();
-                var eventId = Event.Create("Pending Filter", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(2), 10);
-                ctx.Events.Add(eventId);
-                var b1 = Booking.Create(eventId.Id, user.Id);
-                var b2 = Booking.Create(eventId.Id, user.Id);
-                ctx.Bookings.AddRange(b1, b2);
-                await ctx.SaveChangesAsync();
-            });
+            ctx.Users.Add(user);
+            await ctx.SaveChangesAsync();
+            var eventId = Event.Create("Get By Id", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(2), 10);
+            ctx.Events.Add(eventId);
+            var b = Booking.Create(eventId.Id, user.Id);
+            ctx.Bookings.Add(b);
+            await ctx.SaveChangesAsync();
+            return b.Id;
+        });
 
-            // Act
-            var pendingIds = await ExecuteScopeAsync(sp =>
-                sp.GetRequiredService<IBookingRepository>()
-                .GetPendingAsync(CancellationToken.None));
+        // Act
+        var result = await ExecuteScopeAsync(sp =>
+            sp.GetRequiredService<IBookingRepository>()
+            .GetByIdAsync(bookingId, CancellationToken.None));
 
-            // Assert
-            pendingIds.Should().HaveCount(2);
+        // Assert
+        result.Should().NotBeNull();
+        bookingId.Should().Be(result.Id);
+    }
 
-        }
-
-        [Fact]
-        public async Task LoadBookingWithEvent_ReturnsCorrectEvent()
+    [Fact]
+    public async Task GetPendingAsync_ShouldReturnOnlyPendingBookingIds()
+    {
+        // Arrange
+        var user = User.Create("Test", "123");
+        await ExecuteDbContextAsync(async ctx =>
         {
-            // Arrange
-            var user = User.Create("Test", "123");
-            var bookingId = await ExecuteDbContextAsync(async ctx =>
-            {
-                ctx.Users.Add(user);
-                await ctx.SaveChangesAsync();
-                var eventId = Event.Create("Event 1 for Include", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(2), 10);
-                ctx.Events.Add(eventId);
-                var booking = Booking.Create(eventId.Id, user.Id);
-                ctx.Bookings.Add(booking);
-                await ctx.SaveChangesAsync();
-                return booking.Id;
-            });
+            ctx.Users.Add(user);
+            await ctx.SaveChangesAsync();
+            var eventId = Event.Create("Pending Filter", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(2), 10);
+            ctx.Events.Add(eventId);
+            var b1 = Booking.Create(eventId.Id, user.Id);
+            var b2 = Booking.Create(eventId.Id, user.Id);
+            ctx.Bookings.AddRange(b1, b2);
+            await ctx.SaveChangesAsync();
+        });
 
-            // Act & Assert
-            await ExecuteDbContextAsync(async ctx =>
-            {
-                var loadedBooking = await ctx.Bookings
-                    .Include(b => b.Event)
-                    .FirstAsync(b => b.Id == bookingId);
+        // Act
+        var pendingIds = await ExecuteScopeAsync(sp =>
+            sp.GetRequiredService<IBookingRepository>()
+            .GetPendingAsync(CancellationToken.None));
 
-                loadedBooking.Event.Should().NotBeNull();
-                loadedBooking.Event.Title.Should().Be("Event 1 for Include");
-            });
-        }
+        // Assert
+        pendingIds.Should().HaveCount(2);
 
-        [Fact]
-        public async Task Update_ShouldPersistBookingStatusChange()
+    }
+
+    [Fact]
+    public async Task LoadBookingWithEvent_ReturnsCorrectEvent()
+    {
+        // Arrange
+        var user = User.Create("Test", "123");
+        var bookingId = await ExecuteDbContextAsync(async ctx =>
         {
-            // Arrange
-            var user = User.Create("Test", "123");
-            var bookingId = await ExecuteDbContextAsync(async ctx =>
-            {
-                ctx.Users.Add(user);
-                await ctx.SaveChangesAsync();
-                var eventId = Event.Create("Status Update", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(2), 10);
-                ctx.Events.Add(eventId);
-                var b = Booking.Create(eventId.Id, user.Id);
-                ctx.Bookings.Add(b);
-                await ctx.SaveChangesAsync();
-                return b.Id;
-            });
+            ctx.Users.Add(user);
+            await ctx.SaveChangesAsync();
+            var eventId = Event.Create("Event 1 for Include", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(2), 10);
+            ctx.Events.Add(eventId);
+            var booking = Booking.Create(eventId.Id, user.Id);
+            ctx.Bookings.Add(booking);
+            await ctx.SaveChangesAsync();
+            return booking.Id;
+        });
 
-            // Act
-            await ExecuteScopeAsync(async sp =>
-            {
-                var repo = sp.GetRequiredService<IBookingRepository>();
-                var booking = await repo.GetByIdAsync(bookingId, CancellationToken.None);
-                booking!.Confirm();
-                repo.Update(booking);
-                await repo.SaveChangesAsync(CancellationToken.None);
-            });
+        // Act & Assert
+        await ExecuteDbContextAsync(async ctx =>
+        {
+            var loadedBooking = await ctx.Bookings
+                .Include(b => b.Event)
+                .FirstAsync(b => b.Id == bookingId);
 
-            // Assert
-            await ExecuteDbContextAsync(async ctx =>
-            {
-                var updated = await ctx.Bookings.FindAsync([bookingId], CancellationToken.None);
-                updated.Should().NotBeNull();
-                updated.Status.Should().Be(BookingStatus.Confirmed);
-                updated.ProcessedAt.Should().NotBeNull();
-            });
-        }
+            loadedBooking.Event.Should().NotBeNull();
+            loadedBooking.Event.Title.Should().Be("Event 1 for Include");
+        });
+    }
+
+    [Fact]
+    public async Task Update_ShouldPersistBookingStatusChange()
+    {
+        // Arrange
+        var user = User.Create("Test", "123");
+        var bookingId = await ExecuteDbContextAsync(async ctx =>
+        {
+            ctx.Users.Add(user);
+            await ctx.SaveChangesAsync();
+            var eventId = Event.Create("Status Update", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(2), 10);
+            ctx.Events.Add(eventId);
+            var b = Booking.Create(eventId.Id, user.Id);
+            ctx.Bookings.Add(b);
+            await ctx.SaveChangesAsync();
+            return b.Id;
+        });
+
+        // Act
+        await ExecuteScopeAsync(async sp =>
+        {
+            var repo = sp.GetRequiredService<IBookingRepository>();
+            var booking = await repo.GetByIdAsync(bookingId, CancellationToken.None);
+            booking!.Confirm();
+            repo.Update(booking);
+            await repo.SaveChangesAsync(CancellationToken.None);
+        });
+
+        // Assert
+        await ExecuteDbContextAsync(async ctx =>
+        {
+            var updated = await ctx.Bookings.FindAsync([bookingId], CancellationToken.None);
+            updated.Should().NotBeNull();
+            updated.Status.Should().Be(BookingStatus.Confirmed);
+            updated.ProcessedAt.Should().NotBeNull();
+        });
     }
 }

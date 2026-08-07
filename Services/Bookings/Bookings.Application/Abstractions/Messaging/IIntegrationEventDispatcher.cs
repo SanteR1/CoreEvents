@@ -1,7 +1,6 @@
-﻿namespace Bookings.Application.Abstractions.Messaging
+﻿namespace Bookings.Application.Abstractions.Messaging;
+
+public interface IIntegrationEventDispatcher
 {
-    public interface IIntegrationEventDispatcher
-    {
-        Task DispatchAsync(string eventType, string payload, CancellationToken ct);
-    }
+    Task DispatchAsync(string eventType, string payload, CancellationToken ct);
 }

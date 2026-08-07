@@ -1,7 +1,6 @@
-﻿namespace CoreEvents.Application.Configuration
+﻿namespace CoreEvents.Application.Configuration;
+
+public class BookingSettings
 {
-    public class BookingSettings
-    {
-        public int MaxBookingsPerUser { get; set; }
-    }
+    public int MaxBookingsPerUser { get; set; }
 }

@@ -1,7 +1,6 @@
-﻿namespace CoreEvents.Application.Interfaces.Locks
+﻿namespace CoreEvents.Application.Interfaces.Locks;
+
+public interface ILockScope : IAsyncDisposable
 {
-    public interface ILockScope : IAsyncDisposable
-    {
-        Task CompleteAsync(CancellationToken ct = default);
-    }
+    Task CompleteAsync(CancellationToken ct = default);
 }

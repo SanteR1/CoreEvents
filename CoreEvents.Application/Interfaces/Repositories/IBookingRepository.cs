@@ -1,15 +1,14 @@
 ﻿using CoreEvents.Domain.Entities;
 
-namespace CoreEvents.Application.Interfaces.Repositories
+namespace CoreEvents.Application.Interfaces.Repositories;
+
+public interface IBookingRepository
 {
-    public interface IBookingRepository
-    {
-        Task<Booking?> GetByIdAsync(Guid id, CancellationToken ct = default);
-        Task<int> GetBookingCountForUserAsync(Guid userId, CancellationToken ct = default);
-        Task<IReadOnlyList<Guid>> GetPendingAsync(CancellationToken ct = default);
-        Task<int> SaveChangesAsync(CancellationToken ct = default);
-        void Add(Booking booking);
-        void Update(Booking booking);
-        void Delete(Booking booking);
-    }
+    Task<Booking?> GetByIdAsync(Guid id, CancellationToken ct = default);
+    Task<int> GetBookingCountForUserAsync(Guid userId, CancellationToken ct = default);
+    Task<IReadOnlyList<Guid>> GetPendingAsync(CancellationToken ct = default);
+    Task<int> SaveChangesAsync(CancellationToken ct = default);
+    void Add(Booking booking);
+    void Update(Booking booking);
+    void Delete(Booking booking);
 }

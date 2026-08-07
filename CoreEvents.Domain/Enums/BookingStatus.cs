@@ -1,11 +1,9 @@
-﻿namespace CoreEvents.Domain.Enums
-{
-    public enum BookingStatus
-    {
-        Pending,
-        Confirmed,
-        Rejected,
-        Cancelled
-    }
+﻿namespace CoreEvents.Domain.Enums;
 
+public enum BookingStatus
+{
+    Pending,
+    Confirmed,
+    Rejected,
+    Cancelled
 }

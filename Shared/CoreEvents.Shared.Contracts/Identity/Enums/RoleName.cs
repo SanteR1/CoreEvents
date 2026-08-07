@@ -1,8 +1,7 @@
-﻿namespace CoreEvents.Shared.Contracts.Identity.Enums
+﻿namespace CoreEvents.Shared.Contracts.Identity.Enums;
+
+public enum RoleName
 {
-    public enum RoleName
-    {
-        User,
-        Admin
-    }
+    User,
+    Admin
 }

@@ -1,8 +1,7 @@
-﻿namespace Events.Application.Abstractions.Persistence
+﻿namespace Events.Application.Abstractions.Persistence;
+
+public interface IExceptionAnalyzer
 {
-    public interface IExceptionAnalyzer
-    {
-        bool IsTransient(Exception exception);
-        bool IsConcurrency(Exception exception);
-    }
+    bool IsTransient(Exception exception);
+    bool IsConcurrency(Exception exception);
 }

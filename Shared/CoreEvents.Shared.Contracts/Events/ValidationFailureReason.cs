@@ -1,9 +1,8 @@
-﻿namespace CoreEvents.Shared.Contracts.Events
+﻿namespace CoreEvents.Shared.Contracts.Events;
+
+public enum ValidationFailureReason
 {
-    public enum ValidationFailureReason
-    {
-        EventNotFound = 0,
-        EventAlreadyPassed = 1,
-        SeatsNotAvailable = 2
-    }
+    EventNotFound = 0,
+    EventAlreadyPassed = 1,
+    SeatsNotAvailable = 2
 }

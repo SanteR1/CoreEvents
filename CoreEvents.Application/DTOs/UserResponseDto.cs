@@ -2,24 +2,23 @@
 using CoreEvents.Domain.Entities;
 using CoreEvents.Domain.Enums;
 
-namespace CoreEvents.Application.DTOs
-{
-    public record UserResponseDto(
-        Guid Id,
-        string UserName,
-        RoleName Role
-    )
-    {
-        public static Expression<Func<User, UserResponseDto>> ToDto => entity => new UserResponseDto(
-            entity.Id,
-            entity.UserName,
-            entity.Role
-        );
+namespace CoreEvents.Application.DTOs;
 
-        public static UserResponseDto FromEntity(User entity) => new(
-            entity.Id,
-            entity.UserName,
-            entity.Role
-        );
-    }
+public record UserResponseDto(
+    Guid Id,
+    string UserName,
+    RoleName Role
+)
+{
+    public static Expression<Func<User, UserResponseDto>> ToDto => entity => new UserResponseDto(
+        entity.Id,
+        entity.UserName,
+        entity.Role
+    );
+
+    public static UserResponseDto FromEntity(User entity) => new(
+        entity.Id,
+        entity.UserName,
+        entity.Role
+    );
 }
