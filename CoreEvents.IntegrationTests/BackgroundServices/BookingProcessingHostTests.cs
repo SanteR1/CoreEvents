@@ -2,14 +2,12 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using CoreEvents.Application.DTOs;
-using CoreEvents.Application.Services;
 using CoreEvents.Domain.Entities;
 using CoreEvents.Domain.Enums;
 using CoreEvents.IntegrationTests.Infrastructure.Bases;
 using CoreEvents.IntegrationTests.Infrastructure.Factories;
 using FluentAssertions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace CoreEvents.IntegrationTests.BackgroundServices;
 
@@ -41,7 +39,7 @@ public class BookingProcessingHostTests(IntegrationTestFactory factory) : Shared
         loginResponse.EnsureSuccessStatusCode();
         var token = await loginResponse.Content.ReadFromJsonAsync<string>(TestContext.Current.CancellationToken);
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, token);
-        
+
         var response = await _client.PostAsync($"/events/{eventId}/book", content: null, cancellationToken: TestContext.Current.CancellationToken);
         response.StatusCode.Should().Be(HttpStatusCode.Accepted);
 

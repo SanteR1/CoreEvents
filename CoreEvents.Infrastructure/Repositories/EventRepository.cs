@@ -4,97 +4,96 @@ using CoreEvents.Domain.Entities;
 using CoreEvents.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
-namespace CoreEvents.Infrastructure.Repositories
+namespace CoreEvents.Infrastructure.Repositories;
+
+internal sealed class EventRepository : IEventRepository
 {
-    internal sealed class EventRepository : IEventRepository
+    private readonly AppDbContext _context;
+
+    public EventRepository(AppDbContext context)
     {
-        private readonly AppDbContext _context;
+        _context = context;
+    }
+    public async Task<PaginatedResult<Event>> GetAllAsync(EventFilter eventFilter, CancellationToken cancellationToken = default)
+    {
+        var entity = _context.Events
+            .AsQueryable()
+            .AsNoTracking();
 
-        public EventRepository(AppDbContext context)
+        if (!string.IsNullOrWhiteSpace(eventFilter.Title))
         {
-            _context = context;
+            if (_context.Database.IsNpgsql())
+            {
+                entity = entity.Where(e => EF.Functions.ILike(e.Title, $"%{eventFilter.Title}%"));
+            }
+            else
+            {
+                entity = entity.Where(e => e.Title.ToLower().Contains(eventFilter.Title.ToLower()));
+            }
         }
-        public async Task<PaginatedResult<Event>> GetAllAsync(EventFilter eventFilter, CancellationToken cancellationToken = default)
+
+        if (eventFilter.From is not null)
         {
-            var entity = _context.Events
-                .AsQueryable()
-                .AsNoTracking();
+            entity = entity.Where(e => e.StartAt >= eventFilter.From.Value);
+        }
 
-            if (!string.IsNullOrWhiteSpace(eventFilter.Title))
+        if (eventFilter.To is not null)
+        {
+            // Сервис передает в параметр "To" ИСКЛЮЧИТЕЛЬНУЮ (Exclusive) границу.
+            // По этому использую строгое неравенство (<), а не (<=)
+            entity = entity.Where(e => e.EndAt < eventFilter.To.Value);
+        }
+
+        var totalEvents = await entity.CountAsync(cancellationToken);
+
+        if (totalEvents == 0)
+        {
+            return new PaginatedResult<Event>
             {
-                if (_context.Database.IsNpgsql())
-                {
-                    entity = entity.Where(e => EF.Functions.ILike(e.Title, $"%{eventFilter.Title}%"));
-                }
-                else
-                {
-                    entity = entity.Where(e => e.Title.ToLower().Contains(eventFilter.Title.ToLower()));
-                }
-            }
-
-            if (eventFilter.From is not null)
-            {
-                entity = entity.Where(e => e.StartAt >= eventFilter.From.Value);
-            }
-
-            if (eventFilter.To is not null)
-            {
-                // Сервис передает в параметр "To" ИСКЛЮЧИТЕЛЬНУЮ (Exclusive) границу.
-                // По этому использую строгое неравенство (<), а не (<=)
-                entity = entity.Where(e => e.EndAt < eventFilter.To.Value);
-            }
-
-            var totalEvents = await entity.CountAsync(cancellationToken);
-
-            if (totalEvents == 0)
-            {
-                return new PaginatedResult<Event>
-                {
-                    Items = [],
-                    PageSize = eventFilter.PageSize,
-                    CurrentPage = eventFilter.Page,
-                    TotalCount = 0
-                };
-            }
-
-            IReadOnlyList<Event> items = await entity
-                .OrderByDescending(e => e.StartAt)
-                .Skip((eventFilter.Page - 1) * eventFilter.PageSize)
-                .Take(eventFilter.PageSize)
-                .ToListAsync(cancellationToken);
-
-            return new PaginatedResult<Event>()
-            {
-                Items = items,
+                Items = [],
                 PageSize = eventFilter.PageSize,
                 CurrentPage = eventFilter.Page,
-                TotalCount = totalEvents
+                TotalCount = 0
             };
         }
 
-        public async Task<Event?> GetByIdAsync(Guid id, CancellationToken ct = default)
-        {
-            return await _context.Events.FindAsync([id],ct);
-        }
+        IReadOnlyList<Event> items = await entity
+            .OrderByDescending(e => e.StartAt)
+            .Skip((eventFilter.Page - 1) * eventFilter.PageSize)
+            .Take(eventFilter.PageSize)
+            .ToListAsync(cancellationToken);
 
-        public async Task<int> SaveChangesAsync(CancellationToken ct = default)
+        return new PaginatedResult<Event>()
         {
-            return await _context.SaveChangesAsync(ct);
-        }
+            Items = items,
+            PageSize = eventFilter.PageSize,
+            CurrentPage = eventFilter.Page,
+            TotalCount = totalEvents
+        };
+    }
 
-        public void Add(Event entity)
-        {
-            _context.Events.Add(entity);
-        }
+    public async Task<Event?> GetByIdAsync(Guid id, CancellationToken ct = default)
+    {
+        return await _context.Events.FindAsync([id], ct);
+    }
 
-        public void Update(Event entity)
-        {
-            _context.Events.Update(entity);
-        }
+    public async Task<int> SaveChangesAsync(CancellationToken ct = default)
+    {
+        return await _context.SaveChangesAsync(ct);
+    }
 
-        public void Delete(Event entity)
-        {
-            _context.Events.Remove(entity);
-        }
+    public void Add(Event entity)
+    {
+        _context.Events.Add(entity);
+    }
+
+    public void Update(Event entity)
+    {
+        _context.Events.Update(entity);
+    }
+
+    public void Delete(Event entity)
+    {
+        _context.Events.Remove(entity);
     }
 }

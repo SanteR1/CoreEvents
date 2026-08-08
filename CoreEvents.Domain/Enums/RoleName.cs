@@ -1,8 +1,7 @@
-﻿namespace CoreEvents.Domain.Enums
+﻿namespace CoreEvents.Domain.Enums;
+
+public enum RoleName
 {
-    public enum RoleName
-    {
-        User,
-        Admin
-    }
+    User,
+    Admin
 }

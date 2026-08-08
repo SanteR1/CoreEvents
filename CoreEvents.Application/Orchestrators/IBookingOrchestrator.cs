@@ -1,9 +1,8 @@
-﻿namespace CoreEvents.Application.Orchestrators
-{
-    public interface IBookingOrchestrator
-    {
-        Task<IReadOnlyCollection<Guid>> GetWorkItemsAsync(CancellationToken cancellationToken);
+﻿namespace CoreEvents.Application.Orchestrators;
 
-        Task ProcessBookingAsync(Guid bookingId, CancellationToken stoppingToken);
-    }
+public interface IBookingOrchestrator
+{
+    Task<IReadOnlyCollection<Guid>> GetWorkItemsAsync(CancellationToken cancellationToken);
+
+    Task ProcessBookingAsync(Guid bookingId, CancellationToken stoppingToken);
 }

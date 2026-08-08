@@ -1,8 +1,7 @@
-﻿namespace CoreEvents.Domain.Exceptions
+﻿namespace CoreEvents.Domain.Exceptions;
+
+public class DomainUnauthorizedAccessException()
+    : DomainException($"Authorized access only.")
 {
-    public class DomainUnauthorizedAccessException()
-        : DomainException($"Authorized access only.")
-    {
-        public override string ErrorCode => $"Authorization.Denied";
-    }
+    public override string ErrorCode => $"Authorization.Denied";
 }

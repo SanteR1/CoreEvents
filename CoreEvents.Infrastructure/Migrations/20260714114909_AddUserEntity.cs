@@ -1,77 +1,75 @@
-﻿using System;
-using Microsoft.EntityFrameworkCore.Migrations;
+﻿using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace CoreEvents.Migrations
+namespace CoreEvents.Migrations;
+
+/// <inheritdoc />
+public partial class AddUserEntity : Migration
 {
     /// <inheritdoc />
-    public partial class AddUserEntity : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.AddColumn<Guid>(
-                name: "user_id",
-                table: "bookings",
-                type: "uuid",
-                nullable: false,
-                defaultValue: new Guid("00000000-0000-0000-0000-000000000000"));
-            
-            // На момент создания таблица booking уже существовала и по этому EF сгенерировал defaultValue - удаляем
-            migrationBuilder.Sql("ALTER TABLE bookings ALTER COLUMN user_id DROP DEFAULT;");
+        migrationBuilder.AddColumn<Guid>(
+            name: "user_id",
+            table: "bookings",
+            type: "uuid",
+            nullable: false,
+            defaultValue: new Guid("00000000-0000-0000-0000-000000000000"));
 
-            migrationBuilder.CreateTable(
-                name: "users",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "uuid", nullable: false),
-                    user = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                    passwordhash = table.Column<string>(type: "text", nullable: false),
-                    role = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_users", x => x.id);
-                });
+        // На момент создания таблица booking уже существовала и по этому EF сгенерировал defaultValue - удаляем
+        migrationBuilder.Sql("ALTER TABLE bookings ALTER COLUMN user_id DROP DEFAULT;");
 
-            migrationBuilder.CreateIndex(
-                name: "IX_bookings_user_id",
-                table: "bookings",
-                column: "user_id");
+        migrationBuilder.CreateTable(
+            name: "users",
+            columns: table => new
+            {
+                id = table.Column<Guid>(type: "uuid", nullable: false),
+                user = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                passwordhash = table.Column<string>(type: "text", nullable: false),
+                role = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false)
+            },
+            constraints: table =>
+            {
+                table.PrimaryKey("PK_users", x => x.id);
+            });
 
-            migrationBuilder.CreateIndex(
-                name: "IX_users_user",
-                table: "users",
-                column: "user",
-                unique: true);
+        migrationBuilder.CreateIndex(
+            name: "IX_bookings_user_id",
+            table: "bookings",
+            column: "user_id");
 
-            migrationBuilder.AddForeignKey(
-                name: "FK_bookings_users_user_id",
-                table: "bookings",
-                column: "user_id",
-                principalTable: "users",
-                principalColumn: "id",
-                onDelete: ReferentialAction.Cascade);
-        }
+        migrationBuilder.CreateIndex(
+            name: "IX_users_user",
+            table: "users",
+            column: "user",
+            unique: true);
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropForeignKey(
-                name: "FK_bookings_users_user_id",
-                table: "bookings");
+        migrationBuilder.AddForeignKey(
+            name: "FK_bookings_users_user_id",
+            table: "bookings",
+            column: "user_id",
+            principalTable: "users",
+            principalColumn: "id",
+            onDelete: ReferentialAction.Cascade);
+    }
 
-            migrationBuilder.DropTable(
-                name: "users");
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.DropForeignKey(
+            name: "FK_bookings_users_user_id",
+            table: "bookings");
 
-            migrationBuilder.DropIndex(
-                name: "IX_bookings_user_id",
-                table: "bookings");
+        migrationBuilder.DropTable(
+            name: "users");
 
-            migrationBuilder.DropColumn(
-                name: "user_id",
-                table: "bookings");
-        }
+        migrationBuilder.DropIndex(
+            name: "IX_bookings_user_id",
+            table: "bookings");
+
+        migrationBuilder.DropColumn(
+            name: "user_id",
+            table: "bookings");
     }
 }

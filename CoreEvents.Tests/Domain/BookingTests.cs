@@ -2,34 +2,33 @@
 using CoreEvents.Domain.Enums;
 using FluentAssertions;
 
-namespace CoreEvents.Tests.Domain
+namespace CoreEvents.Tests.Domain;
+
+public class BookingTests
 {
-    public class BookingTests
+    [Fact]
+    public void Confirm_ShouldChangeStatusToConfirmed()
     {
-        [Fact]
-        public void Confirm_ShouldChangeStatusToConfirmed()
-        {
-            // Arrange
-            var booking = Booking.Create(Guid.NewGuid(), Guid.NewGuid());
+        // Arrange
+        var booking = Booking.Create(Guid.NewGuid(), Guid.NewGuid());
 
-            // Act & Assert
-            booking.ProcessedAt.Should().BeNull();
-            booking.Confirm();
-            booking.Status.Should().Be(BookingStatus.Confirmed);
-            booking.ProcessedAt.Should().NotBeNull();
-        }
+        // Act & Assert
+        booking.ProcessedAt.Should().BeNull();
+        booking.Confirm();
+        booking.Status.Should().Be(BookingStatus.Confirmed);
+        booking.ProcessedAt.Should().NotBeNull();
+    }
 
-        [Fact]
-        public void Reject_ShouldChangeStatusToRejected()
-        {
-            // Arrange
-            var booking = Booking.Create(Guid.NewGuid(), Guid.NewGuid());
+    [Fact]
+    public void Reject_ShouldChangeStatusToRejected()
+    {
+        // Arrange
+        var booking = Booking.Create(Guid.NewGuid(), Guid.NewGuid());
 
-            // Act & Assert
-            booking.ProcessedAt.Should().BeNull();
-            booking.Reject();
-            booking.Status.Should().Be(BookingStatus.Rejected);
-            booking.ProcessedAt.Should().NotBeNull();
-        }
+        // Act & Assert
+        booking.ProcessedAt.Should().BeNull();
+        booking.Reject();
+        booking.Status.Should().Be(BookingStatus.Rejected);
+        booking.ProcessedAt.Should().NotBeNull();
     }
 }

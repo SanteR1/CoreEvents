@@ -25,12 +25,9 @@ public static class DependencyInjection
         services.AddExceptionHandler<DomainExceptionHandler>();
         services.AddExceptionHandler<GlobalExceptionHandler>();
 
-        services.AddHttpContextAccessor();
-        services.AddScoped<IUserContext, UserContext>();
-
         services.AddHostedService<BookingProcessingService>();
         services.AddOpenApi();
-        services.AddSwaggerGen(option => 
+        services.AddSwaggerGen(option =>
         {
             option.AddSecurityDefinition(JwtBearerDefaults.AuthenticationScheme, new OpenApiSecurityScheme
             {
