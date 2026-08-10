@@ -265,3 +265,52 @@ dotnet_naming_style.begins_with_i.required_prefix = I
 dotnet_naming_style.begins_with_i.required_suffix = 
 dotnet_naming_style.begins_with_i.word_separator = 
 dotnet_naming_style.begins_with_i.capitalization = pascal_case
+
+# ==========================================
+# Настройки ReSharper / JetBrains Rider
+# ==========================================
+
+# 1. Выравнивание LINQ и Fluent API (Критично для читаемости)
+# Выравнивает многострочные цепочки вызовов по точке (удобно для FluentValidation, EF Core, LINQ)
+resharper_csharp_align_multiline_calls_chain = true
+# Выравнивание параметров методов столбцом
+resharper_csharp_align_multiline_parameters = true
+resharper_csharp_align_multiline_parameter = true
+# Выравнивание бинарных выражений (например, длинных && и || в if)
+resharper_csharp_align_multiline_binary_expressions = true
+
+# 2. Форматирование пустых блоков и однострочников
+# Оставляет пустые скобки { } на одной строке (идеально для пустых record или классов с Primary Constructors)
+resharper_csharp_empty_block_style = together_same_line
+# Сохраняет однострочные методы на одной строке, если они короткие
+resharper_csharp_place_simple_method_on_single_line = true
+resharper_csharp_place_simple_accessor_on_single_line = true
+
+# 3. Управление пустыми строками
+# Требует пустую строку после return (визуально отделяет выход из метода)
+resharper_csharp_blank_lines_before_control_transfer_statements = 1
+# Количество пустых строк вокруг классов и неймспейсов
+resharper_csharp_blank_lines_around_namespace = 1
+resharper_csharp_blank_lines_around_class = 1
+
+# 4. Повышение строгости инспекций (Code Analysis)
+# Делает неиспользуемые using'и предупреждениями (будут подсвечиваться желтым/красным, а не серым)
+resharper_redundant_using_directive_highlighting = warning
+# Запрещает использовать this. там, где это не нужно
+resharper_arrange_this_qualifier_highlighting = warning
+# Предупреждение при нарушении правил именования
+resharper_inconsistent_naming_highlighting = warning
+# Строгий контроль возможных NullReferenceException
+resharper_possible_null_reference_exception_highlighting = warning
+
+# 5. Современные фичи C# (Подсказки)
+# Предлагает использовать await using для IAsyncDisposable
+resharper_use_await_using_highlighting = suggestion
+# Подсказывает использование паттерн-матчинга вместо сложных if
+resharper_convert_if_to_or_pattern_highlighting = suggestion
+
+# ==========================================
+# Современный File Layout для .NET 10 / C# 14
+# ==========================================
+
+resharper_csharp_type_member_layout = <TypeMemberLayout><Region Name="Static Members"><Pattern><Match><And><Kind Is="FieldOrProperty"/><Static/></And></Match><Sort><Access Order="Public Internal Protected Private"/><Readonly/></Sort></Pattern></Region><Region Name="Static Methods"><Pattern><Match><And><Kind Is="Method"/><Static/></And></Match><Sort><Access Order="Public Internal Protected Private"/></Sort></Pattern></Region><Region Name="Fields"><Pattern><Match><And><Kind Is="Field"/><Not><Static/></Not></And></Match><Sort><Readonly/><Access Order="Private Protected Internal Public"/></Sort></Pattern></Region><Region Name="Constructors"><Pattern><Match><Kind Is="Constructor"/></Match><Sort><Static/><Access Order="Public Internal Protected Private"/></Sort></Pattern></Region><Region Name="Delegates and Events"><Pattern><Match><Or><Kind Is="Delegate"/><Kind Is="Event"/></Or></Match><Sort><Access Order="Public Internal Protected Private"/></Sort></Pattern></Region><Region Name="Properties"><Pattern><Match><And><Kind Is="Property"/><Not><Static/></Not></And></Match><Sort><Access Order="Public Internal Protected Private"/></Sort></Pattern></Region><Region Name="Interface Implementations"><Pattern><Match><And><Kind Is="Method"/><InterfaceMember/></And></Match></Pattern></Region><Region Name="Public Methods"><Pattern><Match><And><Kind Is="Method"/><Access Is="Public"/><Not><Static/></Not><Not><InterfaceMember/></Not></And></Match></Pattern></Region><Region Name="Internal &amp; Protected Methods"><Pattern><Match><And><Kind Is="Method"/><Or><Access Is="Internal"/><Access Is="Protected"/><Access Is="ProtectedInternal"/></Or><Not><Static/></Not><Not><InterfaceMember/></Not></And></Match></Pattern></Region><Region Name="Private Methods"><Pattern><Match><And><Kind Is="Method"/><Access Is="Private"/><Not><Static/></Not><Not><InterfaceMember/></Not></And></Match></Pattern></Region><Region Name="Nested Types"><Pattern><Match><Kind Is="NestedType"/></Match><Sort><Access Order="Public Internal Protected Private"/></Sort></Pattern></Region></TypeMemberLayout>
