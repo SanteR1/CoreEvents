@@ -1,4 +1,4 @@
-﻿namespace Bookings.Application.Abstractions.Resilience.Constants;
+namespace Bookings.Application.Abstractions.Resilience.Constants;
 
 public static class ResiliencePipelines
 {

@@ -1,4 +1,4 @@
-﻿using Bookings.Infrastructure.Data.Entities;
+using Bookings.Infrastructure.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

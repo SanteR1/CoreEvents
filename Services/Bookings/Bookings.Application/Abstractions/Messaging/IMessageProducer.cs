@@ -1,4 +1,4 @@
-﻿namespace Bookings.Application.Abstractions.Messaging;
+namespace Bookings.Application.Abstractions.Messaging;
 
 public interface IMessageProducer
 {

@@ -1,4 +1,4 @@
-﻿namespace Bookings.Domain.Exceptions;
+namespace Bookings.Domain.Exceptions;
 
 public class ConcurrencyException : Exception
 {

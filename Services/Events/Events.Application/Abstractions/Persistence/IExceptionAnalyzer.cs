@@ -1,4 +1,4 @@
-﻿namespace Events.Application.Abstractions.Persistence;
+namespace Events.Application.Abstractions.Persistence;
 
 public interface IExceptionAnalyzer
 {

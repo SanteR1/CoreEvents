@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.Linq.Expressions;
 using Bookings.Domain.Entities;
 using Bookings.Domain.Enums;

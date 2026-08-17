@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using Bookings.Infrastructure.Resilience.Abstractions;
 using Bookings.Infrastructure.Resilience.Behaviors;
 using MediatR;

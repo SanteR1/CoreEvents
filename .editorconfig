@@ -1,13 +1,10 @@
-# Удалите строку ниже, если вы хотите наследовать параметры .editorconfig из каталогов, расположенных выше в иерархии
-root = true
-
 # Форматирование для всех файлов
 [*]
 indent_style = space
 indent_size = 4
 end_of_line = crlf
 insert_final_newline = false
-# charset = utf-8 # Пока отключил, так как сейчас все файлы *.cs utf-8-bom
+charset = utf-8 # Пока отключил, так как сейчас все файлы *.cs utf-8-bom
 trim_trailing_whitespace = true
 
 # Файлы C#

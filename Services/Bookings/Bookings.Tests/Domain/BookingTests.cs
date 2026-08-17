@@ -1,4 +1,4 @@
-﻿using Bookings.Domain.Entities;
+using Bookings.Domain.Entities;
 using Bookings.Domain.Enums;
 using Bookings.Domain.Exceptions;
 using FluentAssertions;

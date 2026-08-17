@@ -1,4 +1,4 @@
-﻿using Events.Domain.Entities;
+using Events.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -15,10 +15,10 @@ internal sealed class EventConfiguration : IEntityTypeConfiguration<Event>
         builder.HasKey(x => x.Id);
 
         builder.Property(e => e.RowVersion)
-            .HasColumnName("xmin")
-            .HasColumnType("xid")
-            .ValueGeneratedOnAddOrUpdate()
-            .IsConcurrencyToken();
+               .HasColumnName("xmin")
+               .HasColumnType("xid")
+               .ValueGeneratedOnAddOrUpdate()
+               .IsConcurrencyToken();
 
         // Композитный индекс для фильтрации и сортировки дат
         builder.HasIndex(e => new { e.StartAt, e.EndAt })

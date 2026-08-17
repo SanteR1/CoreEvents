@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Users.Application.Interfaces;
 using Users.Domain.Enums;

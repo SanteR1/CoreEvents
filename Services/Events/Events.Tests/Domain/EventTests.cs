@@ -1,4 +1,4 @@
-﻿using Events.Tests.Infrastructure;
+using Events.Tests.Infrastructure;
 using FluentAssertions;
 
 namespace Events.Tests.Domain;

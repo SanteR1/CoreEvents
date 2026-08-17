@@ -1,4 +1,4 @@
-﻿using CoreEvents.Shared.Contracts.Identity.Enums;
+using CoreEvents.Shared.Contracts.Identity.Enums;
 
 namespace Bookings.Application.Abstractions;
 

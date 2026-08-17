@@ -1,4 +1,4 @@
-﻿namespace CoreEvents.Shared.Contracts.Identity.Enums;
+namespace CoreEvents.Shared.Contracts.Identity.Enums;
 
 public enum RoleName
 {

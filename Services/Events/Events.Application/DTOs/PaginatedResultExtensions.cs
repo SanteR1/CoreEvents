@@ -1,4 +1,4 @@
-﻿namespace Events.Application.DTOs;
+namespace Events.Application.DTOs;
 
 public static class PaginatedResultExtensions
 {

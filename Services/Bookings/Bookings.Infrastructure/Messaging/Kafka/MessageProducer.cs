@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using Bookings.Application.Abstractions.Messaging;
 using Bookings.Infrastructure.Messaging.Options;
 using Confluent.Kafka;

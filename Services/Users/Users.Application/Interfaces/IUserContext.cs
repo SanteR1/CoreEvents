@@ -1,4 +1,4 @@
-﻿using Users.Domain.Enums;
+using Users.Domain.Enums;
 
 namespace Users.Application.Interfaces;
 

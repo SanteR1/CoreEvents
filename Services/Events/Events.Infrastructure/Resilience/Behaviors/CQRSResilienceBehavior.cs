@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Reflection;
 using Events.Application.Abstractions.Resilience.Attributes;
 using MediatR;

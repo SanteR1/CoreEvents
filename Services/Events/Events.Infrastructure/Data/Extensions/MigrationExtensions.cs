@@ -1,4 +1,4 @@
-﻿using Events.Infrastructure.Data;
+using Events.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;

@@ -1,4 +1,4 @@
-﻿using Bookings.Application.Abstractions;
+using Bookings.Application.Abstractions;
 
 namespace Bookings.Infrastructure.Tracing;
 

@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using CoreEvents.Shared.Contracts.Events;
 using CoreEvents.Shared.Contracts.Serialization;
 using Events.Application.Abstractions.Messaging;

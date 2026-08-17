@@ -1,4 +1,4 @@
-﻿using CoreEvents.Shared.Contracts.Events;
+using CoreEvents.Shared.Contracts.Events;
 using Events.Application.Abstractions;
 using Events.Application.Abstractions.Messaging;
 using Events.Application.Abstractions.Repositories;

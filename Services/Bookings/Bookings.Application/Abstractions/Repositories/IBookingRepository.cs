@@ -1,4 +1,4 @@
-﻿using Bookings.Domain.Entities;
+using Bookings.Domain.Entities;
 
 namespace Bookings.Application.Abstractions.Repositories;
 

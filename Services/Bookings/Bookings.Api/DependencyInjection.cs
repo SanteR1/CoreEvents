@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 using Bookings.Api.ExceptionHandlers;
 using Bookings.Api.Services;
 using Bookings.Application.Abstractions;

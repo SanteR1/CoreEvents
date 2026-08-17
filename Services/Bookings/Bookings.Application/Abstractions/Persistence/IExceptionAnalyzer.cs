@@ -1,4 +1,4 @@
-﻿namespace Bookings.Application.Abstractions.Persistence;
+namespace Bookings.Application.Abstractions.Persistence;
 
 public interface IExceptionAnalyzer
 {

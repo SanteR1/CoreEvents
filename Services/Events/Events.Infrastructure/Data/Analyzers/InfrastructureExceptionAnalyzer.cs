@@ -1,4 +1,4 @@
-﻿using System.Net.Sockets;
+using System.Net.Sockets;
 using Confluent.Kafka;
 using Events.Application.Abstractions.Persistence;
 using Microsoft.EntityFrameworkCore;

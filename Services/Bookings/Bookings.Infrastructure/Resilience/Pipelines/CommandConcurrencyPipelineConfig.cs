@@ -1,4 +1,4 @@
-﻿using Bookings.Application.Abstractions.Resilience.Constants;
+using Bookings.Application.Abstractions.Resilience.Constants;
 using Bookings.Domain.Exceptions;
 using Bookings.Infrastructure.Resilience.Abstractions;
 using Microsoft.Extensions.DependencyInjection;

@@ -1,4 +1,4 @@
-﻿using Users.Application.Interfaces.Services;
+using Users.Application.Interfaces.Services;
 using Users.Application.Services;
 
 namespace Microsoft.Extensions.DependencyInjection;
