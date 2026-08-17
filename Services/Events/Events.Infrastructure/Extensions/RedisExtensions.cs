@@ -26,7 +26,7 @@ internal static class RedisExtensions
 
         var options = new ConfigurationOptions
         {
-            Password = Environment.GetEnvironmentVariable("REDIS_PASSWORD"),
+            Password = redisOptions.Password,
             ConnectTimeout = redisOptions.ConnectTimeout,
             SyncTimeout = redisOptions.SyncTimeout,
             AbortOnConnectFail = redisOptions.AbortOnConnectFail,

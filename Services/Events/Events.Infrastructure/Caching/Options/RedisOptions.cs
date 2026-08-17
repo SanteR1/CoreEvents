@@ -5,8 +5,10 @@ namespace Events.Infrastructure.Caching.Options;
 internal sealed record RedisOptions
 {
     public const string SectionName = "Redis";
+
     [MinLength(1, ErrorMessage = "Необходимо указать хотя бы один узел Redis.")]
     public string[] EndPoints { get; init; } = Array.Empty<string>();
+    public string Password { get; set; } = string.Empty;
     [Range(0, int.MaxValue)]
     public int ConnectTimeout { get; init; } = 5000;
     [Range(0, int.MaxValue)]
