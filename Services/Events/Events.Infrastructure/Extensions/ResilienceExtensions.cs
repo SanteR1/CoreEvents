@@ -1,5 +1,5 @@
-﻿using System.Reflection;
-using Events.Application.Abstractions.Resilience;
+using System.Reflection;
+using Events.Infrastructure.Resilience.Abstractions;
 using Events.Infrastructure.Resilience.Behaviors;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
@@ -9,7 +9,7 @@ namespace Events.Infrastructure.Extensions;
 
 internal static class ResilienceExtensions
 {
-    public static void AddResiliencePipelines(this IServiceCollection services, Assembly assembly)
+    public static IServiceCollection AddResiliencePipelines(this IServiceCollection services, Assembly assembly)
     {
         services.AddResiliencePipelineRegistry<string>();
 
@@ -41,5 +41,7 @@ internal static class ResilienceExtensions
             });
         }
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(CqrsResilienceBehavior<,>));
+
+        return services;
     }
 }

@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using System.Text;
 using Confluent.Kafka;
 using Confluent.Kafka.Admin;
@@ -82,6 +82,7 @@ public static class DependencyInjection
             .ValidateOnStart();
 
         services.AddAuthorization();
+        services.AddRedis(configuration);
         services.AddDataBase(configuration, environment);
 
         services.AddScoped<IEventRepository, EventRepository>();
@@ -90,6 +91,9 @@ public static class DependencyInjection
         services.AddScoped<IIntegrationEventDispatcher, BookingRequestDispatcher>();
 
         services.AddSingleton<IExceptionAnalyzer, InfrastructureExceptionAnalyzer>();
+
+        services.AddRedis(configuration);
+
         return services;
     }
     private static IServiceCollection AddDataBase(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
@@ -113,21 +117,25 @@ public static class DependencyInjection
 
     public static async Task InitializeKafkaTopicsAsync(this IServiceProvider services)
     {
-        using var scope = services.CreateScope();
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<AdminClientBuilder>>();
-
-        var kafkaOptions = scope.ServiceProvider.GetRequiredService<IOptions<KafkaOptions>>().Value;
-
-        var config = new AdminClientConfig
+        var configuration = services.GetRequiredService<IConfiguration>();
+        bool initKafkaTopics = configuration.GetValue<bool>("Kafka:InitKafkaTopics", true);
+        if (initKafkaTopics)
         {
-            BootstrapServers = kafkaOptions.BootstrapServers
-        };
+            using var scope = services.CreateScope();
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<AdminClientBuilder>>();
 
-        logger.LogInformation("Начало проверки и создания топиков Kafka...");
+            var kafkaOptions = scope.ServiceProvider.GetRequiredService<IOptions<KafkaOptions>>().Value;
 
-        using var adminClient = new AdminClientBuilder(config).Build();
+            var config = new AdminClientConfig
+            {
+                BootstrapServers = kafkaOptions.BootstrapServers
+            };
 
-        var topicsToCreate = new List<TopicSpecification>
+            logger.LogInformation("Начало проверки и создания топиков Kafka...");
+
+            using var adminClient = new AdminClientBuilder(config).Build();
+
+            var topicsToCreate = new List<TopicSpecification>
         {
             new TopicSpecification
             {
@@ -143,40 +151,41 @@ public static class DependencyInjection
             }
         };
 
-        try
-        {
-            var options = new CreateTopicsOptions
+            try
             {
-                RequestTimeout = TimeSpan.FromSeconds(10)
-            };
+                var options = new CreateTopicsOptions
+                {
+                    RequestTimeout = TimeSpan.FromSeconds(10)
+                };
 
-            await adminClient.CreateTopicsAsync(topicsToCreate, options);
-            logger.LogInformation("Все требуемые топики Kafka успешно созданы.");
-        }
-        catch (CreateTopicsException e)
-        {
-            foreach (var result in e.Results)
+                await adminClient.CreateTopicsAsync(topicsToCreate, options);
+                logger.LogInformation("Все требуемые топики Kafka успешно созданы.");
+            }
+            catch (CreateTopicsException e)
             {
-                if (result.Error.Code == ErrorCode.TopicAlreadyExists)
+                foreach (var result in e.Results)
                 {
-                    logger.LogInformation("Топик '{Topic}' уже существует. Пропускаем.", result.Topic);
-                }
-                else
-                {
-                    logger.LogError("Ошибка при создании топика '{Topic}': {Error}", result.Topic, result.Error.Reason);
-                    throw;
+                    if (result.Error.Code == ErrorCode.TopicAlreadyExists)
+                    {
+                        logger.LogInformation("Топик '{Topic}' уже существует. Пропускаем.", result.Topic);
+                    }
+                    else
+                    {
+                        logger.LogError("Ошибка при создании топика '{Topic}': {Error}", result.Topic, result.Error.Reason);
+                        throw;
+                    }
                 }
             }
-        }
-        catch (KafkaException ex) when (ex.Error.Code == ErrorCode.Local_TimedOut)
-        {
-            logger.LogCritical("Не удалось связаться с Kafka по таймауту при создании топиков.");
-            throw;
-        }
-        catch (Exception ex)
-        {
-            logger.LogCritical(ex, "Критическая ошибка при инициализации Kafka. Приложение будет остановлено.");
-            throw;
+            catch (KafkaException ex) when (ex.Error.Code == ErrorCode.Local_TimedOut)
+            {
+                logger.LogCritical("Не удалось связаться с Kafka по таймауту при создании топиков.");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.LogCritical(ex, "Критическая ошибка при инициализации Kafka. Приложение будет остановлено.");
+                throw;
+            }
         }
     }
 }
