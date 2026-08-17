@@ -113,15 +113,15 @@ services:
     ports:
       - "5003:8080"
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ASPNETCORE_HTTP_PORTS=8080
-      - ConnectionStrings__DefaultConnection=Host=coreevents-users-db;Port=5432;Database=${POSTGRES_DB_USERS};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
-      - Jwt__SecretKey=${JWT_SECRET_KEY}
-      - Jwt__Issuer=${JWT_ISSUER}
-      - Jwt__Audience=${JWT_AUDIENCE}
-      - Jwt__ExpirationInMinutes=${JWT_EXPIRATION_MINUTES}
-      - AdminSettings__Login=${API_ADMIN_LOGIN}
-      - AdminSettings__Password=${API_ADMIN_PASSWORD}
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_HTTP_PORTS: 8080
+      CONNECTIONSTRINGS__DEFAULTCONNECTION: Host=coreevents-users-db;Port=5432;Database=${POSTGRES_DB_USERS};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      JWT__SECRETKEY: ${JWT_SECRET_KEY}
+      JWT__ISSUER: ${JWT_ISSUER}
+      JWT__AUDIENCE: ${JWT_AUDIENCE}
+      JWT__EXPIRATIONINMINUTES: ${JWT_EXPIRATION_MINUTES}
+      ADMINSETTINGS__LOGIN: ${API_ADMIN_LOGIN}
+      ADMINSETTINGS__PASSWORD: ${API_ADMIN_PASSWORD}
     depends_on:
       coreevents-users-db:
         condition: service_healthy
@@ -134,20 +134,20 @@ services:
     ports:
       - "5004:8080"
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ASPNETCORE_HTTP_PORTS=8080
-      - ConnectionStrings__DefaultConnection=Host=coreevents-events-db;Port=5432;Database=${POSTGRES_DB_EVENTS};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
-      - Kafka__BootstrapServers=kafka:9092
-      - Jwt__SecretKey=${JWT_SECRET_KEY}
-      - Jwt__Issuer=${JWT_ISSUER}
-      - Jwt__Audience=${JWT_AUDIENCE}
-      - Jwt__ExpirationInMinutes=${JWT_EXPIRATION_MINUTES}
-      - Redis__EndPoints__0=redis:6379
-      - Redis__Password=${REDIS_PASSWORD}
-      - Redis__ConnectTimeout=5000
-      - Redis__SyncTimeout=3000
-      - Redis__AbortOnConnectFail=false
-      - Redis__ConnectRetry=3
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_HTTP_PORTS: 8080
+      CONNECTIONSTRINGS__DEFAULTCONNECTION: Host=coreevents-events-db;Port=5432;Database=${POSTGRES_DB_EVENTS};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      KAFKA__BOOTSTRAPSERVERS: kafka:9092
+      JWT__SECRETKEY: ${JWT_SECRET_KEY}
+      JWT__ISSUER: ${JWT_ISSUER}
+      JWT__AUDIENCE: ${JWT_AUDIENCE}
+      JWT__EXPIRATIONINMINUTES: ${JWT_EXPIRATION_MINUTES}
+      REDIS__ENDPOINTS__0: redis:6379
+      REDIS__PASSWORD: ${REDIS_PASSWORD}
+      REDIS__CONNECTTIMEOUT: 5000
+      REDIS__SYNCTIMEOUT: 3000
+      REDIS__ABORTONCONNECTFAIL: false
+      REDIS__CONNECTRETRY: 3
     depends_on:
       coreevents-events-db:
         condition: service_healthy
@@ -164,14 +164,14 @@ services:
     ports:
       - "5005:8080"
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ASPNETCORE_HTTP_PORTS=8080
-      - ConnectionStrings__DefaultConnection=Host=coreevents-bookings-db;Port=5432;Database=${POSTGRES_DB_BOOKINGS};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
-      - Kafka__BootstrapServers=kafka:9092
-      - Jwt__SecretKey=${JWT_SECRET_KEY}
-      - Jwt__Issuer=${JWT_ISSUER}
-      - Jwt__Audience=${JWT_AUDIENCE}
-      - Jwt__ExpirationInMinutes=${JWT_EXPIRATION_MINUTES}
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_HTTP_PORTS: 8080
+      CONNECTIONSTRINGS__DEFAULTCONNECTION: Host=coreevents-bookings-db;Port=5432;Database=${POSTGRES_DB_BOOKINGS};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      KAFKA__BOOTSTRAPSERVERS: kafka:9092
+      JWT__SECRETKEY: ${JWT_SECRET_KEY}
+      JWT__ISSUER: ${JWT_ISSUER}
+      JWT__AUDIENCE: ${JWT_AUDIENCE}
+      JWT__EXPIRATIONINMINUTES: ${JWT_EXPIRATION_MINUTES}
     depends_on:
       coreevents-bookings-db:
         condition: service_healthy
