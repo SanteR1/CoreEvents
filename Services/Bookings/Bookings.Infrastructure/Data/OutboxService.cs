@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Bookings.Application.Abstractions;
 using Bookings.Application.Abstractions.Messaging;
 using Bookings.Infrastructure.Data.Entities;

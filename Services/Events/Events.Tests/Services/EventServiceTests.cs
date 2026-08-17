@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
+using Events.Application.Abstractions.Caching;
 using Events.Application.Abstractions.Repositories;
 using Events.Application.DTOs;
 using Events.Application.Exceptions;
@@ -15,11 +16,13 @@ public class EventServiceTests
 {
     private readonly Mock<IEventRepository> _eventRepositoryMock;
     private readonly EventService _eventService;
+    private readonly Mock<ICacheService> _cacheService;
 
     public EventServiceTests()
     {
         _eventRepositoryMock = new Mock<IEventRepository>();
-        _eventService = new EventService(_eventRepositoryMock.Object);
+        _cacheService = new Mock<ICacheService>();
+        _eventService = new EventService(_eventRepositoryMock.Object, _cacheService.Object);
     }
 
     #region CreateEventAsync Tests
@@ -260,6 +263,27 @@ public class EventServiceTests
         _eventRepositoryMock.Verify(repo => repo.GetByIdAsync(existEvent.Id, It.IsAny<CancellationToken>()), Times.Once);
         _eventRepositoryMock.Verify(repo => repo.Delete(existEvent), Times.Once);
         _eventRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task DeleteEventAsync_WhenIdExistingInCache_ShouldRemoveInCache()
+    {
+        // Arrange
+        var existEvent = TestEventFactory.Create();
+
+        // Setup
+        _eventRepositoryMock
+            .Setup(repo => repo.GetByIdAsync(existEvent.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existEvent);
+
+        // Act
+        var result = await _eventService.DeleteEventAsync(existEvent.Id, TestContext.Current.CancellationToken);
+
+        result.Should().BeTrue();
+        _eventRepositoryMock.Verify(repo => repo.GetByIdAsync(existEvent.Id, It.IsAny<CancellationToken>()), Times.Once);
+        _eventRepositoryMock.Verify(repo => repo.Delete(existEvent), Times.Once);
+        _eventRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _cacheService.Verify(cache => cache.DeleteAsync($"event:{existEvent.Id}", It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -773,6 +797,118 @@ public class EventServiceTests
             repo => repo.GetByIdAsync(existEvent.Id, cancellationToken),
             Times.Once);
     }
+
+    [Fact]
+    public async Task GetEventByIdAsync_WhenIdExistingInCache_ShouldReturnFromCacheServices()
+    {
+        // Arrange
+        var existingEvent = EventCacheDto.FromEntity(TestEventFactory.Create());
+        var key = CacheKeys.Event(existingEvent.Id);
+
+        // Setup
+        _cacheService.Setup(cache => cache.GetAsync<EventCacheDto>(key, It.IsAny<CancellationToken>()))
+                     .ReturnsAsync(existingEvent);
+
+        // Act
+        var result = await _eventService.GetEventByIdAsync(existingEvent.Id, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Id.Should().Be(existingEvent.Id);
+        result.Title.Should().Be(existingEvent.Title);
+        result.Description.Should().Be(existingEvent.Description);
+        result.StartAt.Should().Be(existingEvent.StartAt);
+        result.EndAt.Should().Be(existingEvent.EndAt);
+        result.TotalSeats.Should().Be(existingEvent.TotalSeats);
+        result.AvailableSeats.Should().Be(existingEvent.AvailableSeats);
+
+        _eventRepositoryMock.Verify(repo => repo.GetByIdAsync(existingEvent.Id, It.IsAny<CancellationToken>()), Times.Never);
+        _cacheService.Verify(repo => repo.GetAsync<EventCacheDto>(key, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetTopEventsBySalesPercentageAsync_WhenIdExistingInCache_ShouldReturnFromCacheServices()
+    {
+        // Arrange
+        var existingEvents = Enumerable.Range(0, 10).Select(x => EventCacheDto.FromEntity(TestEventFactory.Create())).ToList();
+        var key = CacheKeys.Top10Events;
+
+        // Setup
+        _cacheService.Setup(cache => cache.GetAsync<List<EventCacheDto>>(key, It.IsAny<CancellationToken>()))
+                     .ReturnsAsync(existingEvents);
+
+        // Act
+        var result = await _eventService.GetTopEventsBySalesPercentageAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().HaveCount(existingEvents.Count);
+        result.Should().BeEquivalentTo(EventResponseDto.FromEntity(existingEvents));
+
+        _eventRepositoryMock.Verify(repo => repo.GetTopEventsBySalesPercentageAsync(10,It.IsAny<CancellationToken>()), Times.Never);
+        _cacheService.Verify(repo => repo.GetAsync<List<EventCacheDto>>(key, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetEventByIdAsync_WhenIdNonExistingInCache_ShouldReturnFromRepositoryAndCached()
+    {
+        // Arrange
+        var existingEvent = TestEventFactory.Create();
+        var cacheDto = EventCacheDto.FromEntity(existingEvent);
+        var key = CacheKeys.Event(existingEvent.Id);
+
+        // Setup
+        _cacheService.Setup(cache => cache.GetAsync<EventCacheDto>(key, It.IsAny<CancellationToken>()))
+                     .ReturnsAsync((EventCacheDto?)null);
+        _eventRepositoryMock
+            .Setup(repo => repo.GetByIdAsync(existingEvent.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existingEvent);
+
+        // Act
+        var result = await _eventService.GetEventByIdAsync(existingEvent.Id, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Id.Should().Be(existingEvent.Id);
+        result.Title.Should().Be(existingEvent.Title);
+        result.Description.Should().Be(existingEvent.Description);
+        result.StartAt.Should().Be(existingEvent.StartAt);
+        result.EndAt.Should().Be(existingEvent.EndAt);
+        result.TotalSeats.Should().Be(existingEvent.TotalSeats);
+        result.AvailableSeats.Should().Be(existingEvent.AvailableSeats);
+
+        _eventRepositoryMock.Verify(repo => repo.GetByIdAsync(existingEvent.Id, It.IsAny<CancellationToken>()), Times.Once);
+        _cacheService.Verify(cache => cache.SetAsync<EventCacheDto>(key, cacheDto, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetTopEventsBySalesPercentageAsync_WhenIdNonExistingInCache_ShouldReturnFromRepositoryAndCached()
+    {
+        // Arrange
+        var existingEvents = Enumerable.Range(0, 10).Select(x => TestEventFactory.Create()).ToList();
+        var existingEventsCacheDto = EventCacheDto.FromEntity(existingEvents);
+        var key = CacheKeys.Top10Events;
+
+        // Setup
+        _cacheService.Setup(cache => cache.GetAsync<List<EventCacheDto>>(key, It.IsAny<CancellationToken>()))
+                     .ReturnsAsync((List<EventCacheDto>?)null);
+        _eventRepositoryMock
+            .Setup(repo => repo.GetTopEventsBySalesPercentageAsync( 10, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existingEvents);
+
+        // Act
+        var result = await _eventService.GetTopEventsBySalesPercentageAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().HaveCount(existingEvents.Count);
+        result.Should().BeEquivalentTo(EventResponseDto.FromEntity(existingEvents));
+
+
+        _eventRepositoryMock.Verify(repo => repo.GetTopEventsBySalesPercentageAsync(10, It.IsAny<CancellationToken>()), Times.Once);
+        _cacheService.Verify(cache => cache.SetAsync<List<EventCacheDto>>(key, existingEventsCacheDto, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     #endregion
 
     #region UpdateEventAsync
@@ -837,6 +973,40 @@ public class EventServiceTests
 
         _eventRepositoryMock.Verify(repo => repo.GetByIdAsync(existingEvent.Id, It.IsAny<CancellationToken>()), Times.Once);
         _eventRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateEventAsync_WhenIdExistingInCache_ShouldRemoveInCache()
+    {
+        // Arrange
+        var existingEvent = TestEventFactory.Create();
+
+        var updateDto = new EventUpdateDto(
+            Title: "Title Update",
+            Description: "Updated Description",
+            StartAt: DateTime.UtcNow.AddDays(2),
+            EndAt: DateTime.UtcNow.AddDays(3));
+
+        // Setup
+        _eventRepositoryMock
+            .Setup(repo => repo.GetByIdAsync(existingEvent.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existingEvent);
+
+        // Act
+        var result = await _eventService.UpdateEventAsync(existingEvent.Id, updateDto, TestContext.Current.CancellationToken);
+
+        // Assert Mapping
+        result.Id.Should().Be(existingEvent.Id);
+        result.Title.Should().Be(updateDto.Title);
+        result.Description.Should().Be(updateDto.Description);
+        result.StartAt.Should().Be(updateDto.StartAt);
+        result.EndAt.Should().Be(updateDto.EndAt);
+        result.TotalSeats.Should().Be(10);
+        result.AvailableSeats.Should().Be(10);
+
+        _eventRepositoryMock.Verify(repo => repo.GetByIdAsync(existingEvent.Id, It.IsAny<CancellationToken>()), Times.Once);
+        _eventRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _cacheService.Verify(cache => cache.DeleteAsync($"event:{existingEvent.Id}", It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

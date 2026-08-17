@@ -5,6 +5,7 @@
     <Project Path="Services/Bookings/Bookings.Application/Bookings.Application.csproj" Id="6230d331-ad69-4ae0-a679-dc45d4282265" />
     <Project Path="Services/Bookings/Bookings.Domain/Bookings.Domain.csproj" Id="f66d0c7d-2b69-4030-aeed-e80ecb44817d" />
     <Project Path="Services/Bookings/Bookings.Infrastructure/Bookings.Infrastructure.csproj" Id="b5a23790-50a8-4e52-b5be-7d6788f9534e" />
+    <Project Path="Services/Bookings/Bookings.IntegrationTests/Bookings.IntegrationTests.csproj" Id="028bffd7-71cb-475f-9fb5-16c7d4557f34" />
     <Project Path="Services/Bookings/Bookings.Tests/Bookings.Tests.csproj" Id="751bdbda-e1b2-4f4a-9e50-cb4dc0ca5e81" />
   </Folder>
   <Folder Name="/Services/Events/">
@@ -12,6 +13,7 @@
     <Project Path="Services/Events/Events.Application/Events.Application.csproj" Id="b079c07b-b04a-4191-90b4-53a9f2fbe69b" />
     <Project Path="Services/Events/Events.Domain/Events.Domain.csproj" Id="5ebda7e8-b8aa-4f73-a0c0-d67c211f5e0c" />
     <Project Path="Services/Events/Events.Infrastructure/Events.Infrastructure.csproj" Id="7b89aacb-bffa-4753-b36a-ea41c3c5fd7e" />
+    <Project Path="Services/Events/Events.IntegrationTests/Events.IntegrationTests.csproj" Id="17a299c4-f0f9-4ff8-aa8e-0d56ba3736a7" />
     <Project Path="Services/Events/Events.Tests/Events.Tests.csproj" Id="f0ae93e3-b487-4a32-ba88-fea3852f417a" />
   </Folder>
   <Folder Name="/Services/Users/">
@@ -26,12 +28,6 @@
   <Folder Name="/Элементы решения/">
     <File Path=".editorconfig" />
   </Folder>
-  <Project Path="CoreEvents.Application/CoreEvents.Application.csproj" Id="651f94dc-587c-4c4f-b75f-94bc43b35af4" />
-  <Project Path="CoreEvents.Domain/CoreEvents.Domain.csproj" Id="2ba11fe1-4fcd-432d-9dc1-dcecbecc4db7" />
-  <Project Path="CoreEvents.Infrastructure/CoreEvents.Infrastructure.csproj" Id="472de9fe-ecb0-4fd4-b2f5-8a2351a32c04" />
-  <Project Path="CoreEvents.IntegrationTests/CoreEvents.IntegrationTests.csproj" Id="301c7a8a-1346-4544-a5f4-99e0be3a9866" />
-  <Project Path="CoreEvents.Presentation/CoreEvents.Presentation.csproj" />
-  <Project Path="CoreEvents.Tests/CoreEvents.Tests.csproj" Id="ad2de470-f7e4-407f-9c54-66ec09341044" />
   <Project Path="docker-compose.dcproj">
     <Build />
   </Project>

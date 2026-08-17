@@ -27,7 +27,4 @@
 		<InternalsVisibleTo Include="CoreEvents.Tests" />
 		<InternalsVisibleTo Include="CoreEvents.IntegrationTests" />
 	</ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\CoreEvents.Application\CoreEvents.Application.csproj" />
-  </ItemGroup>
 </Project>

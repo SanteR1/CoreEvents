@@ -1,4 +1,4 @@
-﻿using System.Net.Sockets;
+using System.Net.Sockets;
 using Bookings.Application.Abstractions.Persistence;
 using Confluent.Kafka;
 using Microsoft.EntityFrameworkCore;

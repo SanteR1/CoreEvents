@@ -1,4 +1,4 @@
-﻿using Bookings.Domain.Enums;
+using Bookings.Domain.Enums;
 using Bookings.Domain.Exceptions;
 
 namespace Bookings.Domain.Entities;

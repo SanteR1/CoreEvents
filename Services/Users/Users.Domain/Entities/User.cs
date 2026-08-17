@@ -1,4 +1,4 @@
-﻿using Users.Domain.Enums;
+using Users.Domain.Enums;
 using Users.Domain.Exceptions;
 
 namespace Users.Domain.Entities;

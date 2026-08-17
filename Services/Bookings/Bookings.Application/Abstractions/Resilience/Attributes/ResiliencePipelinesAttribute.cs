@@ -1,4 +1,4 @@
-﻿namespace Bookings.Application.Abstractions.Resilience.Attributes;
+namespace Bookings.Application.Abstractions.Resilience.Attributes;
 
 // для удобства, если нужно передавать сразу список
 [AttributeUsage(AttributeTargets.Class)]

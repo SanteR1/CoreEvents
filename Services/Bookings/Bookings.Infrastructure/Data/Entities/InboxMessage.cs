@@ -1,4 +1,4 @@
-﻿namespace Bookings.Infrastructure.Data.Entities;
+namespace Bookings.Infrastructure.Data.Entities;
 
 public sealed class InboxMessage
 {

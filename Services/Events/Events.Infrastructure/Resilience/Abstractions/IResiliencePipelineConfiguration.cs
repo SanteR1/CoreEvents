@@ -1,7 +1,7 @@
-﻿using Polly;
+using Polly;
 using Polly.DependencyInjection;
 
-namespace Events.Application.Abstractions.Resilience;
+namespace Events.Infrastructure.Resilience.Abstractions;
 
 public interface IResiliencePipelineConfiguration
 {

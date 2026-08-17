@@ -23,5 +23,8 @@
   <ItemGroup>
     <ProjectReference Include="..\Bookings.Application\Bookings.Application.csproj" />
   </ItemGroup>
-
+    <ItemGroup>
+        <InternalsVisibleTo Include="Bookings.Tests" />
+        <InternalsVisibleTo Include="Bookings.IntegrationTests" />
+    </ItemGroup>
 </Project>

@@ -1,7 +1,6 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Bookings.Application.Abstractions.Messaging;
 using Bookings.Application.Commands;
-using Bookings.Application.Commands.Bookings.Application.Commands;
 using CoreEvents.Shared.Contracts.Events;
 using CoreEvents.Shared.Contracts.Serialization;
 using MediatR;

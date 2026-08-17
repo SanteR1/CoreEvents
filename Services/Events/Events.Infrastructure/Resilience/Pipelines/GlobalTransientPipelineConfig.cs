@@ -1,6 +1,6 @@
-﻿using Events.Application.Abstractions.Persistence;
-using Events.Application.Abstractions.Resilience;
+using Events.Application.Abstractions.Persistence;
 using Events.Application.Abstractions.Resilience.Constants;
+using Events.Infrastructure.Resilience.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Polly;

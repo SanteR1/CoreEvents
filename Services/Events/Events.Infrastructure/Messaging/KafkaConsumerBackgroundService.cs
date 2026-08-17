@@ -1,13 +1,16 @@
-﻿using System.Text;
+using System.Text;
 using Confluent.Kafka;
 using CoreEvents.Shared.Contracts.Events;
 using Events.Application.Abstractions;
 using Events.Application.Abstractions.Messaging;
 using Events.Application.Abstractions.Resilience.Constants;
+using Events.Domain.DomainEvents;
+using Events.Domain.Entities;
 using Events.Infrastructure.Data;
 using Events.Infrastructure.Data.Entities;
 using Events.Infrastructure.Messaging.Kafka;
 using Events.Infrastructure.Messaging.Options;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -22,7 +25,8 @@ sealed class KafkaConsumerBackgroundService(
     IOptions<KafkaOptions> kafkaOptions,
     ResiliencePipelineProvider<string> pipelineProvider,
     ICorrelationContext correlationContext,
-    ILogger<KafkaConsumerBackgroundService> logger)
+    ILogger<KafkaConsumerBackgroundService> logger
+   )
     : BackgroundService
 {
 
@@ -62,6 +66,7 @@ sealed class KafkaConsumerBackgroundService(
             while (!stoppingToken.IsCancellationRequested)
             {
                 ConsumeResult<string, string>? result = null;
+                List<IDomainEvent> domainEvents = new List<IDomainEvent>();
 
                 try
                 {
@@ -107,7 +112,7 @@ sealed class KafkaConsumerBackgroundService(
                         {
                             // А) Idempotency Check (Inbox)
                             bool isProcessed = await dbContext.InboxMessages
-                                .AnyAsync(m => m.Id == metadata.MessageId, token);
+                                                              .AnyAsync(m => m.Id == metadata.MessageId, token);
 
                             if (!isProcessed)
                             {
@@ -119,19 +124,15 @@ sealed class KafkaConsumerBackgroundService(
                                         Id = metadata.MessageId,
                                         CorrelationId = metadata.CorrelationId,
                                         CausationId = metadata.CausationId,
-
                                         ConsumerName = options.GroupId,
                                         Topic = result.Topic,
-
                                         Partition = result.Partition.Value,
                                         Offset = result.Offset.Value,
-
                                         MessageKey = result.Message.Key ?? string.Empty,
                                         MessageType = metadata.EventType,
-
                                         Payload = result.Message.Value,
-                                        Headers = EventMetadataHeaderMapper.SerializeHeaders(result.Message.Headers),
-
+                                        Headers =
+                                            EventMetadataHeaderMapper.SerializeHeaders(result.Message.Headers),
                                         ReceivedAt = DateTimeOffset.UtcNow,
                                         ProcessedAt = DateTimeOffset.UtcNow,
                                         LastError = null
@@ -140,10 +141,15 @@ sealed class KafkaConsumerBackgroundService(
 
                             await dbContext.SaveChangesAsync(token);
                             await transaction.CommitAsync(token);
+
+                            domainEvents = dbContext.ChangeTracker.Entries<Event>()
+                                                        .SelectMany(x => x.Entity.PopDomainEvents())
+                                                        .ToList();
                         }
                         catch (Exception)
                         {
                             await transaction.RollbackAsync(token);
+
                             throw; // Важно! Пробрасываем ошибку, чтобы Polly ее поймал и ретраил
                         }
                     }, stoppingToken);
@@ -183,6 +189,22 @@ sealed class KafkaConsumerBackgroundService(
                         throw;
                     }
                 }
+
+                try
+                {
+                    using var scope = scopeFactory.CreateScope();
+                    var publisher = scope.ServiceProvider.GetRequiredService<IPublisher>();
+
+                    foreach (var domainEvent in domainEvents)
+                    {
+                        var notification = new DomainEventNotification(domainEvent);
+                        await publisher.Publish(notification, stoppingToken);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning("Ошибка инвалидации {message}", ex.Message);
+                }
             }
         }
         finally
@@ -216,5 +238,4 @@ sealed class KafkaConsumerBackgroundService(
         // Пытаемся записать в DLT
         await producer.ProduceAsync(dltTopicName, dltMessage, ct);
     }
-
 }

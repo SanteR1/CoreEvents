@@ -1,4 +1,4 @@
-﻿namespace Events.Domain.Exceptions;
+namespace Events.Domain.Exceptions;
 
 public class ConcurrencyException : Exception
 {

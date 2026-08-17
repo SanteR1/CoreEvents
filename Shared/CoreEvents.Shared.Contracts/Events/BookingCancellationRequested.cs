@@ -1,4 +1,4 @@
-﻿namespace CoreEvents.Shared.Contracts.Events;
+namespace CoreEvents.Shared.Contracts.Events;
 
 public record BookingCancellationRequested
 {

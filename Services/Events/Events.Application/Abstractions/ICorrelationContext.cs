@@ -1,4 +1,4 @@
-﻿namespace Events.Application.Abstractions;
+namespace Events.Application.Abstractions;
 
 public interface ICorrelationContext
 {

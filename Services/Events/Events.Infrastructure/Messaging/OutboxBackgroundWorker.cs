@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Events.Application.Abstractions.Messaging;
 using Events.Application.Abstractions.Persistence;
 using Events.Infrastructure.Data;

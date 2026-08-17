@@ -1,4 +1,4 @@
-﻿using Events.Application.Abstractions;
+using Events.Application.Abstractions;
 
 namespace Events.Infrastructure.Tracing;
 

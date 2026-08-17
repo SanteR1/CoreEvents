@@ -1,4 +1,4 @@
-﻿using CoreEvents.Shared.Contracts.Exceptions;
+using CoreEvents.Shared.Contracts.Exceptions;
 
 namespace Events.Domain.Exceptions;
 

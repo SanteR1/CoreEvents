@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 
 namespace Bookings.Application.Abstractions.Messaging;
 

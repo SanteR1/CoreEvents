@@ -1,4 +1,4 @@
-﻿using System.Linq.Expressions;
+using System.Linq.Expressions;
 using Events.Domain.Entities;
 
 namespace Events.Application.DTOs;
@@ -31,5 +31,22 @@ public record EventResponseDto(
         entity.EndAt,
         entity.TotalSeats,
         entity.AvailableSeats
+    );
+
+    public static EventResponseDto FromEntity(EventCacheDto entity) => new(
+        entity.Id,
+        entity.Title,
+        entity.Description,
+        entity.StartAt,
+        entity.EndAt,
+        entity.TotalSeats,
+        entity.AvailableSeats
+    );
+
+    public static List<EventResponseDto> FromEntity(List<Event> entity) => new(
+        entity.Select(FromEntity).ToList()
+        );
+    public static List<EventResponseDto> FromEntity(List<EventCacheDto> entity) => new(
+        entity.Select(FromEntity).ToList()
     );
 }

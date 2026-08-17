@@ -1,4 +1,5 @@
-﻿using Events.Application.Abstractions.Repositories;
+using Events.Application.Abstractions.Caching;
+using Events.Application.Abstractions.Repositories;
 using Events.Application.DTOs;
 using Events.Application.Exceptions;
 using Events.Domain.Entities;
@@ -8,9 +9,11 @@ namespace Events.Application.Services;
 internal sealed class EventService : IEventService
 {
     private readonly IEventRepository _eventRepository;
-    public EventService(IEventRepository eventRepository)
+    private readonly ICacheService _cache;
+    public EventService(IEventRepository eventRepository, ICacheService cache)
     {
         _eventRepository = eventRepository;
+        _cache = cache;
     }
 
     public async Task<PaginatedResult<EventResponseDto>> GetAllEventsAsync(EventFilter dtoFilter, CancellationToken ct = default)
@@ -76,9 +79,33 @@ internal sealed class EventService : IEventService
 
     public async Task<EventResponseDto?> GetEventByIdAsync(Guid id, CancellationToken ct = default)
     {
+        var cachedDto = await _cache.GetAsync<EventCacheDto>(CacheKeys.Event(id), ct);
+        if (cachedDto != null)
+            return EventResponseDto.FromEntity(cachedDto);
+
         var eventEntity = await _eventRepository.GetByIdAsync(id, ct);
         if (eventEntity == null)
             throw new EventNotFoundException(id);
+
+        await _cache.SetAsync<EventCacheDto>(CacheKeys.Event(id), EventCacheDto.FromEntity(eventEntity), ct);
+
+        return EventResponseDto.FromEntity(eventEntity);
+    }
+
+    public async Task<List<EventResponseDto>> GetTopEventsBySalesPercentageAsync(CancellationToken ct = default)
+    {
+        const int top = 10;
+        var existKey = await _cache.GetAsync<List<EventCacheDto>>(CacheKeys.Top10Events, ct);
+
+        if (existKey != null)
+            return EventResponseDto.FromEntity(existKey);
+
+        var eventEntity = await _eventRepository.GetTopEventsBySalesPercentageAsync(top, ct);
+
+        if (eventEntity.Count > 0)
+        {
+            await _cache.SetAsync<List<EventCacheDto>>(CacheKeys.Top10Events, EventCacheDto.FromEntity(eventEntity), ct);
+        }
 
         return EventResponseDto.FromEntity(eventEntity);
     }
@@ -110,6 +137,9 @@ internal sealed class EventService : IEventService
             );
 
         await _eventRepository.SaveChangesAsync(ct);
+
+        await _cache.DeleteAsync(CacheKeys.Event(id), ct);
+
         return EventResponseDto.FromEntity(existing);
     }
 
@@ -120,6 +150,9 @@ internal sealed class EventService : IEventService
 
         _eventRepository.Delete(existing);
         await _eventRepository.SaveChangesAsync(ct);
+
+        await _cache.DeleteAsync(CacheKeys.Event(id), ct);
+
         return true;
     }
 }

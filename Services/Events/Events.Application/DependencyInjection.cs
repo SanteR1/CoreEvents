@@ -1,4 +1,4 @@
-﻿using Events.Application.Abstractions.Messaging;
+using Events.Application.Abstractions.Messaging;
 using Events.Application.Services;
 
 namespace Microsoft.Extensions.DependencyInjection;
@@ -15,6 +15,4 @@ public static class DependencyInjection
         services.AddScoped<IEventService, EventService>();
         return services;
     }
-
-
 }

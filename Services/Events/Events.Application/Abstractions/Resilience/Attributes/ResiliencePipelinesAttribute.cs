@@ -1,4 +1,4 @@
-﻿namespace Events.Application.Abstractions.Resilience.Attributes;
+namespace Events.Application.Abstractions.Resilience.Attributes;
 
 // для удобства, если нужно передавать сразу список
 [AttributeUsage(AttributeTargets.Class)]

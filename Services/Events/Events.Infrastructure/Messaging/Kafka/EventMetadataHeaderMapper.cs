@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.Json;
 using Confluent.Kafka;
 using CoreEvents.Shared.Contracts.Events;

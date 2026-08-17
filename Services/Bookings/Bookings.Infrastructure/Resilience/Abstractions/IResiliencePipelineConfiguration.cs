@@ -1,4 +1,4 @@
-﻿using Polly;
+using Polly;
 using Polly.DependencyInjection;
 
 namespace Bookings.Infrastructure.Resilience.Abstractions;

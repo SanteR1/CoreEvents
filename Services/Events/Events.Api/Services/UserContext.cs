@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using CoreEvents.Shared.Contracts.Identity.Enums;
 using Events.Application.Services;
 using Microsoft.IdentityModel.JsonWebTokens;

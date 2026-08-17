@@ -1,4 +1,4 @@
-﻿using Bookings.Domain.Enums;
+using Bookings.Domain.Enums;
 using CoreEvents.Shared.Contracts.Exceptions;
 
 namespace Bookings.Domain.Exceptions;

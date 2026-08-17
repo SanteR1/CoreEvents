@@ -1,4 +1,4 @@
-﻿using Bookings.Application.Abstractions.Messaging;
+using Bookings.Application.Abstractions.Messaging;
 using Bookings.Application.Configuration;
 
 namespace Microsoft.Extensions.DependencyInjection;

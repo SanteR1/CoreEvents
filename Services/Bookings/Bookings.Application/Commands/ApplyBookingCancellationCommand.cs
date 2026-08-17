@@ -1,4 +1,4 @@
-﻿using Bookings.Application.Abstractions.Messaging;
+using Bookings.Application.Abstractions.Messaging;
 using Bookings.Application.Abstractions.Repositories;
 using Bookings.Application.Abstractions.Resilience.Attributes;
 using Bookings.Application.Abstractions.Resilience.Constants;

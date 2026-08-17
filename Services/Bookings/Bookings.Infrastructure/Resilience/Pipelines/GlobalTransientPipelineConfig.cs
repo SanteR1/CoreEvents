@@ -1,4 +1,4 @@
-﻿using Bookings.Application.Abstractions.Persistence;
+using Bookings.Application.Abstractions.Persistence;
 using Bookings.Application.Abstractions.Resilience.Constants;
 using Bookings.Infrastructure.Resilience.Abstractions;
 using Microsoft.Extensions.DependencyInjection;

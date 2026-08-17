@@ -1,4 +1,4 @@
-﻿using Events.Infrastructure.Data.Entities;
+using Events.Infrastructure.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

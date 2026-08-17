@@ -1,4 +1,4 @@
-﻿namespace Events.Infrastructure.Data.Entities;
+namespace Events.Infrastructure.Data.Entities;
 
 public sealed class InboxMessage
 {

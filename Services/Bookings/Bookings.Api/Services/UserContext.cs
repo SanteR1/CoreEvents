@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Bookings.Application.Abstractions;
 using CoreEvents.Shared.Contracts.Identity.Enums;
 using Microsoft.IdentityModel.JsonWebTokens;

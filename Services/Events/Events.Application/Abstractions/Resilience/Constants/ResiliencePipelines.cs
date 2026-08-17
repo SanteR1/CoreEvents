@@ -1,4 +1,4 @@
-﻿namespace Events.Application.Abstractions.Resilience.Constants;
+namespace Events.Application.Abstractions.Resilience.Constants;
 
 public static class ResiliencePipelines
 {

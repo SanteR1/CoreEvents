@@ -1,4 +1,4 @@
-﻿using Events.Application.DTOs;
+using Events.Application.DTOs;
 using Events.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -32,6 +32,15 @@ public class EventsController : ControllerBase
     public async Task<ActionResult<EventResponseDto>> GetById(Guid id)
     {
         var result = await _eventService.GetEventByIdAsync(id);
+        return Ok(result);
+    }
+
+    [HttpGet("top")]
+    [Produces("application/json")]
+    [ProducesResponseType(typeof(IEnumerable<EventResponseDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IEnumerable<EventResponseDto>>> GetTopEventsBySalesPercentageAsync()
+    {
+        var result = await _eventService.GetTopEventsBySalesPercentageAsync();
         return Ok(result);
     }
 

@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using Confluent.Kafka;
 using Events.Application.Abstractions.Messaging;
 using Events.Infrastructure.Messaging.Options;

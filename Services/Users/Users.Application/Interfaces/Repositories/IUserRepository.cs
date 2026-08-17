@@ -1,4 +1,4 @@
-﻿using Users.Domain.Entities;
+using Users.Domain.Entities;
 
 namespace Users.Application.Interfaces.Repositories;
 

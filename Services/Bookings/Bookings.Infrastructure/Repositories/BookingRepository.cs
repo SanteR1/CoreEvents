@@ -1,4 +1,4 @@
-﻿using Bookings.Application.Abstractions.Repositories;
+using Bookings.Application.Abstractions.Repositories;
 using Bookings.Domain.Entities;
 using Bookings.Domain.Enums;
 using Bookings.Infrastructure.Data;

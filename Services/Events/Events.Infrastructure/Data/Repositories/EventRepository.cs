@@ -1,4 +1,4 @@
-﻿using Events.Application.Abstractions.Repositories;
+using Events.Application.Abstractions.Repositories;
 using Events.Application.DTOs;
 using Events.Domain.Entities;
 using Events.Domain.Exceptions;
@@ -75,6 +75,14 @@ internal sealed class EventRepository : IEventRepository
     public async Task<Event?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
         return await _context.Events.FindAsync([id], ct);
+    }
+
+    public async Task<List<Event>> GetTopEventsBySalesPercentageAsync(int take, CancellationToken ct = default)
+    {
+        return await _context.Events
+                             .OrderByDescending(x => (double)(x.TotalSeats - x.AvailableSeats) / x.TotalSeats)
+                             .Take(take)
+                             .ToListAsync(ct);
     }
 
     public async Task<int> SaveChangesAsync(CancellationToken ct = default)

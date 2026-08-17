@@ -1,4 +1,4 @@
-﻿namespace CoreEvents.Shared.Contracts.Exceptions;
+namespace CoreEvents.Shared.Contracts.Exceptions;
 
 public abstract class AppException(string message, Exception? innerException = null)
     : Exception(message, innerException)
