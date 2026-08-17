@@ -1,8 +1,7 @@
-﻿using Bookings.Application.Abstractions;
+using Bookings.Application.Abstractions;
 using Bookings.Application.Commands;
-using Bookings.Application.Commands.Bookings.Application.Commands;
 using Bookings.Application.DTOs;
-using Bookings.Application.Queries.Bookings.Application.Queries;
+using Bookings.Application.Queries;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -43,7 +42,7 @@ public class BookingsController : ControllerBase
         var createdBooking = await _mediator.Send(command, ct);
         return AcceptedAtRoute(
             "GetBookingStatus",
-            new { id = createdBooking },
+            new { id = createdBooking.Id },
             createdBooking
         );
     }
