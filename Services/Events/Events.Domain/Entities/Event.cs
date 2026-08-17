@@ -1,4 +1,5 @@
-﻿using Events.Domain.Exceptions;
+using Events.Domain.DomainEvents;
+using Events.Domain.Exceptions;
 
 namespace Events.Domain.Entities;
 
@@ -73,6 +74,9 @@ public sealed class Event
 
         if (AvailableSeats < count) return false;
         AvailableSeats -= count;
+
+        RaiseDomainEvent(new SeatsReserved(Id));
+
         return true;
     }
 
@@ -86,6 +90,9 @@ public sealed class Event
         }
 
         AvailableSeats += count;
+
+        RaiseDomainEvent(new SeatsReleased(Id));
+
         return true;
     }
 
@@ -127,5 +134,15 @@ public sealed class Event
         {
             throw new ValidationException(errors);
         }
+    }
+
+    private readonly List<IDomainEvent> _domainEvents = new();
+    // public IReadOnlyList<IDomainEvent> GetDomainEvents() => _domainEvents.AsReadOnly();
+    private void RaiseDomainEvent(IDomainEvent domainEvent) => _domainEvents.Add(domainEvent);
+    public IReadOnlyList<IDomainEvent> PopDomainEvents()
+    {
+        var events = _domainEvents.ToList();
+        _domainEvents.Clear();
+        return events;
     }
 }
