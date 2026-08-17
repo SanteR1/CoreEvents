@@ -102,8 +102,6 @@ sealed class KafkaConsumerBackgroundService(
                         var dbContext = scope.ServiceProvider.GetRequiredService<BookingsDbContext>();
                         var dispatcher = scope.ServiceProvider.GetRequiredService<IIntegrationEventDispatcher>();
 
-
-
                         await using var transaction = await dbContext.Database.BeginTransactionAsync(token);
                         try
                         {
@@ -113,20 +111,7 @@ sealed class KafkaConsumerBackgroundService(
 
                             if (!isProcessed)
                             {
-                                // Б) Business Logic (внутри Mediator, который имеет свой Concurrency Retry)
-                                //await mediator.Send(
-                                //    new CreateBookingCommand(
-                                //        incomingMessage.EventId,
-                                //        incomingMessage.UserId,
-                                //        incomingMessage.Seats),
-                                //    token);
-
                                 await dispatcher.DispatchAsync(metadata.EventType, jsonPayload, token);
-
-
-                                // В) Inbox Registration
-                                // public string? MessageType { get; set; }
-                                // public string? HandlerName { get; set; }
                                 dbContext.InboxMessages.Add(
                                     new InboxMessage()
                                     {
