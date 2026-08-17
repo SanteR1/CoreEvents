@@ -22,6 +22,24 @@ services:
       interval: 10s
       timeout: 10s
       retries: 10
+  redis:
+    image: redis:8.10
+    container_name: coreevents-redis
+    hostname: redis
+    restart: unless-stopped
+    ports:
+     - "6379:6379"
+    command: /bin/sh -c "[ -n \"$REDIS_PASSWORD\" ] && redis-server --requirepass \"$REDIS_PASSWORD\" || redis-server"
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/var/lib/redis/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ${REDIS_PASSWORD:+-a \"$REDIS_PASSWORD\"} ping | grep PONG || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
   coreevents-users-db:
     image: postgres:18.4
     container_name: coreevents-users-db
@@ -124,6 +142,12 @@ services:
       - Jwt__Issuer=${JWT_ISSUER}
       - Jwt__Audience=${JWT_AUDIENCE}
       - Jwt__ExpirationInMinutes=${JWT_EXPIRATION_MINUTES}
+      - Redis__EndPoints__0=redis:6379
+      - Redis__Password=${REDIS_PASSWORD}
+      - Redis__ConnectTimeout=5000
+      - Redis__SyncTimeout=3000
+      - Redis__AbortOnConnectFail=false
+      - Redis__ConnectRetry=3
     depends_on:
       coreevents-events-db:
         condition: service_healthy
@@ -153,6 +177,7 @@ services:
         condition: service_healthy
 volumes:
   kafka-data:
+  redis_data:
   bookings-db-data:
   events-db-data:
   users-db-data:
