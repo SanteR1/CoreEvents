@@ -19,6 +19,6 @@ internal sealed class InvalidateEventCacheHandler : INotificationHandler<DomainE
         CancellationToken cancellationToken)
     {
         if (notification.DomainEvent is ICacheInvalidationEvent cacheEvent)
-            await _cacheService.DeleteAsync($"events:{cacheEvent.EventId}", cancellationToken);
+            await _cacheService.DeleteAsync(CacheKeys.Event(cacheEvent.EventId), cancellationToken);
     }
 }

@@ -30,7 +30,7 @@ public class InvalidateEventCacheHandlerTests
 
         // Assert
         _cacheServiceMock.Verify(
-            x => x.DeleteAsync($"events:{eventId}", It.IsAny<CancellationToken>()),
+            x => x.DeleteAsync(CacheKeys.Event(eventId), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 

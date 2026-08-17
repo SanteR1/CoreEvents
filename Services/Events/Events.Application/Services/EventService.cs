@@ -10,9 +10,6 @@ internal sealed class EventService : IEventService
 {
     private readonly IEventRepository _eventRepository;
     private readonly ICacheService _cache;
-    private const string _keyPrefix = "event:";
-    private static string Key(Guid id) => $"{_keyPrefix}{id}";
-    private static string TopKey(int suffix) => $"{_keyPrefix}top{suffix}";
     public EventService(IEventRepository eventRepository, ICacheService cache)
     {
         _eventRepository = eventRepository;
@@ -82,7 +79,7 @@ internal sealed class EventService : IEventService
 
     public async Task<EventResponseDto?> GetEventByIdAsync(Guid id, CancellationToken ct = default)
     {
-        var cachedDto = await _cache.GetAsync<EventCacheDto>(Key(id), ct);
+        var cachedDto = await _cache.GetAsync<EventCacheDto>(CacheKeys.Event(id), ct);
         if (cachedDto != null)
             return EventResponseDto.FromEntity(cachedDto);
 
@@ -90,7 +87,7 @@ internal sealed class EventService : IEventService
         if (eventEntity == null)
             throw new EventNotFoundException(id);
 
-        await _cache.SetAsync<EventCacheDto>(Key(id), EventCacheDto.FromEntity(eventEntity), ct);
+        await _cache.SetAsync<EventCacheDto>(CacheKeys.Event(id), EventCacheDto.FromEntity(eventEntity), ct);
 
         return EventResponseDto.FromEntity(eventEntity);
     }
@@ -98,7 +95,7 @@ internal sealed class EventService : IEventService
     public async Task<List<EventResponseDto>> GetTopEventsBySalesPercentageAsync(CancellationToken ct = default)
     {
         const int top = 10;
-        var existKey = await _cache.GetAsync<List<EventCacheDto>>(TopKey(top), ct);
+        var existKey = await _cache.GetAsync<List<EventCacheDto>>(CacheKeys.Top10Events, ct);
 
         if (existKey != null)
             return EventResponseDto.FromEntity(existKey);
@@ -107,7 +104,7 @@ internal sealed class EventService : IEventService
 
         if (eventEntity.Count > 0)
         {
-            await _cache.SetAsync<List<EventCacheDto>>(TopKey(top), EventCacheDto.FromEntity(eventEntity), ct);
+            await _cache.SetAsync<List<EventCacheDto>>(CacheKeys.Top10Events, EventCacheDto.FromEntity(eventEntity), ct);
         }
 
         return EventResponseDto.FromEntity(eventEntity);
@@ -141,7 +138,7 @@ internal sealed class EventService : IEventService
 
         await _eventRepository.SaveChangesAsync(ct);
 
-        await _cache.DeleteAsync(Key(id), ct);
+        await _cache.DeleteAsync(CacheKeys.Event(id), ct);
 
         return EventResponseDto.FromEntity(existing);
     }
@@ -154,7 +151,7 @@ internal sealed class EventService : IEventService
         _eventRepository.Delete(existing);
         await _eventRepository.SaveChangesAsync(ct);
 
-        await _cache.DeleteAsync(Key(id), ct);
+        await _cache.DeleteAsync(CacheKeys.Event(id), ct);
 
         return true;
     }
