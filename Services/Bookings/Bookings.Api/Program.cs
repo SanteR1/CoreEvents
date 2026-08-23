@@ -2,11 +2,12 @@ using Bookings.Api.Extensions;
 using Bookings.Api.Middlewares;
 using Serilog;
 using Serilog.Events;
+using Serilog.Formatting.Compact;
 
 Log.Logger = new LoggerConfiguration()
              .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
              .Enrich.FromLogContext()
-             .WriteTo.Console()
+             .WriteTo.Console(formatter: new CompactJsonFormatter())
              .CreateBootstrapLogger();
 
 try

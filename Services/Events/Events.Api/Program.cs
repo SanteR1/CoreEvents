@@ -1,11 +1,12 @@
 using Events.Api.Extensions;
 using Serilog;
 using Serilog.Events;
+using Serilog.Formatting.Compact;
 
 Log.Logger = new LoggerConfiguration()
              .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
              .Enrich.FromLogContext()
-             .WriteTo.Console()
+             .WriteTo.Console(formatter: new CompactJsonFormatter())
              .CreateBootstrapLogger();
 
 try
