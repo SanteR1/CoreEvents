@@ -1,4 +1,20 @@
 <Solution>
+  <Folder Name="/observability/" />
+  <Folder Name="/observability/grafana/" />
+  <Folder Name="/observability/grafana/dashboards/">
+    <File Path="observability/grafana/dashboards/ASP.NET OTEL Metrics-rev1.json" />
+    <File Path="observability/grafana/dashboards/NET dashboard-rev1.json" />
+  </Folder>
+  <Folder Name="/observability/grafana/provisioning/" />
+  <Folder Name="/observability/grafana/provisioning/dashboards/">
+    <File Path="observability/grafana/provisioning/dashboards/dashboards.yml" />
+  </Folder>
+  <Folder Name="/observability/grafana/provisioning/datasources/">
+    <File Path="observability/grafana/provisioning/datasources/datasources.yml" />
+  </Folder>
+  <Folder Name="/observability/prometheus/">
+    <File Path="observability/prometheus/prometheus.yml" />
+  </Folder>
   <Folder Name="/Services/" />
   <Folder Name="/Services/Bookings/">
     <Project Path="Services/Bookings/Bookings.Api/Bookings.Api.csproj" Id="9cb99185-22b7-41d7-8fc0-e3bc23366792" />
