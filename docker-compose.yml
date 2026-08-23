@@ -40,6 +40,37 @@ services:
       timeout: 5s
       retries: 3
       start_period: 5s
+  prometheus:
+    image: prom/prometheus:v3.14.0
+    container_name: coreevents-prometheus
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+  jaeger:
+    image: jaegertracing/all-in-one:2.20.0
+    container_name: coreevents-jaeger
+    ports:
+      - "16686:16686"   # UI
+      - "4317:4317"     # OTLP gRPC
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+  grafana:
+    image: grafana/grafana:13.2.0
+    container_name: coreevents-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}
+    volumes:
+      - ./observability/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./observability/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+      # - jaeger
   coreevents-users-db:
     image: postgres:18.4
     container_name: coreevents-users-db
@@ -122,6 +153,10 @@ services:
       JWT__EXPIRATIONINMINUTES: ${JWT_EXPIRATION_MINUTES}
       ADMINSETTINGS__LOGIN: ${API_ADMIN_LOGIN}
       ADMINSETTINGS__PASSWORD: ${API_ADMIN_PASSWORD}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+      OTEL_BSP_SCHEDULE_DELAY: 5000
+      OTEL_BSP_EXPORT_TIMEOUT: 3000
     depends_on:
       coreevents-users-db:
         condition: service_healthy
@@ -148,6 +183,10 @@ services:
       REDIS__SYNCTIMEOUT: 3000
       REDIS__ABORTONCONNECTFAIL: false
       REDIS__CONNECTRETRY: 3
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+      OTEL_BSP_SCHEDULE_DELAY: 5000
+      OTEL_BSP_EXPORT_TIMEOUT: 3000
     depends_on:
       coreevents-events-db:
         condition: service_healthy
@@ -172,6 +211,10 @@ services:
       JWT__ISSUER: ${JWT_ISSUER}
       JWT__AUDIENCE: ${JWT_AUDIENCE}
       JWT__EXPIRATIONINMINUTES: ${JWT_EXPIRATION_MINUTES}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+      OTEL_BSP_SCHEDULE_DELAY: 5000
+      OTEL_BSP_EXPORT_TIMEOUT: 3000
     depends_on:
       coreevents-bookings-db:
         condition: service_healthy
@@ -183,3 +226,5 @@ volumes:
   bookings-db-data:
   events-db-data:
   users-db-data:
+  grafana-data:
+  prometheus-data:
