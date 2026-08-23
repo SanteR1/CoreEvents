@@ -17,7 +17,7 @@ public static class OpenTelemetryExtensions
                                            options.RecordException = true; // любое необработанное/throw исключение будет автоматически записано во вкладку Logs/Events текущего спана 
                                            options.Filter = httpContext =>
                                            {
-                                               
+
                                                var path = httpContext.Request.Path;
                                                return !path.StartsWithSegments("/health") &&
                                                       !path.StartsWithSegments("/metrics");

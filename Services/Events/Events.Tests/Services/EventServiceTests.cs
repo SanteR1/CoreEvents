@@ -845,7 +845,7 @@ public class EventServiceTests
         result.Should().HaveCount(existingEvents.Count);
         result.Should().BeEquivalentTo(EventResponseDto.FromEntity(existingEvents));
 
-        _eventRepositoryMock.Verify(repo => repo.GetTopEventsBySalesPercentageAsync(10,It.IsAny<CancellationToken>()), Times.Never);
+        _eventRepositoryMock.Verify(repo => repo.GetTopEventsBySalesPercentageAsync(10, It.IsAny<CancellationToken>()), Times.Never);
         _cacheService.Verify(repo => repo.GetAsync<List<EventCacheDto>>(key, It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -893,7 +893,7 @@ public class EventServiceTests
         _cacheService.Setup(cache => cache.GetAsync<List<EventCacheDto>>(key, It.IsAny<CancellationToken>()))
                      .ReturnsAsync((List<EventCacheDto>?)null);
         _eventRepositoryMock
-            .Setup(repo => repo.GetTopEventsBySalesPercentageAsync( 10, It.IsAny<CancellationToken>()))
+            .Setup(repo => repo.GetTopEventsBySalesPercentageAsync(10, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingEvents);
 
         // Act
