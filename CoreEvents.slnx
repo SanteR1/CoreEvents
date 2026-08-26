@@ -1,4 +1,20 @@
 <Solution>
+  <Folder Name="/observability/" />
+  <Folder Name="/observability/grafana/" />
+  <Folder Name="/observability/grafana/dashboards/">
+    <File Path="observability/grafana/dashboards/ASP.NET OTEL Metrics-rev1.json" />
+    <File Path="observability/grafana/dashboards/NET dashboard-rev1.json" />
+  </Folder>
+  <Folder Name="/observability/grafana/provisioning/" />
+  <Folder Name="/observability/grafana/provisioning/dashboards/">
+    <File Path="observability/grafana/provisioning/dashboards/dashboards.yml" />
+  </Folder>
+  <Folder Name="/observability/grafana/provisioning/datasources/">
+    <File Path="observability/grafana/provisioning/datasources/datasources.yml" />
+  </Folder>
+  <Folder Name="/observability/prometheus/">
+    <File Path="observability/prometheus/prometheus.yml" />
+  </Folder>
   <Folder Name="/Services/" />
   <Folder Name="/Services/Bookings/">
     <Project Path="Services/Bookings/Bookings.Api/Bookings.Api.csproj" Id="9cb99185-22b7-41d7-8fc0-e3bc23366792" />
@@ -21,6 +37,8 @@
     <Project Path="Services/Users/Users.Application/Users.Application.csproj" Id="e8053b30-ee7d-4feb-87d9-2bdafb1cce86" />
     <Project Path="Services/Users/Users.Domain/Users.Domain.csproj" Id="b13222d2-a762-4c5e-83e7-32b5ea7a2abe" />
     <Project Path="Services/Users/Users.Infrastructure/Users.Infrastructure.csproj" Id="12a23672-ef77-4cb3-8c92-05282388bd2d" />
+    <Project Path="Services/Users/Users.IntegrationTests/Users.IntegrationTests.csproj" Id="c4c98837-3685-4618-a199-51b8a2f3b7aa" />
+    <Project Path="Services/Users/Users.Tests/Users.Tests.csproj" Id="a62036fd-51d0-40ed-bbff-62bf85332d27" />
   </Folder>
   <Folder Name="/Shared/">
     <Project Path="Shared/CoreEvents.Shared.Contracts/CoreEvents.Shared.Contracts.csproj" Id="7da9e648-ed62-42b1-91c3-b690b63b8b98" />
@@ -29,6 +47,6 @@
     <File Path=".editorconfig" />
   </Folder>
   <Project Path="docker-compose.dcproj">
-    <Build />
+    <Build Solution="Release|*" />
   </Project>
 </Solution>

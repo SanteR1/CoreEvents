@@ -1,7 +1,7 @@
+using AwesomeAssertions;
 using Dapper;
 using Events.IntegrationTests.Infrastructure.Bases;
 using Events.IntegrationTests.Infrastructure.Factories;
-using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
@@ -182,7 +182,7 @@ public class MigrationSchemaTests(ApiOnlyIntegrationTestFactory factory, ITestOu
                     column_default AS DefaultValue
                 FROM information_schema.columns 
                 WHERE table_schema = 'public';";
-            var connection = db.Database.GetDbConnection();
+            await using var connection = db.Database.GetDbConnection();
             var dbColumns = (await connection.QueryAsync<ColumnSchemaDef>(dbColumnsQuery)).ToList();
 
             // Запрос уникальных индексов/ограничений

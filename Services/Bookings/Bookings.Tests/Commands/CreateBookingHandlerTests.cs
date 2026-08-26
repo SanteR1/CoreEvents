@@ -1,3 +1,4 @@
+using AwesomeAssertions;
 using Bookings.Application.Abstractions;
 using Bookings.Application.Abstractions.Repositories;
 using Bookings.Application.Commands;
@@ -5,7 +6,6 @@ using Bookings.Application.Configuration;
 using Bookings.Application.Exceptions;
 using Bookings.Domain.Entities;
 using CoreEvents.Shared.Contracts.Events;
-using FluentAssertions;
 using Moq;
 
 namespace Bookings.Tests.Commands;

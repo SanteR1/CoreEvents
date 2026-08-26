@@ -1,0 +1,91 @@
+{
+    // Используйте IntelliSense, чтобы узнать о возможных атрибутах.
+    // Наведите указатель мыши, чтобы просмотреть описания существующих атрибутов.
+    // Для получения дополнительной информации посетите: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "C#: Users.Api Debug",
+            "type": "dotnet",
+            "request": "launch",
+            "projectPath": "${workspaceFolder}/Services/Users/Users.Api/Users.Api.csproj"
+        },
+        {
+            "name": "C#: Bookings.Api Debug",
+            "type": "dotnet",
+            "request": "launch",
+            "projectPath": "${workspaceFolder}/Services/Bookings/Bookings.Api/Bookings.Api.csproj",
+        },
+        {
+            "name": "C#: Events.Api Debug",
+            "type": "dotnet",
+            "request": "launch",
+            "projectPath": "${workspaceFolder}/Services/Events/Events.Api/Events.Api.csproj",
+        },
+        {
+            "name": "Debug: Users.Api",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-users-service",
+            "program": "${workspaceFolder}/Services/Users/Users.Api/bin/Debug/net10.0/Users.Api.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/Services/Users/Users.Api",
+            "envFile": "${workspaceFolder}/.env",
+            "stopAtEntry": false,
+            "console": "internalConsole",
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+                // "ConnectionStrings__Redis": "redis:6379",
+                // "Kafka__BootstrapServers": "kafka:9092"
+            }
+        },
+        {
+            "name": "Debug: Bookings.Api",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-bookings-service",
+            "program": "${workspaceFolder}/Services/Bookings/Bookings.Api/bin/Debug/net10.0/Bookings.Api.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/Services/Bookings/Bookings.Api",
+            "envFile": "${workspaceFolder}/.env",
+            "stopAtEntry": false,
+            "console": "internalConsole",
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            }
+        },
+        {
+            "name": "Debug: Events.Api",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-events-service",
+            "program": "${workspaceFolder}/Services/Events/Events.Api/bin/Debug/net10.0/Events.Api.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/Services/Events/Events.Api",
+            "envFile": "${workspaceFolder}/.env",
+            "stopAtEntry": false,
+            "console": "internalConsole",
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            }
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Launch All Microservices clr",
+            "configurations": [
+                "Debug: Users.Api",
+                "Debug: Bookings.Api",
+                "Debug: Events.Api"
+            ]
+        },
+                {
+            "name": "Launch All Microservices dotnet",
+            "configurations": [
+                "C#: Users.Api Debug",
+                "C#: Bookings.Api Debug",
+                "C#: Events.Api Debug"
+            ]
+        }
+    ]
+}

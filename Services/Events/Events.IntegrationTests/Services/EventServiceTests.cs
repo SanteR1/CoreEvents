@@ -1,9 +1,9 @@
+using AwesomeAssertions;
 using Events.Application.DTOs;
 using Events.Application.Services;
 using Events.Domain.Entities;
 using Events.IntegrationTests.Infrastructure.Bases;
 using Events.IntegrationTests.Infrastructure.Factories;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Events.IntegrationTests.Services;

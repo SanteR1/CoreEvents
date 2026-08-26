@@ -1,0 +1,11 @@
+apiVersion: 1
+
+datasources:
+  # 1. Подключение к Prometheus
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    # Имя хоста 'prometheus' должно совпадать с именем сервиса в docker-compose.yml
+    url: http://prometheus:9090 
+    isDefault: true # Делает этот источник основным по умолчанию
+    editable: true # Запрещает случайное изменение/удаление через веб-интерфейс

@@ -7,6 +7,15 @@ WORKDIR /app
 EXPOSE 8080
 EXPOSE 8081
 
+# Переключаемся на root для выдачи прав
+USER root
+
+# Создаем директорию и делаем пользователя app (владельца процесса) ее хозяином
+RUN mkdir -p /var/log/users-api \
+    && chown -R app:app /var/log/users-api
+
+# Возвращаемся к безопасному пользователю для работы приложения
+USER app
 
 # Этот этап используется для сборки проекта службы
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build

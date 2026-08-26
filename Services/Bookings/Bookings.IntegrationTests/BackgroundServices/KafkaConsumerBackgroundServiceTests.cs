@@ -1,12 +1,12 @@
 using System.Text;
 using System.Text.Json;
+using AwesomeAssertions;
 using Bookings.Infrastructure.Data;
 using Bookings.Infrastructure.Data.Entities;
 using Bookings.IntegrationTests.Infrastructure.Bases;
 using Bookings.IntegrationTests.Infrastructure.Factories;
 using Confluent.Kafka;
 using CoreEvents.Shared.Contracts.Events;
-using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 

@@ -1,0 +1,21 @@
+global:
+  scrape_interval: 15s
+  # Запрещаем Prometheus запрашивать метрики с точками (UTF-8).
+  # Это заставит .NET-экспортер автоматически заменять точки на '_'.
+  metric_name_validation_scheme: legacy
+
+scrape_configs:
+  - job_name: events-service
+    static_configs:
+      - targets: ["events.api:8080"]
+    metrics_path: /metrics
+      
+  - job_name: bookings-service
+    static_configs:
+      - targets: ["bookings.api:8080"]
+    metrics_path: /metrics
+
+  - job_name: users-service
+    static_configs:
+      - targets: ["users.api:8080"]
+    metrics_path: /metrics

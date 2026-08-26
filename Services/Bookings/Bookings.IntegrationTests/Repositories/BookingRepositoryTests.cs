@@ -1,9 +1,9 @@
+using AwesomeAssertions;
 using Bookings.Application.Abstractions.Repositories;
 using Bookings.Domain.Entities;
 using Bookings.Domain.Enums;
 using Bookings.IntegrationTests.Infrastructure.Bases;
 using Bookings.IntegrationTests.Infrastructure.Factories;
-using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 

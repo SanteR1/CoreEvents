@@ -1,0 +1,57 @@
+{
+    "name": ".NET 10 Microservices Workspace",
+    // Указываем путь к вашему существующему compose-файлу
+    "dockerComposeFile": [
+        "../docker-compose.yml"
+    ],
+    // Указываем, какой сервис из compose будет вашим рабочим местом.
+    // Мы создадим новый сервис "dev-env" в docker-compose (см. шаг 3).
+    "service": "dev-env",
+    "runServices": ["123"],
+    // Папка внутри контейнера, куда примонтируется ваш код
+    "workspaceFolder": "/workspace",
+    // VS Code сам автоматически переопределит команду запуска этого контейнера
+    "overrideCommand": true,
+    // stop — остановит контейнеры (docker compose stop)
+    // down — полностью удалит контейнеры и сети (docker compose down)
+    "shutdownAction": "stopCompose",
+    // Для управления контейнерами из vs code
+    "features": {
+        "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+            "version": "latest",
+            "enableNonRootDocker": "true",
+            "moby": "true"
+        }
+    },
+    "customizations": {
+        "vscode": {
+            // Расширения, которые автоматически поставятся ВНУТРЬ контейнера
+            "extensions": [
+                "ms-dotnettools.csdevkit", // C# Dev Kit для .NET 10
+                "ms-dotnettools.csharp",
+                "ms-azuretools.vscode-docker",
+                "mikestead.dotenv", // Использование расширения-помощника (Аналог "envFile")
+                "humao.rest-client" // Удобно для тестирования Web API
+            ],
+            "settings": {
+                "dotnet.cli.telemetryOptOut": true
+            }
+        }
+    },
+    // Открываем порты ваших Web API, Kafka UI или Grafana наружу, 
+    // чтобы они пробрасывались через SSH на ваш основной ПК
+    "forwardPorts": [
+        5003,
+        5004,
+        5005,
+        6379,
+        9090,
+        16686,
+        3000,
+        5433,
+        5434,
+        5435,
+        8090
+    ],
+    "remoteUser": "vscode"
+}

@@ -31,6 +31,7 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLife
     private string? _connectionString;
     private string? _connectionStringKafka;
     private string? _connectionStringRedis;
+
     public string ConnectionString => _connectionString ?? throw new InvalidOperationException("Строка подключения не инициализирована.");
     public string ConnectionStringKafka => _connectionStringKafka ?? throw new InvalidOperationException("Строка подключения Kafka не инициализирована.");
     public string ConnectionStringRedis => _connectionStringRedis ?? throw new InvalidOperationException("Строка подключения Redis не инициализирована.");
@@ -121,14 +122,20 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLife
         await _respawner.ResetAsync(conn);
     }
 
+    /// <summary>
+    /// Асинхронно освобождает ресурсы фабрики: сначала останавливает тестовый хост
+    /// приложения (WebApplicationFactory), затем параллельно останавливает и удаляет
+    /// все Docker-контейнеры (Postgres, Kafka, Redis), поднятые для теста.
+    /// </summary>
+    /// <returns></returns>
     public override async ValueTask DisposeAsync()
     {
-        await _dbContainer.StopAsync();
-        await _dbContainer.DisposeAsync();
-        await _kafkaContainer.StopAsync();
-        await _kafkaContainer.DisposeAsync();
-        await _redisContainer.StopAsync();
-        await _redisContainer.DisposeAsync();
         await base.DisposeAsync();
+        await Task.WhenAll(
+            _dbContainer.DisposeAsync().AsTask(),
+            _kafkaContainer.DisposeAsync().AsTask(),
+            _redisContainer.DisposeAsync().AsTask()
+        );
+        GC.SuppressFinalize(this);
     }
 }

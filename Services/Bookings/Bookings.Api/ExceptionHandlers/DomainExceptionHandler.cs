@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 using CoreEvents.Shared.Contracts.Exceptions;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
@@ -19,7 +20,8 @@ public class DomainExceptionHandler(
         }
 
         var statusCode = GetStatusCode(exception);
-        var traceId = System.Diagnostics.Activity.Current?.Id ?? httpContext.TraceIdentifier;
+        Activity.Current?.AddException(exception);
+        var traceId = Activity.Current?.Id ?? httpContext.TraceIdentifier;
 
         logger.LogWarning("Request error: {Message} at {Path}. TraceId: {TraceId}",
             exception.Message, httpContext.Request.Path, traceId);

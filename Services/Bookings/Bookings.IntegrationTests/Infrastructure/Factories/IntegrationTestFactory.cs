@@ -122,14 +122,20 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLife
         await _respawner.ResetAsync(conn);
     }
 
+    /// <summary>
+    /// Асинхронно освобождает ресурсы фабрики: сначала останавливает тестовый хост
+    /// приложения (WebApplicationFactory), затем параллельно останавливает и удаляет
+    /// все Docker-контейнеры (Postgres, Kafka, Redis), поднятые для теста.
+    /// </summary>
+    /// <returns></returns>
     public override async ValueTask DisposeAsync()
     {
-        await _dbContainer.StopAsync();
-        await _dbContainer.DisposeAsync();
-        await _kafkaContainer.StopAsync();
-        await _kafkaContainer.DisposeAsync();
-        await _redisContainer.StopAsync();
-        await _redisContainer.DisposeAsync();
         await base.DisposeAsync();
+        await Task.WhenAll(
+            _dbContainer.DisposeAsync().AsTask(),
+            _kafkaContainer.DisposeAsync().AsTask(),
+            _redisContainer.DisposeAsync().AsTask()
+        );
+        GC.SuppressFinalize(this);
     }
 }

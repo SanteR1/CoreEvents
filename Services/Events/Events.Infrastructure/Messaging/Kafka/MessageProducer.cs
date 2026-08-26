@@ -6,7 +6,7 @@ using Microsoft.Extensions.Options;
 
 namespace Events.Infrastructure.Messaging.Kafka;
 
-internal class MessageProducer : IMessageProducer, IDisposable
+internal sealed class MessageProducer : IMessageProducer, IDisposable
 {
     private readonly IProducer<string, string> _producer;
 
