@@ -22,7 +22,10 @@ public class User
     public static User Create(string userName, string passwordHash, string? role = "User")
     {
         if (string.IsNullOrWhiteSpace(userName))
-            throw new DomainValidationException(nameof(userName), "Логин должен быть указан.");
+            throw new ValidationException(nameof(userName), "Логин должен быть указан.");
+
+        if (string.IsNullOrWhiteSpace(passwordHash))
+            throw new ValidationException(nameof(passwordHash), "Пароль должен быть указан.");
 
         var userRole = role switch
         {

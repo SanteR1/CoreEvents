@@ -2,7 +2,7 @@ using CoreEvents.Shared.Contracts.Exceptions;
 
 namespace Users.Domain.Exceptions;
 
-public class DomainValidationException : BadRequestException
+public class ValidationException : BadRequestException
 {
     public override string ErrorCode => "Domain.ValidationFailed";
 
@@ -10,7 +10,7 @@ public class DomainValidationException : BadRequestException
     // чтобы обработчик сам нашел этот словарь и положил его в ProblemDetails.
     public override IReadOnlyDictionary<string, string[]> ValidationErrors { get; }
 
-    public DomainValidationException(string propertyName, string errorMessage)
+    public ValidationException(string propertyName, string errorMessage)
         : base($"Validation failed for {propertyName}: {errorMessage}")
     {
         ValidationErrors = new Dictionary<string, string[]>
@@ -19,7 +19,7 @@ public class DomainValidationException : BadRequestException
         };
     }
 
-    public DomainValidationException(IReadOnlyDictionary<string, string[]> errors)
+    public ValidationException(IReadOnlyDictionary<string, string[]> errors)
         : base("One or more domain validation errors occurred.")
     {
         ValidationErrors = errors;
