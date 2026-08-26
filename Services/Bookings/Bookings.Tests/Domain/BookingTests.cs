@@ -1,7 +1,7 @@
+using AwesomeAssertions;
 using Bookings.Domain.Entities;
 using Bookings.Domain.Enums;
 using Bookings.Domain.Exceptions;
-using FluentAssertions;
 
 namespace Bookings.Tests.Domain;
 

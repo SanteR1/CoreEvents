@@ -1,8 +1,8 @@
+using AwesomeAssertions;
 using Bookings.Application.Abstractions.Repositories;
 using Bookings.Application.Commands;
 using Bookings.Domain.Entities;
 using Bookings.Domain.Enums;
-using FluentAssertions;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Moq;
