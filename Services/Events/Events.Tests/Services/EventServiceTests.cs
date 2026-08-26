@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using AwesomeAssertions;
 using Events.Application.Abstractions.Caching;
 using Events.Application.Abstractions.Repositories;
 using Events.Application.DTOs;
@@ -6,7 +7,6 @@ using Events.Application.Exceptions;
 using Events.Application.Services;
 using Events.Domain.Entities;
 using Events.Tests.Infrastructure;
-using FluentAssertions;
 using Moq;
 using ValidationException = Events.Domain.Exceptions.ValidationException;
 
