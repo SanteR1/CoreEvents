@@ -1,10 +1,10 @@
+using AwesomeAssertions;
 using Events.Application.Abstractions.Repositories;
 using Events.Application.DTOs;
 using Events.Domain.Entities;
 using Events.Infrastructure.Data;
 using Events.IntegrationTests.Infrastructure.Bases;
 using Events.IntegrationTests.Infrastructure.Factories;
-using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;

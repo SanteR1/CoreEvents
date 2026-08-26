@@ -1,9 +1,9 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using AwesomeAssertions;
 using EfSchemaCompare;
 using Events.Infrastructure.Data;
 using Events.IntegrationTests.Infrastructure.Factories;
-using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -17,6 +17,7 @@ namespace Events.IntegrationTests.Infrastructure.Bases;
 public abstract class IntegrationTestBase<TFactory> : IAsyncLifetime where TFactory : IntegrationTestFactory
 {
     protected readonly TFactory Factory;
+    protected readonly HttpClient HttpClient;
 
     /// <summary>
     /// Инициализирует базовый класс тестов, получая глобальный экземпляр фабрики.
@@ -25,6 +26,7 @@ public abstract class IntegrationTestBase<TFactory> : IAsyncLifetime where TFact
     protected IntegrationTestBase(TFactory factory)
     {
         Factory = factory;
+        HttpClient = Factory.CreateClient();
     }
 
     /// <summary>
@@ -35,9 +37,22 @@ public abstract class IntegrationTestBase<TFactory> : IAsyncLifetime where TFact
 
     /// <summary>
     /// Выполняется асинхронно фреймворком xUnit ПОСЛЕ каждого теста ([Fact]).
-    /// Обычно остается пустым, так как очистка данных происходит перед тестом.
+    /// Освобождает ресурсы по паттерну IAsyncDisposable.
     /// </summary>
-    public virtual ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    public async ValueTask DisposeAsync()
+    {
+        await DisposeAsyncCore();
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// Виртуальный метод для переопределения логики очистки в производных классах-наследниках.
+    /// </summary>
+    protected virtual async ValueTask DisposeAsyncCore()
+    {
+        HttpClient.Dispose();
+        await Task.CompletedTask;
+    }
 
     /// <summary>
     /// Создает новую изолированную область видимости (Scope) DI-контейнера, 

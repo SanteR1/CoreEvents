@@ -1,12 +1,12 @@
 using System.Text;
 using System.Text.Json;
+using AwesomeAssertions;
 using Confluent.Kafka;
 using CoreEvents.Shared.Contracts.Events;
 using Events.Infrastructure.Data;
 using Events.Infrastructure.Data.Entities;
 using Events.IntegrationTests.Infrastructure.Bases;
 using Events.IntegrationTests.Infrastructure.Factories;
-using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
