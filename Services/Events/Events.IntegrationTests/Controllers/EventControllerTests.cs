@@ -1,18 +1,16 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using AwesomeAssertions;
 using Events.Application.DTOs;
 using Events.IntegrationTests.Infrastructure.Auth;
 using Events.IntegrationTests.Infrastructure.Bases;
 using Events.IntegrationTests.Infrastructure.Factories;
-using FluentAssertions;
 
 namespace Events.IntegrationTests.Controllers;
 
-public class EventControllerTests(ApiOnlyIntegrationTestFactory factory) : ApiOnlyIntegrationTestBase(factory)
+public sealed class EventControllerTests(ApiOnlyIntegrationTestFactory factory) : ApiOnlyIntegrationTestBase(factory)
 {
-    private readonly HttpClient _client = factory.CreateClient();
-
     [Fact]
     public async Task CreateEvent_WithValidRequest_ShouldSaveToDbAndReturnCreated()
     {
@@ -28,12 +26,12 @@ public class EventControllerTests(ApiOnlyIntegrationTestFactory factory) : ApiOn
             Description: "Test Description"
             );
 
-        _client.DefaultRequestHeaders.Authorization =
+        HttpClient.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue(TestAuthHandler.AuthenticationScheme, "token");
-        _client.DefaultRequestHeaders.Add("X-Test-Role", "Admin");
+        HttpClient.DefaultRequestHeaders.Add("X-Test-Role", "Admin");
 
         // Act
-        var response = await _client.PostAsJsonAsync("/events", eventCreateDto, TestContext.Current.CancellationToken);
+        using var response = await HttpClient.PostAsJsonAsync("/events", eventCreateDto, TestContext.Current.CancellationToken);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Created);
@@ -76,12 +74,12 @@ public class EventControllerTests(ApiOnlyIntegrationTestFactory factory) : ApiOn
             Description: "Test Description"
             );
 
-        _client.DefaultRequestHeaders.Authorization =
+        HttpClient.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue(TestAuthHandler.AuthenticationScheme, "token");
-        _client.DefaultRequestHeaders.Add("X-Test-Role", "User");
+        HttpClient.DefaultRequestHeaders.Add("X-Test-Role", "User");
 
         // Act
-        var response = await _client.PostAsJsonAsync("/events", eventCreateDto, TestContext.Current.CancellationToken);
+        using var response = await HttpClient.PostAsJsonAsync("/events", eventCreateDto, TestContext.Current.CancellationToken);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
@@ -102,12 +100,12 @@ public class EventControllerTests(ApiOnlyIntegrationTestFactory factory) : ApiOn
             Description: "Test Description"
         );
 
-        _client.DefaultRequestHeaders.Authorization =
+        HttpClient.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue(TestAuthHandler.AuthenticationScheme, "token");
-        _client.DefaultRequestHeaders.Add("X-Test-Role", "Admin");
+        HttpClient.DefaultRequestHeaders.Add("X-Test-Role", "Admin");
 
         // Act
-        var response = await _client.PostAsJsonAsync("/events", eventCreateDto, TestContext.Current.CancellationToken);
+        using var response = await HttpClient.PostAsJsonAsync("/events", eventCreateDto, TestContext.Current.CancellationToken);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Created);
@@ -150,12 +148,12 @@ public class EventControllerTests(ApiOnlyIntegrationTestFactory factory) : ApiOn
             Description: "Test Description"
         );
 
-        _client.DefaultRequestHeaders.Authorization =
+        HttpClient.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue(TestAuthHandler.AuthenticationScheme, "token");
-        _client.DefaultRequestHeaders.Add("X-Test-Role", "User");
+        HttpClient.DefaultRequestHeaders.Add("X-Test-Role", "User");
 
         // Act
-        var response = await _client.PutAsJsonAsync($"/events/{Guid.NewGuid()}", eventCreateDto, TestContext.Current.CancellationToken);
+        using var response = await HttpClient.PutAsJsonAsync($"/events/{Guid.NewGuid()}", eventCreateDto, TestContext.Current.CancellationToken);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
@@ -176,12 +174,12 @@ public class EventControllerTests(ApiOnlyIntegrationTestFactory factory) : ApiOn
             Description: "Test Description"
         );
 
-        _client.DefaultRequestHeaders.Authorization =
+        HttpClient.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue(TestAuthHandler.AuthenticationScheme, "token");
-        _client.DefaultRequestHeaders.Add("X-Test-Role", "Admin");
+        HttpClient.DefaultRequestHeaders.Add("X-Test-Role", "Admin");
 
         // Act
-        var responseCreate = await _client.PostAsJsonAsync("/events", eventCreateDto, TestContext.Current.CancellationToken);
+        using var responseCreate = await HttpClient.PostAsJsonAsync("/events", eventCreateDto, TestContext.Current.CancellationToken);
 
         // Assert
         responseCreate.StatusCode.Should().Be(HttpStatusCode.Created);
@@ -199,7 +197,7 @@ public class EventControllerTests(ApiOnlyIntegrationTestFactory factory) : ApiOn
             TotalSeats: 20,
             Description: "Update Description"
         );
-        var response = await _client.PutAsJsonAsync($"/events/{returnedEvent.Id}", eventUpdate, TestContext.Current.CancellationToken);
+        using var response = await HttpClient.PutAsJsonAsync($"/events/{returnedEvent.Id}", eventUpdate, TestContext.Current.CancellationToken);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
@@ -232,12 +230,12 @@ public class EventControllerTests(ApiOnlyIntegrationTestFactory factory) : ApiOn
             Description: "Test Description"
         );
 
-        _client.DefaultRequestHeaders.Authorization =
+        HttpClient.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue(TestAuthHandler.AuthenticationScheme, "token");
-        _client.DefaultRequestHeaders.Add("X-Test-Role", "User");
+        HttpClient.DefaultRequestHeaders.Add("X-Test-Role", "User");
 
         // Act
-        var response = await _client.DeleteAsync($"/events/{Guid.NewGuid()}", TestContext.Current.CancellationToken);
+        using var response = await HttpClient.DeleteAsync($"/events/{Guid.NewGuid()}", TestContext.Current.CancellationToken);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
@@ -258,12 +256,12 @@ public class EventControllerTests(ApiOnlyIntegrationTestFactory factory) : ApiOn
             Description: "Test Description"
         );
 
-        _client.DefaultRequestHeaders.Authorization =
+        HttpClient.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue(TestAuthHandler.AuthenticationScheme, "token");
-        _client.DefaultRequestHeaders.Add("X-Test-Role", "Admin");
+        HttpClient.DefaultRequestHeaders.Add("X-Test-Role", "Admin");
 
         // Act
-        var responseCreate = await _client.PostAsJsonAsync("/events", eventCreateDto, TestContext.Current.CancellationToken);
+        using var responseCreate = await HttpClient.PostAsJsonAsync("/events", eventCreateDto, TestContext.Current.CancellationToken);
 
         // Assert
         responseCreate.StatusCode.Should().Be(HttpStatusCode.Created);
@@ -281,7 +279,7 @@ public class EventControllerTests(ApiOnlyIntegrationTestFactory factory) : ApiOn
             TotalSeats: 20,
             Description: "Update Description"
         );
-        var response = await _client.PutAsJsonAsync($"/events/{returnedEvent.Id}", eventUpdate, TestContext.Current.CancellationToken);
+        using var response = await HttpClient.PutAsJsonAsync($"/events/{returnedEvent.Id}", eventUpdate, TestContext.Current.CancellationToken);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
