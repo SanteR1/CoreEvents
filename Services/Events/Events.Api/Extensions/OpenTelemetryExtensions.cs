@@ -19,8 +19,7 @@ public static class OpenTelemetryExtensions
                                            {
 
                                                var path = httpContext.Request.Path;
-                                               return !path.StartsWithSegments("/health") &&
-                                                      !path.StartsWithSegments("/metrics");
+                                               return !path.StartsWithSegments("/metrics");
                                            };
                                        })
                                        .AddHttpClientInstrumentation()
