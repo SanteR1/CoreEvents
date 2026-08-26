@@ -1,9 +1,9 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using AwesomeAssertions;
 using Bookings.Infrastructure.Data;
 using Bookings.IntegrationTests.Infrastructure.Factories;
 using EfSchemaCompare;
-using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -17,6 +17,7 @@ namespace Bookings.IntegrationTests.Infrastructure.Bases;
 public abstract class IntegrationTestBase<TFactory> : IAsyncLifetime where TFactory : IntegrationTestFactory
 {
     protected readonly TFactory Factory;
+    protected readonly HttpClient HttpClient;
 
     /// <summary>
     /// Инициализирует базовый класс тестов, получая глобальный экземпляр фабрики.
@@ -25,6 +26,7 @@ public abstract class IntegrationTestBase<TFactory> : IAsyncLifetime where TFact
     protected IntegrationTestBase(TFactory factory)
     {
         Factory = factory;
+        HttpClient = Factory.CreateClient();
     }
 
     /// <summary>
@@ -37,7 +39,21 @@ public abstract class IntegrationTestBase<TFactory> : IAsyncLifetime where TFact
     /// Выполняется асинхронно фреймворком xUnit ПОСЛЕ каждого теста ([Fact]).
     /// Обычно остается пустым, так как очистка данных происходит перед тестом.
     /// </summary>
-    public virtual ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    public async ValueTask DisposeAsync()
+    {
+        // 1. Вызываем виртуальный метод, который переопределят наследники
+        await DisposeAsyncCore();
+
+        // 2. Подавляем финализатор (если он есть у базового класса)
+        GC.SuppressFinalize(this);
+    }
+
+    // Виртуальный метод, требуемый анализатором для абстрактного класса
+    protected virtual async ValueTask DisposeAsyncCore()
+    {
+        HttpClient.Dispose();
+        await Task.CompletedTask;
+    }
 
     /// <summary>
     /// Создает новую изолированную область видимости (Scope) DI-контейнера, 
@@ -71,7 +87,7 @@ public abstract class IntegrationTestBase<TFactory> : IAsyncLifetime where TFact
     }
 
     /// <summary>
-    /// Создает изолированный Scope, автоматически извлекает <see cref="AppDbContext"/> 
+    /// Создает изолированный Scope, автоматически извлекает <see cref="BookingsDbContext"/> 
     /// и выполняет операцию с базой данных без возврата результата.
     /// </summary>
     /// <remarks>
@@ -86,7 +102,7 @@ public abstract class IntegrationTestBase<TFactory> : IAsyncLifetime where TFact
         => ExecuteScopeAsync(sp => action(sp.GetRequiredService<BookingsDbContext>()));
 
     /// <summary>
-    /// Создает изолированный Scope, автоматически извлекает <see cref="AppDbContext"/>, 
+    /// Создает изолированный Scope, автоматически извлекает <see cref="BookingsDbContext"/>, 
     /// выполняет операцию с БД и возвращает результат.
     /// </summary>
     /// <remarks>
@@ -104,7 +120,7 @@ public abstract class IntegrationTestBase<TFactory> : IAsyncLifetime where TFact
     /// Выполняет действие без возврата результата.
     /// </summary>
     /// <remarks>
-    /// **Когда использовать:** Аналогично <see cref="ExecuteDbContextAsync(Func{AppDbContext, Task})"/> (Arrange/Assert), 
+    /// **Когда использовать:** Аналогично <see cref="ExecuteDbContextAsync(Func{BookingsDbContext, Task})"/> (Arrange/Assert), 
     /// но для дополнительных контекстов БД (например, IdentityDbContext или контексты других микросервисов).
     /// </remarks>
     /// <typeparam name="TContext">Тип контекста базы данных.</typeparam>
@@ -118,7 +134,7 @@ public abstract class IntegrationTestBase<TFactory> : IAsyncLifetime where TFact
     /// Выполняет действие и возвращает результат.
     /// </summary>
     /// <remarks>
-    /// **Когда использовать:** Аналогично <see cref="ExecuteDbContextAsync{T}(Func{AppDbContext, Task{T}})"/> (Arrange), 
+    /// **Когда использовать:** Аналогично <see cref="ExecuteDbContextAsync{T}(Func{BookingsDbContext, Task{T}})"/> (Arrange), 
     /// но для альтернативных контекстов БД.
     /// </remarks>
     /// <typeparam name="TContext">Тип контекста базы данных.</typeparam>
@@ -132,7 +148,7 @@ public abstract class IntegrationTestBase<TFactory> : IAsyncLifetime where TFact
     /// <summary>
     /// Проверяет соответствие физической схемы базы данных текущей модели EF Core.
     /// </summary>
-    /// <param name="db">Экземпляр <see cref="EventsDbContext"/>, используемый в тесте.</param>
+    /// <param name="db">Экземпляр <see cref="BookingsDbContext"/>, используемый в тесте.</param>
     /// <exception cref="Xunit.Sdk.EqualException">Выбрасывается, если схема БД отличается от модели.</exception>
     internal void AssertSchemaMatches(BookingsDbContext db)
     {
@@ -217,4 +233,5 @@ public abstract class IntegrationTestBase<TFactory> : IAsyncLifetime where TFact
     {
         Converters = { new JsonStringEnumConverter() }
     };
+
 }
