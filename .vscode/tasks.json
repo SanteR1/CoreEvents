@@ -2,6 +2,25 @@
     "version": "2.0.0",
     "tasks": [
         {
+            "label": "Auto-start Vite",
+            "type": "npm",
+            "script": "dev",
+            "options": {
+                "cwd": "${workspaceFolder}/Frontend/react-web"
+            },
+            // Эта настройка запускает задачу автоматически при открытии проекта
+            "runOptions": {
+                "runOn": "folderOpen"
+            },
+            // Настраиваем внешний вид терминала
+            "presentation": {
+                "reveal": "always", // Всегда показывать терминал с логами
+                "panel": "dedicated", // Выделить отдельную вкладку под Vite
+                "clear": true, // Очищать терминал при перезапуске
+                "close": false
+            }
+        },
+        {
             "label": "build-users-service",
             "command": "dotnet",
             "type": "process",
@@ -39,3 +58,4 @@
         }
     ]
 }
+
