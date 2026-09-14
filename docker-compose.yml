@@ -262,6 +262,8 @@ services:
     # Подключаем к той же сети, где живут ваши микросервисы, Kafka и Redis
     #networks:
     #- your-feature-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 volumes:
   kafka-data:
   redis_data:

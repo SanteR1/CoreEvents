@@ -1,66 +1,70 @@
 {
-    "name": "CoreEvents Workspace",
-    // Указываем путь к вашему существующему compose-файлу
-    "dockerComposeFile": ["../docker-compose.yml"],
-    // Указываем, какой сервис из compose будет вашим рабочим местом.
-    // Мы создадим новый сервис "dev-env" в docker-compose.
-    "service": "dev-env",
-    // Папка внутри контейнера, куда примонтируется ваш код
-    "workspaceFolder": "/workspace",
-    // VS Code сам автоматически переопределит команду запуска этого контейнера
-    "overrideCommand": true,
-    // stop — остановит контейнеры (docker compose stop)
-    // down — полностью удалит контейнеры и сети (docker compose down)
-    "shutdownAction": "stopCompose",
-    // Для управления контейнерами из vs code
-    "features": {
-        "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
-            "version": "latest",
-            "enableNonRootDocker": "true",
-            "moby": "true"
+  "name": "CoreEvents Workspace",
+  // Указываем путь к вашему существующему compose-файлу
+  "dockerComposeFile": ["../docker-compose.yml"],
+  // Указываем, какой сервис из compose будет вашим рабочим местом.
+  // Мы создадим новый сервис "dev-env" в docker-compose.
+  "service": "dev-env",
+  // Папка внутри контейнера, куда примонтируется ваш код
+  "workspaceFolder": "/workspace",
+  // VS Code сам автоматически переопределит команду запуска этого контейнера
+  "overrideCommand": true,
+  // stop — остановит контейнеры (docker compose stop)
+  // down — полностью удалит контейнеры и сети (docker compose down)
+  "shutdownAction": "stopCompose",
+  "mounts": [
+    "source=${localWorkspaceFolder}/.devcontainer-storage/gemini,target=/home/vscode/.gemini,type=bind"
+  ],
+  // Для управления контейнерами из vs code
+  "features": {
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+      "version": "latest",
+      "enableNonRootDocker": "true",
+      "moby": "true"
+    },
+    // ДОБАВЛЯЕМ NODE.JS:
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "26.8.1", //
+      "nodeGypDependencies": true
+    }
+  },
+  "customizations": {
+    "vscode": {
+      // Расширения, которые автоматически поставятся ВНУТРЬ контейнера
+      "extensions": [
+        "ms-dotnettools.csdevkit", // C# Dev Kit для .NET 10
+        "ms-dotnettools.csharp",
+        "ms-azuretools.vscode-docker",
+        "mikestead.dotenv", // Использование расширения-помощника (Аналог "envFile")
+        "humao.rest-client", // Удобно для тестирования Web API
+        "dsznajder.es7-react-js-snippets", // React Snippets
+        "dbaeumer.vscode-eslint", // ESLint
+        "esbenp.prettier-vscode", // Prettier
+        "google.google-antigravity" // Google Antigravity
+      ],
+      "settings": {
+        "dotnet.cli.telemetryOptOut": true,
+        "editor.formatOnSave": true,
+        // Четкое разделение форматтеров, чтобы Prettier не ломал C# код
+        "[typescript]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
         },
-        // ДОБАВЛЯЕМ NODE.JS:
-        "ghcr.io/devcontainers/features/node:1": {
-            "version": "26.8.1", //
-            "nodeGypDependencies": true
+        "[typescriptreact]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        "[csharp]": {
+          "editor.defaultFormatter": "ms-dotnettools.csharp"
         }
-    },
-    "customizations": {
-        "vscode": {
-            // Расширения, которые автоматически поставятся ВНУТРЬ контейнера
-            "extensions": [
-                "ms-dotnettools.csdevkit", // C# Dev Kit для .NET 10
-                "ms-dotnettools.csharp",
-                "ms-azuretools.vscode-docker",
-                "mikestead.dotenv", // Использование расширения-помощника (Аналог "envFile")
-                "humao.rest-client", // Удобно для тестирования Web API
-                "dsznajder.es7-react-js-snippets", // React Snippets
-                "dbaeumer.vscode-eslint", // ESLint
-                "esbenp.prettier-vscode" // Prettier
-            ],
-            "settings": {
-                "dotnet.cli.telemetryOptOut": true,
-                "editor.formatOnSave": true,
-                // Четкое разделение форматтеров, чтобы Prettier не ломал C# код
-                "[typescript]": {
-                    "editor.defaultFormatter": "esbenp.prettier-vscode"
-                },
-                "[typescriptreact]": {
-                    "editor.defaultFormatter": "esbenp.prettier-vscode"
-                },
-                "[csharp]": {
-                    "editor.defaultFormatter": "ms-dotnettools.csharp"
-                }
-            }
-        }
-    },
-    // Открываем порты Web API, Kafka UI или Grafana наружу,
-    // чтобы они пробрасывались через SSH на ваш основной ПК
-    "forwardPorts": [
-        5001,5003, 5004, 5005, 5173, 5433, 5434, 5435, 6379, 9090, 16686, 3000, 8090
-    ],
-    "remoteUser": "vscode",
-    // Автоматическая установка зависимостей при сборке контейнера
-    "postCreateCommand": "dotnet restore CoreEvents.slnx && cd Frontend/react-web && npm install"
+      }
+    }
+  },
+  // Открываем порты Web API, Kafka UI или Grafana наружу,
+  // чтобы они пробрасывались через SSH на ваш основной ПК
+  "forwardPorts": [
+    5001, 5003, 5004, 5005, 5173, 5433, 5434, 5435, 6379, 9090, 16686, 3000,
+    8090
+  ],
+  "remoteUser": "vscode",
+  // Автоматическая установка зависимостей при сборке контейнера
+  "postCreateCommand": "dotnet restore CoreEvents.slnx && cd Frontend/react-web && npm install --legacy-peer-deps"
 }
-
