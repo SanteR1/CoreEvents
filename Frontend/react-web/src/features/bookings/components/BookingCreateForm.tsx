@@ -80,7 +80,7 @@ export const BookingCreateForm = ({
   return (
     <Form
       method="post"
-      className="space-y-6 rounded-2xl border border-[var(--border)] bg-[var(--bg)] p-6 shadow-sm"
+      className="space-y-6 rounded-2xl border border-(--border) bg-(--bg) p-6 shadow-sm"
     >
       {error && (
         <div
@@ -92,7 +92,7 @@ export const BookingCreateForm = ({
             <div className="flex-1">
               <p className="font-semibold">Не удалось оформить бронирование</p>
               <p className="mt-1 text-xs">{error.message}</p>
-              <p className="mt-2 text-xs text-[var(--text)]">
+              <p className="mt-2 text-xs text-(--text)">
                 Вы можете нажать кнопку ниже, чтобы повторить отправку заявки, или вернуться назад к
                 событию.
               </p>
@@ -104,7 +104,7 @@ export const BookingCreateForm = ({
       <input type="hidden" name="eventId" value={eventId} />
 
       <div className="space-y-2">
-        <label htmlFor="seats" className="block text-sm font-medium text-[var(--text)]">
+        <label htmlFor="seats" className="block text-sm font-medium text-(--text)">
           Количество мест
         </label>
         <div className="flex items-center justify-center space-x-3">
@@ -113,7 +113,7 @@ export const BookingCreateForm = ({
             aria-label="Уменьшить количество мест"
             onClick={handleDecrement}
             disabled={currentSeats <= 1 || isSubmitting || availableSeats <= 0}
-            className="flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--bg)] text-lg font-bold text-[var(--text-h)] hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-gray-800"
+            className="flex h-10 w-10 items-center justify-center rounded-lg border border-(--border) bg-(--bg) text-lg font-bold text-(--text-h) hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-gray-800"
           >
             -
           </button>
@@ -128,7 +128,7 @@ export const BookingCreateForm = ({
             onChange={handleInputChange}
             onBlur={handleBlur}
             disabled={isSubmitting}
-            className="h-10 w-20 rounded-lg border border-[var(--border)] bg-[var(--bg)] text-center font-semibold text-[var(--text-h)] focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+            className="h-10 w-20 rounded-lg border border-(--border) bg-(--bg) text-center font-semibold text-(--text-h) focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
           ></input>
 
           <button
@@ -136,12 +136,12 @@ export const BookingCreateForm = ({
             aria-label="Увеличить количество мест"
             onClick={handleIncrement}
             disabled={currentSeats >= availableSeats || isSubmitting}
-            className="flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--bg)] text-lg font-bold text-[var(--text-h)] hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-gray-800"
+            className="flex h-10 w-10 items-center justify-center rounded-lg border border-(--border) bg-(--bg) text-lg font-bold text-(--text-h) hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-gray-800"
           >
             +
           </button>
         </div>
-        <p className="text-xs text-[var(--text)] opacity-75">
+        <p className="text-xs text-(--text) opacity-75">
           Доступно для выбора: до {availableSeats} мест
         </p>
       </div>
@@ -149,7 +149,7 @@ export const BookingCreateForm = ({
       <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
         <Link
           to={`/events/${eventId}`}
-          className="rounded-xl border border-[var(--border)] px-4 py-2.5 text-center text-sm font-medium text-[var(--text)] transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+          className="rounded-xl border border-(--border) px-4 py-2.5 text-center text-sm font-medium text-(--text) transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
         >
           ← Назад к событию
         </Link>

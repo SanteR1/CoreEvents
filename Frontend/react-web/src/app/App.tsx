@@ -17,15 +17,13 @@ export default function App() {
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
     `transition-colors ${
-      isActive
-        ? 'font-semibold text-[var(--accent)]'
-        : 'text-[var(--text-h)] hover:text-[var(--accent)]'
+      isActive ? 'font-semibold text-(--accent)' : 'text-(--text-h) hover:text-(--accent)'
     }`;
 
   return (
     <ThemeProvider>
-      <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] transition-colors duration-200">
-        <header className="border-b border-[var(--border)] px-6 py-4">
+      <div className="min-h-screen bg-(--bg) text-(--text) transition-colors duration-200">
+        <header className="border-b border-(--border) px-6 py-4">
           <nav className="mx-auto flex max-w-7xl items-center gap-6 text-sm font-medium">
             {/* 1. Публичные ссылки */}
             <NavLink to="/" end className={navLinkClass}>
@@ -45,7 +43,7 @@ export default function App() {
             {/* 3. Блок профиля, индикатор загрузки и переключатель тем */}
             <div className="ml-auto flex items-center gap-4">
               {isLoading && (
-                <span className="animate-pulse text-xs text-[var(--accent)]">Загрузка...</span>
+                <span className="animate-pulse text-xs text-(--accent)">Загрузка...</span>
               )}
 
               {/* Переключатель Light / System / Dark */}
@@ -63,7 +61,7 @@ export default function App() {
                 <div className="flex items-center gap-4">
                   <Link
                     to="/login"
-                    className="text-[var(--text-h)] transition-colors hover:text-[var(--accent)]"
+                    className="text-(--text-h) transition-colors hover:text-(--accent)"
                   >
                     Вход
                   </Link>

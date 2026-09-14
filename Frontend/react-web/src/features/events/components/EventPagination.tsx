@@ -79,14 +79,14 @@ export const EventPagination = ({
   return (
     <div className="flex flex-col items-center justify-between gap-4 py-4 text-left sm:flex-row">
       {/* Информация о количестве */}
-      <div className="text-xs text-[var(--text)]">
+      <div className="text-xs text-(--text)">
         {totalCount > 0 ? (
           <span>
             Показано{' '}
-            <strong className="font-semibold text-[var(--text-h)]">
+            <strong className="font-semibold text-(--text-h)">
               {startItem}–{endItem}
             </strong>{' '}
-            из <strong className="font-semibold text-[var(--text-h)]">{totalCount}</strong> событий
+            из <strong className="font-semibold text-(--text-h)">{totalCount}</strong> событий
           </span>
         ) : (
           <span>
@@ -102,12 +102,12 @@ export const EventPagination = ({
           {currentPage > 1 ? (
             <Link
               to={buildUrl(currentPage - 1)}
-              className="flex h-9 items-center justify-center rounded-lg border border-[var(--border)] px-3 text-xs font-medium text-[var(--text-h)] transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+              className="flex h-9 items-center justify-center rounded-lg border border-(--border) px-3 text-xs font-medium text-(--text-h) transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
             >
               ← Назад
             </Link>
           ) : (
-            <span className="flex h-9 cursor-not-allowed items-center justify-center rounded-lg border border-[var(--border)] px-3 text-xs font-medium text-[var(--text)] opacity-40">
+            <span className="flex h-9 cursor-not-allowed items-center justify-center rounded-lg border border-(--border) px-3 text-xs font-medium text-(--text) opacity-40">
               ← Назад
             </span>
           )}
@@ -119,7 +119,7 @@ export const EventPagination = ({
                 return (
                   <span
                     key={idx < 3 ? 'dots-start' : 'dots-end'}
-                    className="px-2 text-xs text-[var(--text)]"
+                    className="px-2 text-xs text-(--text)"
                   >
                     ...
                   </span>
@@ -138,7 +138,7 @@ export const EventPagination = ({
                 <Link
                   key={item}
                   to={buildUrl(item)}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border)] text-xs font-medium text-[var(--text-h)] transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-(--border) text-xs font-medium text-(--text-h) transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
                 >
                   {item}
                 </Link>
@@ -150,12 +150,12 @@ export const EventPagination = ({
           {currentPage < totalPages ? (
             <Link
               to={buildUrl(currentPage + 1)}
-              className="flex h-9 items-center justify-center rounded-lg border border-[var(--border)] px-3 text-xs font-medium text-[var(--text-h)] transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+              className="flex h-9 items-center justify-center rounded-lg border border-(--border) px-3 text-xs font-medium text-(--text-h) transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
             >
               Вперед →
             </Link>
           ) : (
-            <span className="flex h-9 cursor-not-allowed items-center justify-center rounded-lg border border-[var(--border)] px-3 text-xs font-medium text-[var(--text)] opacity-40">
+            <span className="flex h-9 cursor-not-allowed items-center justify-center rounded-lg border border-(--border) px-3 text-xs font-medium text-(--text) opacity-40">
               Вперед →
             </span>
           )}
@@ -163,7 +163,7 @@ export const EventPagination = ({
       )}
 
       {/* Селектор размера страницы */}
-      <div className="flex items-center gap-2 text-xs text-[var(--text)]">
+      <div className="flex items-center gap-2 text-xs text-(--text)">
         <span>Показывать по:</span>
         {[6, 12, 24].map((size) => (
           <Link
@@ -172,7 +172,7 @@ export const EventPagination = ({
             className={`rounded px-2 py-1 transition-colors ${
               pageSize === size
                 ? 'bg-indigo-100 font-bold text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300'
-                : 'text-[var(--text)] hover:bg-gray-100 dark:hover:bg-gray-800'
+                : 'text-(--text) hover:bg-gray-100 dark:hover:bg-gray-800'
             }`}
           >
             {size}

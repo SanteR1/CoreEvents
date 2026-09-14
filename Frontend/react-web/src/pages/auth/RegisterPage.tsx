@@ -79,8 +79,8 @@ export const RegisterPage = () => {
 
   return (
     <div className="flex min-h-[60vh] items-center justify-center p-4">
-      <div className="w-full max-w-sm rounded-lg border border-[var(--border)] bg-[var(--bg)] p-6 shadow-sm">
-        <h1 className="mb-4 text-center text-xl font-semibold text-[var(--text-h)]">Регистрация</h1>
+      <div className="w-full max-w-sm rounded-lg border border-(--border) bg-(--bg) p-6 shadow-sm">
+        <h1 className="mb-4 text-center text-xl font-semibold text-(--text-h)">Регистрация</h1>
         <RegisterForm error={actionData?.error} returnUrl={returnUrl} />
       </div>
     </div>

@@ -24,7 +24,7 @@ export const EventCard = ({ event }: EventCardProps) => {
   const isFewSeats = !isSoldOut && event.availableSeats <= 5;
 
   return (
-    <div className="flex flex-col justify-between rounded-xl border border-[var(--border)] bg-[var(--bg)] p-5 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+    <div className="flex flex-col justify-between rounded-xl border border-(--border) bg-(--bg) p-5 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
       <div className="space-y-3">
         {/* Статус мест */}
         <div className="flex items-center justify-between gap-2">
@@ -42,11 +42,11 @@ export const EventCard = ({ event }: EventCardProps) => {
             </span>
           )}
 
-          <span className="text-xs text-[var(--text)]">Всего: {event.totalSeats}</span>
+          <span className="text-xs text-(--text)">Всего: {event.totalSeats}</span>
         </div>
 
         {/* Название */}
-        <h3 className="text-lg leading-snug font-bold text-[var(--text-h)]">
+        <h3 className="text-lg leading-snug font-bold text-(--text-h)">
           <Link
             to={`/events/${event.id}`}
             className="transition-colors hover:text-indigo-600 dark:hover:text-indigo-400"
@@ -56,28 +56,28 @@ export const EventCard = ({ event }: EventCardProps) => {
         </h3>
 
         {/* Описание */}
-        <p className="line-clamp-2 text-sm text-[var(--text)]">
+        <p className="line-clamp-2 text-sm text-(--text)">
           {event.description ?? 'Описание отсутствует'}
         </p>
 
         {/* Даты */}
-        <div className="space-y-1 rounded-lg bg-[var(--code-bg)] p-3 text-xs text-[var(--text)]">
+        <div className="space-y-1 rounded-lg bg-(--code-bg) p-3 text-xs text-(--text)">
           <div className="flex items-center justify-between">
-            <span className="font-medium text-[var(--text-h)]">Начало:</span>
+            <span className="font-medium text-(--text-h)">Начало:</span>
             <span>{formatDate(event.startAt)}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="font-medium text-[var(--text-h)]">Окончание:</span>
+            <span className="font-medium text-(--text-h)">Окончание:</span>
             <span>{formatDate(event.endAt)}</span>
           </div>
         </div>
       </div>
 
       {/* Кнопки действий */}
-      <div className="mt-5 flex items-center gap-2 border-t border-[var(--border)] pt-2">
+      <div className="mt-5 flex items-center gap-2 border-t border-(--border) pt-2">
         <Link
           to={`/events/${event.id}`}
-          className="flex-1 rounded-lg border border-[var(--border)] px-3 py-2 text-center text-xs font-medium text-[var(--text-h)] transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+          className="flex-1 rounded-lg border border-(--border) px-3 py-2 text-center text-xs font-medium text-(--text-h) transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
         >
           Подробнее
         </Link>

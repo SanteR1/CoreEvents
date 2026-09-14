@@ -11,8 +11,6 @@ export async function loader() {
   } catch (err) {
     return {
       error: err instanceof Error ? err.message : 'Не удалось найти события',
-      //data: null, // Возвращаем null, чтобы типизация не ругалась
-      //status: 500,
     };
   }
 }
@@ -25,16 +23,7 @@ export const TopEventsPage = () => {
 
   // Пишем функцию, которая описывает реальное действие
   const handleBooking = (eventId: string) => {
-    console.log('Пользователь хочет купить билет на:', eventId);
-
-    // Используем navigate вместо redirect внутри компонента
-    // Вариант А: Перекинуть на страницу чекаута (бронирования)
-    //navigate(`/bookings/new?eventId=${eventId}`);
     void navigate(`/bookings/create/${eventId}`);
-    // navigate(`/bookings/create?eventId=${eventId}&seats=1`);
-
-    // Вариант Б: Сразу дернуть метод твоего сервиса Bookings
-    // await createBooking({ eventId, userId: currentUser.id });
   };
 
   if (res?.success) {

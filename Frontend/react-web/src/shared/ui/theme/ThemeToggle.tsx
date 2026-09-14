@@ -10,7 +10,7 @@ export function ThemeToggle() {
   ];
 
   return (
-    <div className="inline-flex rounded-lg border border-[var(--border)] bg-[var(--code-bg)] p-1">
+    <div className="inline-flex rounded-lg border border-(--border) bg-(--code-bg) p-1">
       {options.map((option) => {
         const isActive = theme === option.value;
         return (
@@ -20,8 +20,8 @@ export function ThemeToggle() {
             onClick={() => setTheme(option.value)}
             className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
               isActive
-                ? 'bg-[var(--bg)] text-[var(--text-h)] shadow-sm'
-                : 'text-[var(--text)] hover:text-[var(--text-h)]'
+                ? 'bg-(--bg) text-(--text-h) shadow-sm'
+                : 'text-(--text) hover:text-(--text-h)'
             }`}
             title={option.label}
           >

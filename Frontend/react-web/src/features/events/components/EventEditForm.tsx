@@ -23,7 +23,7 @@ export const EventEditForm = ({ event, error, isSubmitting }: EventEditFormProps
   return (
     <Form
       method="post"
-      className="space-y-5 rounded-xl border border-[var(--border)] bg-[var(--bg)] p-6 text-left shadow-sm"
+      className="space-y-5 rounded-xl border border-(--border) bg-(--bg) p-6 text-left shadow-sm"
     >
       {/* Общее сообщение об ошибке */}
       {error?.message && (
@@ -34,7 +34,7 @@ export const EventEditForm = ({ event, error, isSubmitting }: EventEditFormProps
 
       {/* Поле Название */}
       <div>
-        <label htmlFor="title" className="mb-1 block text-sm font-medium text-[var(--text-h)]">
+        <label htmlFor="title" className="mb-1 block text-sm font-medium text-(--text-h)">
           Название события <span className="text-red-500">*</span>
         </label>
         <input
@@ -44,10 +44,10 @@ export const EventEditForm = ({ event, error, isSubmitting }: EventEditFormProps
           defaultValue={event.title}
           required
           placeholder="Например: Архитектурный митап"
-          className={`w-full rounded-lg border bg-[var(--code-bg)] px-3.5 py-2 text-sm text-[var(--text-h)] transition-colors outline-none placeholder:text-[var(--text)] focus:ring-1 ${
+          className={`w-full rounded-lg border bg-(--code-bg) px-3.5 py-2 text-sm text-(--text-h) transition-colors outline-none placeholder:text-(--text) focus:ring-1 ${
             error?.fieldErrors?.title
               ? 'border-red-500 focus:border-red-500 focus:ring-red-500 dark:border-red-500/50'
-              : 'border-[var(--border)] focus:border-[var(--accent)] focus:ring-[var(--accent)]'
+              : 'border-(--border) focus:border-(--accent) focus:ring-(--accent)'
           }`}
         />
         {error?.fieldErrors?.title && (
@@ -60,7 +60,7 @@ export const EventEditForm = ({ event, error, isSubmitting }: EventEditFormProps
       {/* Даты начала и окончания */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
-          <label htmlFor="startAt" className="mb-1 block text-sm font-medium text-[var(--text-h)]">
+          <label htmlFor="startAt" className="mb-1 block text-sm font-medium text-(--text-h)">
             Дата и время начала <span className="text-red-500">*</span>
           </label>
           <input
@@ -69,10 +69,10 @@ export const EventEditForm = ({ event, error, isSubmitting }: EventEditFormProps
             name="startAt"
             defaultValue={toDateTimeLocalString(event.startAt)}
             required
-            className={`w-full rounded-lg border bg-[var(--code-bg)] px-3.5 py-2 text-sm text-[var(--text-h)] transition-colors outline-none focus:ring-1 dark:scheme-dark [&::-webkit-calendar-picker-indicator]:cursor-pointer ${
+            className={`w-full rounded-lg border bg-(--code-bg) px-3.5 py-2 text-sm text-(--text-h) transition-colors outline-none focus:ring-1 dark:scheme-dark [&::-webkit-calendar-picker-indicator]:cursor-pointer ${
               error?.fieldErrors?.startAt
                 ? 'border-red-500 focus:border-red-500 focus:ring-red-500 dark:border-red-500/50'
-                : 'border-[var(--border)] focus:border-[var(--accent)] focus:ring-[var(--accent)]'
+                : 'border-(--border) focus:border-(--accent) focus:ring-(--accent)'
             }`}
           />
           {error?.fieldErrors?.startAt && (
@@ -83,7 +83,7 @@ export const EventEditForm = ({ event, error, isSubmitting }: EventEditFormProps
         </div>
 
         <div>
-          <label htmlFor="endAt" className="mb-1 block text-sm font-medium text-[var(--text-h)]">
+          <label htmlFor="endAt" className="mb-1 block text-sm font-medium text-(--text-h)">
             Дата и время окончания <span className="text-red-500">*</span>
           </label>
           <input
@@ -92,10 +92,10 @@ export const EventEditForm = ({ event, error, isSubmitting }: EventEditFormProps
             name="endAt"
             defaultValue={toDateTimeLocalString(event.endAt)}
             required
-            className={`w-full rounded-lg border bg-[var(--code-bg)] px-3.5 py-2 text-sm text-[var(--text-h)] transition-colors outline-none focus:ring-1 dark:scheme-dark [&::-webkit-calendar-picker-indicator]:cursor-pointer ${
+            className={`w-full rounded-lg border bg-(--code-bg) px-3.5 py-2 text-sm text-(--text-h) transition-colors outline-none focus:ring-1 dark:scheme-dark [&::-webkit-calendar-picker-indicator]:cursor-pointer ${
               error?.fieldErrors?.endAt
                 ? 'border-red-500 focus:border-red-500 focus:ring-red-500 dark:border-red-500/50'
-                : 'border-[var(--border)] focus:border-[var(--accent)] focus:ring-[var(--accent)]'
+                : 'border-(--border) focus:border-(--accent) focus:ring-(--accent)'
             }`}
           />
           {error?.fieldErrors?.endAt && (
@@ -108,10 +108,7 @@ export const EventEditForm = ({ event, error, isSubmitting }: EventEditFormProps
 
       {/* Описание */}
       <div>
-        <label
-          htmlFor="description"
-          className="mb-1 block text-sm font-medium text-[var(--text-h)]"
-        >
+        <label htmlFor="description" className="mb-1 block text-sm font-medium text-(--text-h)">
           Описание события
         </label>
         <textarea
@@ -120,10 +117,10 @@ export const EventEditForm = ({ event, error, isSubmitting }: EventEditFormProps
           rows={5}
           defaultValue={event.description ?? ''}
           placeholder="Подробное описание программы события..."
-          className={`w-full resize-y rounded-lg border bg-[var(--code-bg)] px-3.5 py-2 text-sm text-[var(--text-h)] transition-colors outline-none placeholder:text-[var(--text)] focus:ring-1 ${
+          className={`w-full resize-y rounded-lg border bg-(--code-bg) px-3.5 py-2 text-sm text-(--text-h) transition-colors outline-none placeholder:text-(--text) focus:ring-1 ${
             error?.fieldErrors?.description
               ? 'border-red-500 focus:border-red-500 focus:ring-red-500 dark:border-red-500/50'
-              : 'border-[var(--border)] focus:border-[var(--accent)] focus:ring-[var(--accent)]'
+              : 'border-(--border) focus:border-(--accent) focus:ring-(--accent)'
           }`}
         />
         {error?.fieldErrors?.description && (
@@ -134,16 +131,16 @@ export const EventEditForm = ({ event, error, isSubmitting }: EventEditFormProps
       </div>
 
       {/* Информационный блок о местах (только чтение) */}
-      <div className="rounded-lg bg-[var(--code-bg)] p-3 text-xs text-[var(--text)]">
+      <div className="rounded-lg bg-(--code-bg) p-3 text-xs text-(--text)">
         <p>
-          Количество мест (<strong className="text-[var(--text-h)]">{event.totalSeats}</strong>,
-          доступно: <strong className="text-[var(--text-h)]">{event.availableSeats}</strong>)
-          задается при создании события и не может быть изменено через эту форму.
+          Количество мест (<strong className="text-(--text-h)">{event.totalSeats}</strong>,
+          доступно: <strong className="text-(--text-h)">{event.availableSeats}</strong>) задается
+          при создании события и не может быть изменено через эту форму.
         </p>
       </div>
 
       {/* Кнопки действий */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] pt-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-(--border) pt-4">
         <div className="flex flex-wrap items-center gap-3">
           <button
             type="submit"
@@ -172,7 +169,7 @@ export const EventEditForm = ({ event, error, isSubmitting }: EventEditFormProps
 
           <Link
             to={`/events/${event.id}`}
-            className="rounded-lg border border-[var(--border)] px-5 py-2.5 text-sm font-medium text-[var(--text)] transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="rounded-lg border border-(--border) px-5 py-2.5 text-sm font-medium text-(--text) transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
           >
             Отмена
           </Link>

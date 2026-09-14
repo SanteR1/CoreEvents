@@ -140,16 +140,16 @@ export const EditEventPage = () => {
     <div className="mx-auto max-w-3xl space-y-6 py-6 text-left">
       <Link
         to={`/events/${event.id}`}
-        className="inline-flex items-center gap-1 text-sm font-medium text-[var(--text)] transition-colors hover:text-[var(--text-h)]"
+        className="inline-flex items-center gap-1 text-sm font-medium text-(--text) transition-colors hover:text-(--text-h)"
       >
         ← Назад к событию
       </Link>
 
       <div>
-        <h1 className="text-2xl font-extrabold text-[var(--text-h)] sm:text-3xl">
+        <h1 className="text-2xl font-extrabold text-(--text-h) sm:text-3xl">
           Редактирование события
         </h1>
-        <p className="mt-1 text-sm text-[var(--text)]">
+        <p className="mt-1 text-sm text-(--text)">
           Внесите изменения в информацию о событии и сохраните их.
         </p>
       </div>

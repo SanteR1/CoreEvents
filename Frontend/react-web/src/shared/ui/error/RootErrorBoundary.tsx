@@ -78,7 +78,7 @@ export const RootErrorBoundary = () => {
   return (
     <div className="mx-auto flex min-h-[70vh] max-w-2xl flex-col items-center justify-center px-4 py-12 text-center">
       {/* Иконка / статус */}
-      <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--bg)] shadow-sm">
+      <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl border border-(--border) bg-(--bg) shadow-sm">
         {is404 && <span className="text-3xl">🔍</span>}
         {is401 && <span className="text-3xl">🔒</span>}
         {is403 && <span className="text-3xl">🚫</span>}
@@ -94,10 +94,8 @@ export const RootErrorBoundary = () => {
       )}
 
       {/* Заголовок и пояснение */}
-      <h1 className="text-2xl font-bold tracking-tight text-[var(--text-h)] sm:text-3xl">
-        {title}
-      </h1>
-      <p className="mt-3 max-w-lg text-sm text-[var(--text)]">{message}</p>
+      <h1 className="text-2xl font-bold tracking-tight text-(--text-h) sm:text-3xl">{title}</h1>
+      <p className="mt-3 max-w-lg text-sm text-(--text)">{message}</p>
 
       {/* Действия */}
       <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
@@ -128,7 +126,7 @@ export const RootErrorBoundary = () => {
           className={
             is404 || is403
               ? 'rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500'
-              : 'rounded-xl border border-[var(--border)] bg-[var(--bg)] px-5 py-2.5 text-sm font-medium text-[var(--text)] transition hover:bg-gray-100 dark:hover:bg-gray-800'
+              : 'rounded-xl border border-(--border) bg-(--bg) px-5 py-2.5 text-sm font-medium text-(--text) transition hover:bg-gray-100 dark:hover:bg-gray-800'
           }
         >
           ← В каталог событий
@@ -139,7 +137,7 @@ export const RootErrorBoundary = () => {
           onClick={() => {
             void navigate(-1);
           }}
-          className="rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text)] transition hover:bg-gray-100 dark:hover:bg-gray-800"
+          className="rounded-xl border border-(--border) px-4 py-2.5 text-sm font-medium text-(--text) transition hover:bg-gray-100 dark:hover:bg-gray-800"
         >
           Назад
         </button>
@@ -148,10 +146,10 @@ export const RootErrorBoundary = () => {
       {/* Техническая информация для разработчиков */}
       {technicalDetails && (
         <details className="mt-8 w-full text-left">
-          <summary className="cursor-pointer text-xs font-medium text-[var(--text)] hover:underline">
+          <summary className="cursor-pointer text-xs font-medium text-(--text) hover:underline">
             Техническая информация об ошибке (для отладки)
           </summary>
-          <pre className="mt-2 max-h-48 overflow-auto rounded-xl border border-[var(--border)] bg-[var(--code-bg)] p-4 font-mono text-xs text-[var(--text)]">
+          <pre className="mt-2 max-h-48 overflow-auto rounded-xl border border-(--border) bg-(--code-bg) p-4 font-mono text-xs text-(--text)">
             {technicalDetails}
           </pre>
         </details>

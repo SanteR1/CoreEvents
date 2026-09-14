@@ -63,10 +63,10 @@ export const HomePage = () => {
       {/* Шапка каталога */}
       <div className="flex flex-col gap-4 text-left sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-[var(--text-h)] sm:text-4xl">
+          <h1 className="text-3xl font-extrabold tracking-tight text-(--text-h) sm:text-4xl">
             Афиша событий
           </h1>
-          <p className="mt-1 text-sm text-[var(--text)] sm:text-base">
+          <p className="mt-1 text-sm text-(--text) sm:text-base">
             Актуальные события, встречи и конференции. Выбирайте и бронируйте билеты онлайн.
           </p>
         </div>
@@ -74,7 +74,7 @@ export const HomePage = () => {
         <div className="flex items-center gap-3">
           <Link
             to="/events/topevents"
-            className="rounded-lg border border-[var(--border)] bg-[var(--bg)] px-4 py-2 text-sm font-medium text-[var(--text-h)] transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="rounded-lg border border-(--border) bg-(--bg) px-4 py-2 text-sm font-medium text-(--text-h) transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
           >
             🔥 Топ событий
           </Link>
@@ -116,7 +116,7 @@ export const HomePage = () => {
       {isSuccess && (
         <>
           {events.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-[var(--border)] p-12 text-center">
+            <div className="rounded-2xl border border-dashed border-(--border) p-12 text-center">
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-500 dark:bg-gray-800">
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path
@@ -127,10 +127,8 @@ export const HomePage = () => {
                   />
                 </svg>
               </div>
-              <h3 className="mt-3 text-lg font-semibold text-[var(--text-h)]">
-                События не найдены
-              </h3>
-              <p className="mt-1 text-sm text-[var(--text)]">
+              <h3 className="mt-3 text-lg font-semibold text-(--text-h)">События не найдены</h3>
+              <p className="mt-1 text-sm text-(--text)">
                 По заданным критериям ничего не найдено. Попробуйте изменить параметры поиска или
                 сбросить фильтры.
               </p>

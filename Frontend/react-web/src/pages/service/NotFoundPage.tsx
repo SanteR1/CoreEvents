@@ -18,10 +18,10 @@ export const NotFoundPage = () => {
       </div>
 
       {/* Заголовок и пояснение */}
-      <h1 className="text-2xl font-bold tracking-tight text-[var(--text-h)] sm:text-3xl">
+      <h1 className="text-2xl font-bold tracking-tight text-(--text-h) sm:text-3xl">
         Страница не найдена
       </h1>
-      <p className="mt-3 max-w-md text-sm text-[var(--text)]">
+      <p className="mt-3 max-w-md text-sm text-(--text)">
         К сожалению, запрашиваемая страница не существует, была удалена или её адрес изменился.
       </p>
 
@@ -36,7 +36,7 @@ export const NotFoundPage = () => {
 
         <Link
           to="/events/topevents"
-          className="rounded-xl border border-[var(--border)] bg-[var(--bg)] px-5 py-2.5 text-sm font-medium text-[var(--text)] transition hover:bg-gray-100 dark:hover:bg-gray-800"
+          className="rounded-xl border border-(--border) bg-(--bg) px-5 py-2.5 text-sm font-medium text-(--text) transition hover:bg-gray-100 dark:hover:bg-gray-800"
         >
           Топ событий
         </Link>
@@ -46,7 +46,7 @@ export const NotFoundPage = () => {
           onClick={() => {
             void navigate(-1);
           }}
-          className="rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text)] transition hover:bg-gray-100 dark:hover:bg-gray-800"
+          className="rounded-xl border border-(--border) px-4 py-2.5 text-sm font-medium text-(--text) transition hover:bg-gray-100 dark:hover:bg-gray-800"
         >
           Назад
         </button>
