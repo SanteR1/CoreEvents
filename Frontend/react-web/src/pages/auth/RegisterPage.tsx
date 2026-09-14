@@ -2,18 +2,10 @@
 import { type ActionFunctionArgs, redirect, useActionData, useSearchParams } from 'react-router';
 import { RegisterForm } from '@/features/auth/components/RegisterForm';
 import { registerUser, loginUser } from '@/features/auth/api/authApi';
-import { setToken } from '@/shared/lib/auth';
+import { setToken, getSafeReturnUrl } from '@/shared/lib/auth';
 
 interface ActionData {
   error?: string;
-}
-
-// Защита от внешних редиректов
-function getSafeReturnUrl(target: string | null): string {
-  if (!target || !target.startsWith('/') || target.startsWith('//')) {
-    return '/';
-  }
-  return target;
 }
 
 export async function action({ request }: ActionFunctionArgs): Promise<Response | ActionData> {
