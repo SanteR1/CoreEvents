@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+#
+.gemini/
+.devcontainer-storage/
+
+# For React-router genered types+
+.react-router/
