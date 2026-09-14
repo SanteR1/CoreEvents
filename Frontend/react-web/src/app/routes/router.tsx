@@ -1,5 +1,5 @@
 import { createBrowserRouter } from 'react-router';
-import { requireAuthLoader, anonymousOnlyLoader } from './loaders';
+import { requireAuthLoader, anonymousOnlyLoader } from '@/shared/lib/auth';
 
 // Импорт страниц
 import { HomePage, loader as homeLoader } from '@/pages/events/HomePage';

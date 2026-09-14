@@ -9,7 +9,7 @@ import {
   type ActionFunctionArgs,
 } from 'react-router';
 import { getEventById, deleteEventById } from '@/features/events/api/eventsApi';
-import { requireAuthLoader } from '@/app/routes/loaders';
+import { requireAuthLoader } from '@/shared/lib/auth';
 import { toFormError } from '@/shared/api/errors';
 
 export async function loader({ params }: LoaderFunctionArgs) {

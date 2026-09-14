@@ -7,7 +7,7 @@ import {
   redirect,
   Link,
 } from 'react-router';
-import { requireAuthLoader } from '@/app/routes/loaders';
+import { requireAuthLoader } from '@/shared/lib/auth';
 import {
   getEventById,
   updateEventById,

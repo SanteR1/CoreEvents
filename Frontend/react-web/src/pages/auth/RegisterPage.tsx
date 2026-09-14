@@ -2,7 +2,7 @@
 import { type ActionFunctionArgs, redirect, useActionData, useSearchParams } from 'react-router';
 import { RegisterForm } from '@/features/auth/components/RegisterForm';
 import { registerUser, loginUser } from '@/features/auth/api/authApi';
-import { setToken } from '@/shared/lib/auth/sessionStore';
+import { setToken } from '@/shared/lib/auth';
 
 interface ActionData {
   error?: string;

@@ -1,7 +1,6 @@
-import { useSyncExternalStore } from 'react';
 import { Outlet, NavLink, Link, useNavigation, useNavigate } from 'react-router';
-import { getToken, clearToken, subscribe } from '@/shared/lib/auth/sessionStore';
-import { ThemeProvider } from '@/app/providers/ThemeProvider';
+import { clearToken, useIsAuthenticated } from '@/shared/lib/auth';
+import { ThemeProvider } from '@/shared/lib/theme';
 import { ThemeToggle } from '@/shared/ui/theme/ThemeToggle';
 
 export default function App() {
@@ -9,8 +8,7 @@ export default function App() {
   const navigate = useNavigate();
   const isLoading = navigation.state === 'loading';
 
-  const token = useSyncExternalStore(subscribe, getToken, () => null);
-  const isAuthenticated = Boolean(token);
+  const isAuthenticated = useIsAuthenticated();
 
   const handleLogout = () => {
     clearToken();

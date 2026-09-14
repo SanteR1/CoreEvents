@@ -9,7 +9,7 @@ import {
 import { getBookingById, deleteBookingById } from '@/features/bookings/api/bookingsApi';
 import { BookingDetails } from '@/features/bookings/components/BookingDetails';
 import { toFormError } from '@/shared/api/errors';
-import { requireAuthLoader } from '@/app/routes/loaders';
+import { requireAuthLoader } from '@/shared/lib/auth';
 
 const CANCELLING_PREFIX = 'cancelling_booking_';
 

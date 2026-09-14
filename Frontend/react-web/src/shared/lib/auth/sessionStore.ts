@@ -38,13 +38,13 @@ export function getToken(): string | null {
     return null;
   }
 
-  // Если токен протух — сразу зачищаем хранилище и возвращаем null
+  // Если токен протух — возвращаем null, а зачистку откладываем во избежание side-effects во время рендера
   if (isTokenExpired(token)) {
-    // Тихо удаляем мусор из хранилища, чтобы не занимал место.
-    // Главное — НЕ вызываем listeners.forEach(), так как это ломает рендер React.
-    // listeners.forEach((listener) => listener());
-
-    localStorage.removeItem(TOKEN_KEY);
+    queueMicrotask(() => {
+      if (localStorage.getItem(TOKEN_KEY) === token) {
+        localStorage.removeItem(TOKEN_KEY);
+      }
+    });
     return null;
   }
 

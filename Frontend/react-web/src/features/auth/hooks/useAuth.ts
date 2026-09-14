@@ -1,7 +1,7 @@
-import { useSyncExternalStore } from 'react';
-import { getToken, subscribe } from '@/shared/lib/auth/sessionStore';
+import { useToken, useIsAuthenticated } from '@/shared/lib/auth';
 
 export function useAuth() {
-  const token = useSyncExternalStore(subscribe, getToken, () => null);
-  return { token, isAuthenticated: token !== null };
+  const token = useToken();
+  const isAuthenticated = useIsAuthenticated();
+  return { token, isAuthenticated };
 }

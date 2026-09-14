@@ -1,4 +1,4 @@
-import { useTheme, type ThemePreference } from '@/app/providers/themeContext';
+import { useTheme, type ThemePreference } from '@/shared/lib/theme';
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();

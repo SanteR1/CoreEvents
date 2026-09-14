@@ -1,5 +1,4 @@
-//
-import { requireAuthLoader } from '@/app/routes/loaders';
+import { requireAuthLoader } from '@/shared/lib/auth';
 import { createBooking } from '@/features/bookings/api/bookingsApi';
 import { BookingCreateForm } from '@/features/bookings/components/BookingCreateForm';
 import { getEventById } from '@/features/events/api/eventsApi';
