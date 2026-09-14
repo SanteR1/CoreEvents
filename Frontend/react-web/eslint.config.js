@@ -6,9 +6,10 @@ import tseslint from 'typescript-eslint';
 import { defineConfig, globalIgnores } from 'eslint/config';
 import reactX from 'eslint-plugin-react-x';
 import reactDom from 'eslint-plugin-react-dom';
+import jsxA11y from 'eslint-plugin-jsx-a11y';
 
 export default defineConfig([
-  globalIgnores(['dist', 'src/shared/api/generated/**']),
+  globalIgnores(['dist', 'coverage', 'src/shared/api/generated/**']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
@@ -20,6 +21,7 @@ export default defineConfig([
       reactX.configs['disable-conflict-eslint-plugin-react-hooks'],
       reactDom.configs.recommended,
       reactHooks.configs.flat['recommended-latest'],
+      jsxA11y.flatConfigs.recommended,
     ],
     languageOptions: {
       ecmaVersion: 2023,
