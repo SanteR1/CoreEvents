@@ -1,36 +1,7 @@
 import { createBrowserRouter } from 'react-router';
 import { requireAuthLoader, anonymousOnlyLoader } from '@/shared/lib/auth';
-
-// Импорт страниц
-import { HomePage, loader as homeLoader } from '@/pages/events/HomePage';
-import { LoginPage, action as loginAction } from '@/pages/auth/LoginPage';
-import { CreateEventPage, action as createEventAction } from '@/pages/events/CreateEventPage';
-import {
-  CreateBookingPage,
-  action as createBookingAction,
-  loader as createBookingLoader,
-} from '@/pages/bookings/CreateBookingPage';
-import {
-  GetBookingPage,
-  loader as bookingLoader,
-  action as bookingAction,
-} from '@/pages/bookings/BookingStatusPage';
-import { TopEventsPage, loader as topEventsLoader } from '@/pages/events/TopEvents';
 import App from '@/app/App';
-import { RegisterPage, action as registerAction } from '@/pages/auth/RegisterPage';
-import {
-  GetEventByIdPage,
-  loader as eventDetailsLoader,
-  action as deleteEventAction,
-} from '@/pages/events/GetEventById';
-import {
-  EditEventPage,
-  loader as editEventLoader,
-  action as editEventAction,
-} from '@/pages/events/EditEventPage';
 import { RootErrorBoundary } from '@/shared/ui/error/RootErrorBoundary';
-import { NotFoundPage } from '@/pages/service/NotFoundPage';
-
 import { RootFallback } from './RootFallback';
 
 export const router = createBrowserRouter([
@@ -43,47 +14,59 @@ export const router = createBrowserRouter([
       // 1. Публичные маршруты
       {
         index: true,
-        element: <HomePage />,
-        loader: homeLoader,
+        lazy: async () => {
+          const { HomePage, loader } = await import('@/pages/events/HomePage');
+          return { Component: HomePage, loader };
+        },
       },
       {
         path: 'events/topevents',
-        element: <TopEventsPage />,
-        loader: topEventsLoader,
+        lazy: async () => {
+          const { TopEventsPage, loader } = await import('@/pages/events/TopEvents');
+          return { Component: TopEventsPage, loader };
+        },
       },
       {
         path: 'events/:id',
-        element: <GetEventByIdPage />,
-        loader: eventDetailsLoader,
-        action: deleteEventAction,
+        lazy: async () => {
+          const { GetEventByIdPage, loader, action } = await import('@/pages/events/GetEventById');
+          return { Component: GetEventByIdPage, loader, action };
+        },
       },
 
       // 2. Маршруты только для гостей
       {
         path: 'login',
-        element: <LoginPage />,
         loader: anonymousOnlyLoader,
-        action: loginAction,
+        lazy: async () => {
+          const { LoginPage, action } = await import('@/pages/auth/LoginPage');
+          return { Component: LoginPage, action };
+        },
       },
       {
         path: 'register',
-        element: <RegisterPage />,
         loader: anonymousOnlyLoader,
-        action: registerAction,
+        lazy: async () => {
+          const { RegisterPage, action } = await import('@/pages/auth/RegisterPage');
+          return { Component: RegisterPage, action };
+        },
       },
 
       // 3. Защищенные маршруты событий
       {
         path: 'events/create',
-        element: <CreateEventPage />,
         loader: requireAuthLoader,
-        action: createEventAction,
+        lazy: async () => {
+          const { CreateEventPage, action } = await import('@/pages/events/CreateEventPage');
+          return { Component: CreateEventPage, action };
+        },
       },
       {
         path: 'events/:id/edit',
-        element: <EditEventPage />,
-        loader: editEventLoader,
-        action: editEventAction,
+        lazy: async () => {
+          const { EditEventPage, loader, action } = await import('@/pages/events/EditEventPage');
+          return { Component: EditEventPage, loader, action };
+        },
       },
 
       // 4. Защищенные маршруты бронирований
@@ -92,15 +75,19 @@ export const router = createBrowserRouter([
         children: [
           {
             path: 'create/:eventId',
-            element: <CreateBookingPage />,
-            action: createBookingAction,
-            loader: createBookingLoader,
+            lazy: async () => {
+              const { CreateBookingPage, loader, action } =
+                await import('@/pages/bookings/CreateBookingPage');
+              return { Component: CreateBookingPage, loader, action };
+            },
           },
           {
             path: ':bookingId',
-            element: <GetBookingPage />,
-            action: bookingAction,
-            loader: bookingLoader,
+            lazy: async () => {
+              const { GetBookingPage, loader, action } =
+                await import('@/pages/bookings/BookingStatusPage');
+              return { Component: GetBookingPage, loader, action };
+            },
           },
         ],
       },
@@ -108,7 +95,10 @@ export const router = createBrowserRouter([
       // 5. Fallback на случай несуществующего пути (404)
       {
         path: '*',
-        element: <NotFoundPage />,
+        lazy: async () => {
+          const { NotFoundPage } = await import('@/pages/service/NotFoundPage');
+          return { Component: NotFoundPage };
+        },
       },
     ],
   },
