@@ -1,0 +1,21 @@
+import createClient from 'openapi-fetch';
+import type { paths } from '@/shared/api/generated/users'; // Путь к сгенерированным типам
+import { getToken } from '@/shared/lib/auth/sessionStore';
+
+const USERS_API_URL = import.meta.env.VITE_USERS_API_URL as string;
+
+export const usersClient = createClient<paths>({
+  //baseUrl: 'http://host.docker.internal:5003', // Или ваш базовый URL для продакшена/разработки
+  baseUrl: `${USERS_API_URL}`, // Или ваш базовый URL для продакшена/разработки
+});
+
+// Опционально: можно добавить интерцепторы (middleware) для авторизации
+usersClient.use({
+  onRequest({ request }) {
+    const token = getToken();
+    if (token) {
+      request.headers.set('Authorization', `Bearer ${token}`);
+    }
+    return request;
+  },
+});

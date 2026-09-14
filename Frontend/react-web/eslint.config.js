@@ -8,7 +8,7 @@ import reactX from 'eslint-plugin-react-x';
 import reactDom from 'eslint-plugin-react-dom';
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores(['dist', 'src/shared/api/generated/**']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
@@ -17,8 +17,9 @@ export default defineConfig([
       tseslint.configs.recommendedTypeChecked,
       tseslint.configs.stylisticTypeChecked,
       reactX.configs['recommended-typescript'],
+      reactX.configs['disable-conflict-eslint-plugin-react-hooks'],
       reactDom.configs.recommended,
-      reactHooks.configs['recommended-latest'],
+      reactHooks.configs.flat['recommended-latest'],
     ],
     languageOptions: {
       ecmaVersion: 2023,
@@ -32,7 +33,26 @@ export default defineConfig([
       'react-refresh': reactRefresh,
     },
     rules: {
-      'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+      'react-refresh/only-export-components': [
+        'warn',
+        {
+          allowConstantExport: true,
+          allowExportNames: [
+            'loader',
+            'action',
+            'clientLoader',
+            'clientAction',
+            'ErrorBoundary',
+            'HydrateFallback',
+          ],
+        },
+      ],
+      '@typescript-eslint/only-throw-error': [
+        'error',
+        {
+          allow: ['Response'],
+        },
+      ],
     },
   },
 ]);
