@@ -19,8 +19,8 @@ public class EventsController : ControllerBase
 
     [HttpGet]
     [Produces("application/json")]
-    [ProducesResponseType(typeof(IEnumerable<EventResponseDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<IEnumerable<EventResponseDto>>> GetAll([FromQuery] EventFilter filter)
+    [ProducesResponseType(typeof(PaginatedResult<EventResponseDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<PaginatedResult<EventResponseDto>>> GetAll([FromQuery] EventFilter filter)
     {
         return Ok(await _eventService.GetAllEventsAsync(filter));
     }
