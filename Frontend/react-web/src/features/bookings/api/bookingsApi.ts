@@ -81,6 +81,7 @@ export async function getBookingById(
     const { data, error, response } = await bookingsClient.GET('/Bookings/{id}', {
       params: { path: { id } },
       signal: options?.signal,
+      cache: 'no-store',
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         'Cache-Control': 'no-cache, no-store, must-revalidate',

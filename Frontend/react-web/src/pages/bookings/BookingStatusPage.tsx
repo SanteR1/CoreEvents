@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import {
   useLoaderData,
   useActionData,
@@ -94,35 +94,47 @@ export const GetBookingPage = () => {
   const { booking } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const revalidator = useRevalidator();
+  const revalidatorRef = useRef(revalidator);
+
+  useEffect(() => {
+    revalidatorRef.current = revalidator;
+  });
 
   const isPendingStatus = booking.status === 'Pending';
 
-  // Проверяем флаг отмены в sessionStorage, чтобы не терять состояние при обновлении страницы (F5)
-  const [isStoredCancelling] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return Boolean(sessionStorage.getItem(`${CANCELLING_PREFIX}${booking.id}`));
+  // Состояние процесса отмены, синхронизированное с sessionStorage для сохранения при F5
+  const [cancellingId, setCancellingId] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    return sessionStorage.getItem(`${CANCELLING_PREFIX}${booking.id}`) ? booking.id : null;
   });
 
-  const isCancellingInProgress =
-    (Boolean(actionData?.success) || isStoredCancelling) &&
-    booking.status !== 'Cancelled' &&
-    !actionData?.error;
+  // Корректировка состояния при рендере (рекомендованный паттерн React 19)
+  if (actionData?.success && cancellingId !== booking.id && booking.status !== 'Cancelled') {
+    setCancellingId(booking.id);
+  }
+  if (booking.status === 'Cancelled' && cancellingId === booking.id) {
+    setCancellingId(null);
+  }
 
-  // Синхронизируем sessionStorage с актуальным состоянием
+  // Синхронизация внешнего хранилища sessionStorage
   useEffect(() => {
-    if (actionData?.success && booking.status !== 'Cancelled') {
+    if (cancellingId === booking.id && booking.status !== 'Cancelled') {
       sessionStorage.setItem(`${CANCELLING_PREFIX}${booking.id}`, 'true');
-    }
-
-    if (booking.status === 'Cancelled' || actionData?.error) {
+    } else if (booking.status === 'Cancelled' || actionData?.error) {
       sessionStorage.removeItem(`${CANCELLING_PREFIX}${booking.id}`);
     }
-  }, [booking.id, booking.status, actionData?.success, actionData?.error]);
+  }, [cancellingId, booking.id, booking.status, actionData?.error]);
+
+  const isCancellingInProgress =
+    (cancellingId === booking.id || Boolean(actionData?.success)) &&
+    booking.status !== 'Cancelled' &&
+    !actionData?.error;
 
   // Запускаем опрос, если бронь либо создается (Pending), либо в процессе отмены
   const shouldPoll = isPendingStatus || isCancellingInProgress;
 
-  // Надежный рекурсивный поллинг через setTimeout, независимый от смены ссылок revalidator
+  // Надежный рекурсивный поллинг через setTimeout с useRef для revalidator,
+  // что исключает сброс таймеров при смене revalidator.state (idle <-> loading)
   useEffect(() => {
     if (!shouldPoll) {
       return;
@@ -135,8 +147,8 @@ export const GetBookingPage = () => {
       if (!isMounted) return;
 
       try {
-        if (revalidator.state === 'idle') {
-          await revalidator.revalidate();
+        if (revalidatorRef.current.state === 'idle') {
+          await revalidatorRef.current.revalidate();
         }
       } catch {
         // Фоновые сетевые сбои игнорируются, следующий опрос продолжится
@@ -153,7 +165,7 @@ export const GetBookingPage = () => {
       isMounted = false;
       clearTimeout(timerId);
     };
-  }, [shouldPoll, revalidator]);
+  }, [shouldPoll]);
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-6 text-left">
@@ -179,7 +191,14 @@ export const GetBookingPage = () => {
         </div>
       )}
 
-      {actionData?.success && (
+      {isCancellingInProgress && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-300">
+          {actionData?.message ??
+            'Заявка на отмену бронирования принята и обрабатывается в фоновом режиме...'}
+        </div>
+      )}
+
+      {!isCancellingInProgress && actionData?.success && (
         <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-700 dark:border-green-900/50 dark:bg-green-950/20 dark:text-green-300">
           {actionData.message}
         </div>
