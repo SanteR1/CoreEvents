@@ -1,0 +1,72 @@
+import { Form, useNavigation, Link } from 'react-router';
+
+interface RegisterFormProps {
+  error?: string;
+  returnUrl?: string | null;
+}
+
+export const RegisterForm = ({ error, returnUrl }: RegisterFormProps) => {
+  const navigation = useNavigation();
+  const isSubmitting = navigation.state === 'submitting';
+
+  return (
+    <Form
+      method="post"
+      action={returnUrl ? `/register?returnUrl=${encodeURIComponent(returnUrl)}` : '/register'}
+      className="w-full space-y-4"
+    >
+      {error && (
+        <div className="rounded border border-red-200 bg-red-50 p-2 text-sm text-red-600">
+          {error}
+        </div>
+      )}
+
+      <div>
+        <label htmlFor="register-username" className="mb-1 block text-sm font-medium">
+          Имя пользователя
+        </label>
+        <input
+          id="register-username"
+          type="text"
+          name="username"
+          required
+          autoComplete="username"
+          placeholder="Имя пользователя"
+          className="w-full rounded border px-3 py-1.5 outline-none focus:ring-1 focus:ring-blue-500"
+        />
+      </div>
+
+      <div>
+        <label htmlFor="register-password" className="mb-1 block text-sm font-medium">
+          Пароль
+        </label>
+        <input
+          id="register-password"
+          type="password"
+          name="password"
+          required
+          autoComplete="current-password"
+          placeholder="Пароль"
+          className="w-full rounded border px-3 py-1.5 outline-none focus:ring-1 focus:ring-blue-500"
+        />
+      </div>
+
+      <button
+        type="submit"
+        disabled={isSubmitting}
+        className="w-full cursor-pointer rounded bg-blue-600 py-2 font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+      >
+        {'Зарегистрироваться'}
+      </button>
+      <div className="user-login_footer flex w-full justify-between">
+        <span className="text-gray-500">Уже есть аккаунт?</span>
+        <Link
+          to={returnUrl ? `/login?returnUrl=${encodeURIComponent(returnUrl)}` : '/login'}
+          className="font-medium text-blue-600 transition-colors hover:underline dark:text-blue-400"
+        >
+          Войти
+        </Link>
+      </div>
+    </Form>
+  );
+};

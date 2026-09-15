@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"path": "../Frontend/react-web"
+		}
+	],
+	"settings": {
+		"antigravity.enableTelemetry": false
+	}
+}
