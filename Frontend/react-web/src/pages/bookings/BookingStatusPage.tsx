@@ -104,7 +104,6 @@ export const GetBookingPage = () => {
 
   // Состояние процесса отмены, синхронизированное с sessionStorage для сохранения при F5
   const [cancellingId, setCancellingId] = useState<string | null>(() => {
-    if (typeof window === 'undefined') return null;
     return sessionStorage.getItem(`${CANCELLING_PREFIX}${booking.id}`) ? booking.id : null;
   });
 
@@ -144,12 +143,8 @@ export const GetBookingPage = () => {
     let timerId: ReturnType<typeof setTimeout>;
 
     const poll = async () => {
-      if (!isMounted) return;
-
       try {
-        if (revalidatorRef.current.state === 'idle') {
-          await revalidatorRef.current.revalidate();
-        }
+        await revalidatorRef.current.revalidate();
       } catch {
         // Фоновые сетевые сбои игнорируются, следующий опрос продолжится
       } finally {

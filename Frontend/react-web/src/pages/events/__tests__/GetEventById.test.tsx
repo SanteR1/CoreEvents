@@ -131,6 +131,26 @@ describe('GetEventById', () => {
       });
     });
 
+    it('throws 500 Response with fallback message when error.message is missing and status is 0', async () => {
+      vi.mocked(getEventById).mockResolvedValueOnce({
+        success: false,
+        httpStatus: 0,
+        error: undefined as unknown as { message: string },
+      });
+
+      const args = createLoaderArgs('ev-crash');
+      let caught: unknown;
+      try {
+        await loader(args);
+      } catch (err) {
+        caught = err;
+      }
+      expect(caught).toBeInstanceOf(Response);
+      const res = caught as Response;
+      expect(res.status).toBe(500);
+      expect(await res.text()).toBe('Не удалось загрузить событие');
+    });
+
     it('returns event data on successful API response', async () => {
       vi.mocked(getEventById).mockResolvedValueOnce({
         success: true,

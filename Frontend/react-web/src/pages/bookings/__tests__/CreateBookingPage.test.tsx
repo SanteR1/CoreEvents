@@ -141,6 +141,27 @@ describe('CreateBookingPage', () => {
       });
     });
 
+    it('throws 500 Response with fallback message when res.error?.message is missing and status is 0', async () => {
+      setToken(createMockJwt());
+      vi.mocked(getEventById).mockResolvedValueOnce({
+        success: false,
+        httpStatus: 0,
+        error: undefined as unknown as { message: string },
+      });
+
+      const args = createLoaderArgs('ev-crash');
+      let caught: unknown;
+      try {
+        await loader(args);
+      } catch (err) {
+        caught = err;
+      }
+      expect(caught).toBeInstanceOf(Response);
+      const res = caught as Response;
+      expect(res.status).toBe(500);
+      expect(await res.text()).toBe('Не удалось загрузить данные события');
+    });
+
     it('returns event data on successful load', async () => {
       setToken(createMockJwt());
       vi.mocked(getEventById).mockResolvedValueOnce({
@@ -260,6 +281,19 @@ describe('CreateBookingPage', () => {
           message: 'Syntax crash in parser',
         },
       });
+    });
+
+    it('re-throws thrown Response instances without catching', async () => {
+      const responseToThrow = new Response(null, {
+        status: 302,
+        headers: { Location: '/somewhere' },
+      });
+      vi.mocked(createBooking).mockImplementationOnce(() => {
+        throw responseToThrow;
+      });
+
+      const args = createActionArgs({ eventId: 'ev-1' });
+      await expect(action(args)).rejects.toBe(responseToThrow);
     });
   });
 

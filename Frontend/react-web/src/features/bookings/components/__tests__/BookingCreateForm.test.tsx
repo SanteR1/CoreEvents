@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { BookingCreateForm } from '../BookingCreateForm';
@@ -156,6 +156,55 @@ describe('BookingCreateForm', () => {
       // Moving focus away resets to 1
       await user.tab();
       expect(input).toHaveValue(1);
+
+      // Blurring when input is not empty preserves value
+      await user.click(input);
+      await user.tab();
+      expect(input).toHaveValue(1);
+    });
+
+    it('handles increment and decrement when input is currently empty string', async () => {
+      const user = userEvent.setup();
+      renderForm({
+        eventId: 'event-1',
+        availableSeats: 5,
+        isSubmitting: false,
+      });
+
+      const input = screen.getByRole('spinbutton', { name: /^количество мест$/i });
+      const incrementBtn = screen.getByRole('button', { name: /увеличить количество мест/i });
+      const decrementBtn = screen.getByRole('button', { name: /уменьшить количество мест/i });
+
+      // Clear input without triggering blur
+      await user.clear(input);
+      expect(input).toHaveValue(null);
+
+      // Increment from empty defaults to 1 + 1 = 2
+      await user.click(incrementBtn);
+      expect(input).toHaveValue(2);
+
+      // Clear input again
+      await user.clear(input);
+      expect(input).toHaveValue(null);
+
+      // Decrement button is disabled when currentSeats is 1
+      expect(decrementBtn).toBeDisabled();
+    });
+
+    it('ignores input change when parsed value is NaN', () => {
+      renderForm({
+        eventId: 'event-1',
+        availableSeats: 5,
+        isSubmitting: false,
+      });
+
+      const input = screen.getByRole('spinbutton', { name: /^количество мест$/i });
+      input.setAttribute('type', 'text');
+      fireEvent.change(input, { target: { value: 'invalid-number' } });
+      input.setAttribute('type', 'number');
+
+      // State is not updated with NaN, button still displays (1)
+      expect(screen.getByRole('button', { name: /забронировать \(1\)/i })).toBeInTheDocument();
     });
   });
 

@@ -132,8 +132,19 @@ describe('TopEvents', () => {
       expect(soldOutBtn).toBeDisabled();
     });
 
-    it('renders empty when res.success is false or not present', async () => {
+    it('renders empty when res is null', async () => {
       const { container } = renderTopEventsPage(null);
+      await waitFor(() => {
+        expect(container).toBeEmptyDOMElement();
+      });
+    });
+
+    it('renders empty when res.success is false', async () => {
+      const { container } = renderTopEventsPage({
+        success: false,
+        httpStatus: 500,
+        error: { message: 'Ошибка загрузки' },
+      });
       await waitFor(() => {
         expect(container).toBeEmptyDOMElement();
       });
@@ -166,6 +177,30 @@ describe('TopEvents', () => {
       expect(screen.getByText('Описание отсутствует')).toBeInTheDocument();
       const notSpecified = screen.getAllByText('Не указано');
       expect(notSpecified.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('handles button click when onBookClick is undefined without errors', async () => {
+      const user = userEvent.setup();
+      render(<TopEventsForm events={[mockTopEvent1]} />);
+
+      const bookBtn = screen.getByRole('button', { name: 'Забронировать' });
+      await user.click(bookBtn);
+      expect(bookBtn).toBeInTheDocument();
+    });
+
+    it('does not invoke onBookClick when event.id is empty or missing', async () => {
+      const user = userEvent.setup();
+      const onBookClick = vi.fn();
+      const eventWithoutId: EventResponse = {
+        ...mockTopEvent1,
+        id: '',
+      };
+
+      render(<TopEventsForm events={[eventWithoutId]} onBookClick={onBookClick} />);
+
+      const bookBtn = screen.getByRole('button', { name: 'Забронировать' });
+      await user.click(bookBtn);
+      expect(onBookClick).not.toHaveBeenCalled();
     });
 
     it('satisfies WCAG accessibility standards', async () => {

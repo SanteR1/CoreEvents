@@ -26,16 +26,10 @@ export default defineConfig({
         '**/*.test.{ts,tsx}',
       ],
       thresholds: {
-        'src/shared/lib/auth/**': {
-          lines: 80,
-          functions: 80,
-          branches: 75,
-          statements: 80,
-        },
-        'src/shared/api/errors.ts': {
-          lines: 80,
-          branches: 70,
-        },
+        lines: 98,
+        functions: 98,
+        branches: 95,
+        statements: 98,
       },
     },
   },

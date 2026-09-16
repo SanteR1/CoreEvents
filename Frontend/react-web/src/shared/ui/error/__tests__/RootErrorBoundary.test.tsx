@@ -234,5 +234,41 @@ describe('RootErrorBoundary', () => {
       expect(screen.getByRole('heading', { name: /ошибка 418/i })).toBeInTheDocument();
       expect(screen.getByText("I'm a Teapot")).toBeInTheDocument();
     });
+
+    it('handles empty statusText when error.data is empty', async () => {
+      const errorResponse = new Response(null, {
+        status: 418,
+        statusText: '',
+      });
+
+      renderBoundaryWithError(errorResponse);
+
+      expect(await screen.findByText(/код ошибки: 418/i)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /ошибка 418/i })).toBeInTheDocument();
+    });
+
+    it('falls back to error.message when stack is undefined', async () => {
+      const err = new Error('Ошибка без трейса');
+      Object.defineProperty(err, 'stack', { value: undefined });
+
+      renderBoundaryWithError(err);
+
+      expect(
+        await screen.findByRole('heading', { name: /произошла непредвиденная ошибка/i }),
+      ).toBeInTheDocument();
+      expect(screen.getAllByText('Ошибка без трейса')).toHaveLength(2);
+    });
+
+    it('handles non-Error and non-Response thrown values gracefully', async () => {
+      renderBoundaryWithError('Прямая строка ошибки');
+
+      expect(
+        await screen.findByRole('heading', { name: /произошла непредвиденная ошибка/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText('Что-то пошло не так при загрузке страницы. Попробуйте обновить страницу.'),
+      ).toBeInTheDocument();
+    });
   });
 });
+

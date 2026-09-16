@@ -76,4 +76,22 @@ describe('useAuth and useToken Hooks', () => {
     expect(result.current).toBe(true);
     unmount();
   });
+
+  it('returns null during server-side rendering (getServerSnapshot)', async () => {
+    const { createElement } = await import('react');
+    const { renderToString } = await import('react-dom/server');
+
+    function SsrConsumer() {
+      const token = useToken();
+      const isAuth = useIsAuthenticated();
+      return createElement(
+        'div',
+        { 'data-testid': 'ssr' },
+        token === null && !isAuth ? 'ssr-null' : 'ssr-auth',
+      );
+    }
+
+    const html = renderToString(createElement(SsrConsumer));
+    expect(html).toContain('ssr-null');
+  });
 });

@@ -45,7 +45,11 @@ export async function action({ request }: ActionFunctionArgs): Promise<Response 
 
     if (loginResult.error || !loginResult.data) {
       // Если регистрация прошла, но логин не удался (например, временный сбой) — перенаправляем на логин
-      return redirect(returnUrl ? `/login?returnUrl=${encodeURIComponent(returnUrl)}` : '/login');
+      return redirect(
+        returnUrl && returnUrl !== '/'
+          ? `/login?returnUrl=${encodeURIComponent(returnUrl)}`
+          : '/login',
+      );
     }
 
     // 3. Сохраняем токен в хранилище сессии

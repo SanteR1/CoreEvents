@@ -199,6 +199,63 @@ describe('CreateEventPage', () => {
       });
     });
 
+    it('creates event successfully when description is omitted', async () => {
+      vi.mocked(createEvent).mockResolvedValueOnce({
+        success: true,
+        httpStatus: 201,
+        statusUrl: null,
+        event: { ...mockCreatedEvent, description: null },
+      });
+
+      const args = createActionArgs({
+        title: 'Event without description',
+        startAt: '2026-10-20T10:00',
+        endAt: '2026-10-20T12:00',
+        totalSeats: '20',
+      });
+
+      const result = await action(args);
+      expect(result).toEqual({
+        event: { ...mockCreatedEvent, description: null },
+      });
+      expect(createEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Event without description',
+          description: '',
+          totalSeats: 20,
+        }),
+      );
+    });
+
+    it('creates event with trimmed description when description is provided', async () => {
+      vi.mocked(createEvent).mockResolvedValueOnce({
+        success: true,
+        httpStatus: 201,
+        statusUrl: null,
+        event: { ...mockCreatedEvent, description: 'Подробное описание' },
+      });
+
+      const args = createActionArgs({
+        title: 'Event with description',
+        startAt: '2026-10-20T10:00',
+        endAt: '2026-10-20T12:00',
+        totalSeats: '25',
+        description: '   Подробное описание   ',
+      });
+      const result = await action(args);
+
+      expect(result).toEqual({
+        event: { ...mockCreatedEvent, description: 'Подробное описание' },
+      });
+      expect(createEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Event with description',
+          description: 'Подробное описание',
+          totalSeats: 25,
+        }),
+      );
+    });
+
     it('returns API error when createEvent returns success: false', async () => {
       vi.mocked(createEvent).mockResolvedValueOnce({
         success: false,

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, act, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { loader, action, GetBookingPage } from '../BookingStatusPage';
 import { getBookingById, deleteBookingById } from '@/features/bookings/api/bookingsApi';
@@ -140,6 +141,48 @@ describe('BookingStatusPage', () => {
         status: 500,
         statusText: 'Internal Server Error',
       });
+    });
+
+    it('throws 500 Response with fallback message when res.error?.message is missing and status is 0', async () => {
+      setToken(createMockJwt());
+      vi.mocked(getBookingById).mockResolvedValueOnce({
+        success: false,
+        httpStatus: 0,
+        error: undefined as unknown as { message: string },
+      });
+
+      const args = createLoaderArgs('bk-crash');
+      let caught: unknown;
+      try {
+        await loader(args);
+      } catch (err) {
+        caught = err;
+      }
+      expect(caught).toBeInstanceOf(Response);
+      const res = caught as Response;
+      expect(res.status).toBe(500);
+      expect(await res.text()).toBe('Не удалось загрузить бронирование');
+    });
+
+    it('throws Response with res.httpStatus and custom message when httpStatus >= 400', async () => {
+      setToken(createMockJwt());
+      vi.mocked(getBookingById).mockResolvedValueOnce({
+        success: false,
+        httpStatus: 502,
+        error: { message: 'Шлюз недоступен' },
+      });
+
+      const args = createLoaderArgs('bk-bad-gateway');
+      let caught: unknown;
+      try {
+        await loader(args);
+      } catch (err) {
+        caught = err;
+      }
+      expect(caught).toBeInstanceOf(Response);
+      const res = caught as Response;
+      expect(res.status).toBe(502);
+      expect(await res.text()).toBe('Шлюз недоступен');
     });
 
     it('returns booking data on successful load', async () => {
@@ -290,7 +333,9 @@ describe('BookingStatusPage', () => {
       render(<RouterProvider router={router} />);
 
       await screen.findByRole('heading', { name: /статус бронирования/i });
-      expect(sessionStorage.getItem('cancelling_booking_bk-123')).toBeNull();
+      await waitFor(() => {
+        expect(sessionStorage.getItem('cancelling_booking_bk-123')).toBeNull();
+      });
     });
 
     it('renders error alert banner when actionData contains error', async () => {
@@ -310,6 +355,291 @@ describe('BookingStatusPage', () => {
       render(<RouterProvider router={router} />);
 
       await screen.findByRole('heading', { name: /статус бронирования/i });
+    });
+
+    it('submits cancellation and displays cancelling banner when action succeeds', async () => {
+      setToken(createMockJwt());
+      vi.spyOn(window, 'confirm').mockReturnValue(true);
+      vi.mocked(deleteBookingById).mockResolvedValueOnce({
+        success: true,
+        httpStatus: 200,
+      });
+
+      const user = userEvent.setup();
+      const router = createMemoryRouter(
+        [
+          {
+            path: '/bookings/:bookingId',
+            element: <GetBookingPage />,
+            loader: () => ({ booking: { ...mockBooking, status: 'Confirmed' } }),
+            action,
+            HydrateFallback: () => null,
+          },
+        ],
+        { initialEntries: ['/bookings/bk-123'] },
+      );
+
+      render(<RouterProvider router={router} />);
+
+      const cancelBtn = await screen.findByRole('button', { name: /отменить бронирование/i });
+      await user.click(cancelBtn);
+
+      expect(await screen.findByText('Заявка на отмену бронирования принята')).toBeInTheDocument();
+      expect(screen.getByText('Отмена обрабатывается сервером...')).toBeInTheDocument();
+    });
+
+    it('executes polling loop and handles revalidation correctly', async () => {
+      vi.useFakeTimers();
+      const router = createMemoryRouter(
+        [
+          {
+            path: '/bookings/:bookingId',
+            element: <GetBookingPage />,
+            loader: () => ({ booking: mockBooking }),
+            action: () => null,
+            HydrateFallback: () => null,
+          },
+        ],
+        { initialEntries: ['/bookings/bk-123'] },
+      );
+
+      render(<RouterProvider router={router} />);
+
+      // Flush router initial loader & mount GetBookingPage
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(screen.getByRole('heading', { name: /статус бронирования/i })).toBeInTheDocument();
+
+      // Advance timer by 2000ms to trigger poll()
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2000);
+      });
+      // Advance timer by another 2000ms to test recurring loop
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2000);
+      });
+
+      vi.useRealTimers();
+    });
+
+    it('displays actionData error when cancellation fails', async () => {
+      const user = userEvent.setup();
+      vi.spyOn(window, 'confirm').mockReturnValue(true);
+      const router = createMemoryRouter(
+        [
+          {
+            path: '/bookings/:bookingId',
+            element: <GetBookingPage />,
+            loader: () => ({ booking: mockBooking }),
+            action: () => ({ error: { message: 'Ошибка при отмене' } }),
+            HydrateFallback: () => null,
+          },
+        ],
+        { initialEntries: ['/bookings/bk-123'] },
+      );
+
+      render(<RouterProvider router={router} />);
+      const cancelBtn = await screen.findByRole('button', { name: /отменить бронирование/i });
+      await user.click(cancelBtn);
+
+      expect(await screen.findByText('Ошибка при отмене')).toBeInTheDocument();
+    });
+
+    it('displays actionData success message when cancellation is completed without inProgress', async () => {
+      const user = userEvent.setup();
+      vi.spyOn(window, 'confirm').mockReturnValue(true);
+      let callCount = 0;
+      const router = createMemoryRouter(
+        [
+          {
+            path: '/bookings/:bookingId',
+            element: <GetBookingPage />,
+            loader: () => {
+              callCount++;
+              if (callCount > 1) {
+                return { booking: { ...mockBooking, status: 'Cancelled' } };
+              }
+              return { booking: mockBooking };
+            },
+            action: () => ({ success: true, message: 'Бронирование успешно отменено' }),
+            HydrateFallback: () => null,
+          },
+        ],
+        { initialEntries: ['/bookings/bk-123'] },
+      );
+
+      render(<RouterProvider router={router} />);
+      const cancelBtn = await screen.findByRole('button', { name: /отменить бронирование/i });
+      await user.click(cancelBtn);
+
+      expect(await screen.findByText('Бронирование успешно отменено')).toBeInTheDocument();
+    });
+
+    it('catches and ignores network errors in polling loop', async () => {
+      vi.useFakeTimers();
+      let callCount = 0;
+      const router = createMemoryRouter(
+        [
+          {
+            path: '/bookings/:bookingId',
+            element: <GetBookingPage />,
+            loader: () => {
+              callCount++;
+              if (callCount > 1) {
+                throw new Error('Network error during poll');
+              }
+              return { booking: mockBooking };
+            },
+            action: () => null,
+            HydrateFallback: () => null,
+            ErrorBoundary: () => null,
+          },
+        ],
+        { initialEntries: ['/bookings/bk-123'] },
+      );
+
+      render(<RouterProvider router={router} />);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(screen.getByRole('heading', { name: /статус бронирования/i })).toBeInTheDocument();
+
+      // Trigger poll which throws error in revalidation
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2000);
+      });
+
+      vi.useRealTimers();
+    });
+
+    it('displays fallback cancelling message when action returns inProgress without message', async () => {
+      const user = userEvent.setup();
+      vi.spyOn(window, 'confirm').mockReturnValue(true);
+      const router = createMemoryRouter(
+        [
+          {
+            path: '/bookings/:bookingId',
+            element: <GetBookingPage />,
+            loader: () => ({ booking: mockBooking }),
+            action: () => ({ success: true }),
+            HydrateFallback: () => null,
+          },
+        ],
+        { initialEntries: ['/bookings/bk-123'] },
+      );
+
+      render(<RouterProvider router={router} />);
+      const cancelBtn = await screen.findByRole('button', { name: /отменить бронирование/i });
+      await user.click(cancelBtn);
+
+      expect(
+        await screen.findByText(
+          'Заявка на отмену бронирования принята и обрабатывается в фоновом режиме...',
+        ),
+      ).toBeInTheDocument();
+    });
+
+    it('shows loading indicator when revalidator is in loading state', async () => {
+      vi.useFakeTimers();
+      let callCount = 0;
+      let resolveLoader!: (val: unknown) => void;
+
+      const router = createMemoryRouter(
+        [
+          {
+            path: '/bookings/:bookingId',
+            element: <GetBookingPage />,
+            loader: () => {
+              callCount++;
+              if (callCount > 1) {
+                return new Promise((res) => {
+                  resolveLoader = res;
+                });
+              }
+              return { booking: mockBooking };
+            },
+            HydrateFallback: () => null,
+          },
+        ],
+        { initialEntries: ['/bookings/bk-123'] },
+      );
+
+      render(<RouterProvider router={router} />);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+
+      expect(screen.getByText('Фоновое отслеживание...')).toBeInTheDocument();
+
+      // Trigger poll() which starts revalidating
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2000);
+      });
+
+      // While loader is in-flight, revalidator.state is 'loading'
+      expect(screen.getByText('Обновление данных...')).toBeInTheDocument();
+
+      // Resolve pending loader with Confirmed status
+      await act(async () => {
+        resolveLoader({ booking: { ...mockBooking, status: 'Confirmed' } });
+        await vi.advanceTimersByTimeAsync(0);
+      });
+
+      expect(screen.queryByText('Обновление данных...')).not.toBeInTheDocument();
+      expect(screen.queryByText('Фоновое отслеживание...')).not.toBeInTheDocument();
+
+      vi.useRealTimers();
+    });
+
+    it('stops polling and cleans up when component unmounts while revalidating', async () => {
+      vi.useFakeTimers();
+      let resolveReval!: () => void;
+      let callCount = 0;
+      const router = createMemoryRouter(
+        [
+          {
+            path: '/bookings/:bookingId',
+            element: <GetBookingPage />,
+            loader: () => {
+              callCount++;
+              if (callCount > 1) {
+                return new Promise((res) => {
+                  resolveReval = () => res({ booking: mockBooking });
+                });
+              }
+              return { booking: mockBooking };
+            },
+            action: () => null,
+            HydrateFallback: () => null,
+          },
+        ],
+        { initialEntries: ['/bookings/bk-123'] },
+      );
+
+      const { unmount } = render(<RouterProvider router={router} />);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+
+      // Trigger poll() which starts revalidating (callCount > 1)
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2000);
+      });
+
+      // Unmount while revalidation is in-flight!
+      unmount();
+
+      // Now resolve the in-flight revalidation
+      await act(async () => {
+        if (resolveReval) resolveReval();
+        await vi.advanceTimersByTimeAsync(0);
+      });
+
+      vi.useRealTimers();
     });
   });
 });

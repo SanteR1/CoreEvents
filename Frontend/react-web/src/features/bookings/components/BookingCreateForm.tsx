@@ -52,11 +52,11 @@ export const BookingCreateForm = ({
   const currentSeats = seats === '' ? 1 : seats;
 
   const handleDecrement = () => {
-    setSeats((prev) => Math.max(1, (typeof prev === 'number' ? prev : 1) - 1));
+    setSeats(Math.max(1, currentSeats - 1));
   };
 
   const handleIncrement = () => {
-    setSeats((prev) => Math.min(availableSeats, (typeof prev === 'number' ? prev : 1) + 1));
+    setSeats(Math.min(availableSeats, currentSeats + 1));
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {

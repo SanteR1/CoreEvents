@@ -129,6 +129,25 @@ describe('errors.ts', () => {
       });
     });
 
+    it('attaches message to localFieldName when error is ProblemDetails', () => {
+      const problem = {
+        title: 'Validation failed',
+        status: 400,
+        errors: {
+          title: ['Слишком короткое'],
+        },
+      };
+
+      const res = toFormError(problem, { localFieldName: 'root' });
+      expect(res).toEqual({
+        message: 'Validation failed',
+        fieldErrors: {
+          title: ['Слишком короткое'],
+          root: ['Validation failed'],
+        },
+      });
+    });
+
     it('falls back to defaultMessage for unknown primitives', () => {
       const res = toFormError(404, { defaultMessage: 'Ресурс не найден' });
       expect(res).toEqual({
@@ -136,5 +155,41 @@ describe('errors.ts', () => {
         fieldErrors: undefined,
       });
     });
+
+    it('attaches localFieldName for Error instances and primitive types', () => {
+      const errorRes = toFormError(new Error('Ошибка валидации'), { localFieldName: 'root' });
+      expect(errorRes).toEqual({
+        message: 'Ошибка валидации',
+        fieldErrors: {
+          root: ['Ошибка валидации'],
+        },
+      });
+
+      const primRes = toFormError(500, {
+        localFieldName: 'global',
+        defaultMessage: 'Внутренняя ошибка',
+      });
+      expect(primRes).toEqual({
+        message: 'Внутренняя ошибка',
+        fieldErrors: {
+          global: ['Внутренняя ошибка'],
+        },
+      });
+    });
+
+    it('handles Error with empty message and non-array field errors', () => {
+      const emptyMsgRes = toFormError(new Error(''), { defaultMessage: 'По умолчанию' });
+      expect(emptyMsgRes?.message).toBe('');
+
+      const nonArrayRes = toFormError({
+        errors: {
+          title: 'Одиночная ошибка строкой',
+        },
+      });
+      expect(nonArrayRes?.fieldErrors).toEqual({
+        title: ['Одиночная ошибка строкой'],
+      });
+    });
   });
 });
+

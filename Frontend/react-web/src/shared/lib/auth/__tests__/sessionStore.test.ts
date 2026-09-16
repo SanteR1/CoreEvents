@@ -73,6 +73,20 @@ describe('sessionStore.ts', () => {
     expect(localStorage.getItem('auth_token')).toBeNull();
   });
 
+  it('handles 3-part tokens with invalid base64 or invalid json as expired', async () => {
+    // 1. Некорректный base64
+    localStorage.setItem('auth_token', 'header.%%%invalid-base64%%%.sig');
+    expect(getToken()).toBeNull();
+    await Promise.resolve();
+    expect(localStorage.getItem('auth_token')).toBeNull();
+
+    // 2. Валидный base64, но невалидный JSON
+    localStorage.setItem('auth_token', `header.${btoa('invalid-json')}.sig`);
+    expect(getToken()).toBeNull();
+    await Promise.resolve();
+    expect(localStorage.getItem('auth_token')).toBeNull();
+  });
+
   it('stores token and notifies listeners upon setToken', () => {
     const listener = vi.fn();
     const unsubscribe = subscribe(listener);
@@ -138,5 +152,22 @@ describe('sessionStore.ts', () => {
 
     expect(result.current.token).toBeNull();
     expect(result.current.isAuthenticated).toBe(false);
+  });
+
+  it('does not remove token in cleanup microtask if token was replaced before microtask runs', async () => {
+    const expiredToken = createMockJwt(-3600);
+    const freshToken = createMockJwt(3600);
+
+    localStorage.setItem('auth_token', expiredToken);
+    expect(getToken()).toBeNull();
+
+    // Immediately replace token before microtask fires
+    localStorage.setItem('auth_token', freshToken);
+
+    // Wait for microtask queue to drain
+    await new Promise<void>((resolve) => queueMicrotask(() => resolve()));
+
+    // Fresh token was preserved
+    expect(localStorage.getItem('auth_token')).toBe(freshToken);
   });
 });

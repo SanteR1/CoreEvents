@@ -254,4 +254,27 @@ describe('ThemeProvider & useTheme', () => {
 
     expect(screen.getByTestId('app-theme')).toHaveTextContent('system');
   });
+
+  describe('SSR fallback', () => {
+    const originalWindow = globalThis.window;
+
+    afterEach(() => {
+      vi.stubGlobal('window', originalWindow);
+    });
+
+    it('defaults resolvedTheme to light when window is undefined (SSR)', async () => {
+      vi.stubGlobal('window', undefined);
+      const { renderToString } = await import('react-dom/server');
+      function SsrConsumer() {
+        const { resolvedTheme } = useTheme();
+        return <div data-testid="ssr-theme">{resolvedTheme}</div>;
+      }
+      const html = renderToString(
+        <ThemeProvider>
+          <SsrConsumer />
+        </ThemeProvider>,
+      );
+      expect(html).toContain('light');
+    });
+  });
 });
