@@ -187,4 +187,52 @@ describe('RootErrorBoundary', () => {
       await user.click(backBtn);
     });
   });
+
+  describe('Custom and Object Error Responses', () => {
+    it('extracts message from error.data object with message property', async () => {
+      const errorResponse = new Response(
+        JSON.stringify({ message: 'Ошибка валидации полезной нагрузки' }),
+        {
+          status: 422,
+          statusText: 'Unprocessable Entity',
+          headers: { 'Content-Type': 'application/json' },
+        },
+      );
+
+      renderBoundaryWithError(errorResponse);
+
+      expect(await screen.findByText(/код ошибки: 422/i)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /ошибка 422/i })).toBeInTheDocument();
+      expect(screen.getByText('Ошибка валидации полезной нагрузки')).toBeInTheDocument();
+    });
+
+    it('falls back to default 404 message when message matches statusText', async () => {
+      const errorResponse = new Response(null, {
+        status: 404,
+        statusText: 'Not Found',
+      });
+
+      renderBoundaryWithError(errorResponse);
+
+      expect(await screen.findByText(/код ошибки: 404/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          /запрошенная страница, событие или бронирование не существуют либо были удалены/i,
+        ),
+      ).toBeInTheDocument();
+    });
+
+    it('handles statusText fallback when error.data is empty and status is arbitrary', async () => {
+      const errorResponse = new Response(null, {
+        status: 418,
+        statusText: "I'm a Teapot",
+      });
+
+      renderBoundaryWithError(errorResponse);
+
+      expect(await screen.findByText(/код ошибки: 418/i)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /ошибка 418/i })).toBeInTheDocument();
+      expect(screen.getByText("I'm a Teapot")).toBeInTheDocument();
+    });
+  });
 });

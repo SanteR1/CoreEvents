@@ -17,7 +17,7 @@ export const RootErrorBoundary = () => {
   if (isRouteErrorResponse(error)) {
     statusCode = error.status;
 
-    if (typeof error.data === 'string') {
+    if (typeof error.data === 'string' && error.data.trim().length > 0) {
       message = error.data;
     } else if (error.data && typeof error.data === 'object' && 'message' in error.data) {
       message = String((error.data as { message: unknown }).message);
@@ -30,7 +30,7 @@ export const RootErrorBoundary = () => {
         is404 = true;
         title = 'Ресурс не найден';
         message =
-          message !== error.statusText
+          message && message !== error.statusText
             ? message
             : 'Запрошенная страница, событие или бронирование не существуют либо были удалены.';
         break;
