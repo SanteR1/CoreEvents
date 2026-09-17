@@ -404,6 +404,9 @@ FodyWeavers.xsd
 !.vscode/extensions.json
 !.vscode/*.code-snippets
 
+.gemini/
+.devcontainer-storage/
+
 # Local History for Visual Studio Code
 .history/
 

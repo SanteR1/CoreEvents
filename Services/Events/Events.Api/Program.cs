@@ -15,6 +15,17 @@ try
 
     var builder = WebApplication.CreateBuilder(args);
 
+    builder.Services.AddCors(options =>
+    {
+        options.AddPolicy("AllowFrontend", policy =>
+        {
+            policy.WithOrigins("http://localhost:5173")
+                  .AllowAnyHeader()
+                  .AllowAnyMethod();
+            // .AllowCredentials(); // раскомментируйте, только если будете слать credentials: 'include' (cookie)
+        });
+    });
+
     builder.AddApplicationLogging();
     builder.Services.AddApplicationTelemetry(builder.Configuration);
 
@@ -38,6 +49,8 @@ try
 
     await app.ApplyMigrationsAsync();
     await app.Services.InitializeKafkaTopicsAsync();
+
+    app.UseCors("AllowFrontend");
 
     app.UseAuthentication();
 
