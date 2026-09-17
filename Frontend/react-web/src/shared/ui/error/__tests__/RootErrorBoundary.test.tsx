@@ -266,9 +266,10 @@ describe('RootErrorBoundary', () => {
         await screen.findByRole('heading', { name: /произошла непредвиденная ошибка/i }),
       ).toBeInTheDocument();
       expect(
-        screen.getByText('Что-то пошло не так при загрузке страницы. Попробуйте обновить страницу.'),
+        screen.getByText(
+          'Что-то пошло не так при загрузке страницы. Попробуйте обновить страницу.',
+        ),
       ).toBeInTheDocument();
     });
   });
 });
-
