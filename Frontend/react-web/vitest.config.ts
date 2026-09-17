@@ -10,6 +10,11 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./test/setup.ts'],
+    env: {
+      VITE_USERS_API_URL: 'http://localhost:5003',
+      VITE_EVENTS_API_URL: 'http://localhost:5004',
+      VITE_BOOKINGS_API_URL: 'http://localhost:5005',
+    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'json-summary'],

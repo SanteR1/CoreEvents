@@ -4,13 +4,13 @@ on:
   push:
     branches: [main, master, dev-react]
     paths:
-      - 'Frontend/react-web/**'
-      - '.github/workflows/frontend-ci.yml'
+      - "Frontend/react-web/**"
+      - ".github/workflows/frontend-ci.yml"
   pull_request:
     branches: [main, master]
     paths:
-      - 'Frontend/react-web/**'
-      - '.github/workflows/frontend-ci.yml'
+      - "Frontend/react-web/**"
+      - ".github/workflows/frontend-ci.yml"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -32,7 +32,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: 'npm'
+          cache: "npm"
           cache-dependency-path: Frontend/react-web/package-lock.json
 
       - name: Install dependencies

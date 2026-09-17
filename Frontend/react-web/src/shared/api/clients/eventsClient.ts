@@ -2,11 +2,11 @@ import createClient from 'openapi-fetch';
 import type { paths } from '@/shared/api/generated/events'; // Путь к сгенерированным типам
 import { getToken } from '@/shared/lib/auth/sessionStore';
 
-const EVENTS_API_URL = import.meta.env.VITE_EVENTS_API_URL as string;
+const EVENTS_API_URL: string =
+  (import.meta.env.VITE_EVENTS_API_URL as string | undefined) ?? 'http://localhost:5004';
 
 export const eventsClient = createClient<paths>({
-  //baseUrl: 'http://host.docker.internal:5004', // Или ваш базовый URL для продакшена/разработки
-  baseUrl: `${EVENTS_API_URL}`, // Или ваш базовый URL для продакшена/разработки
+  baseUrl: EVENTS_API_URL,
 });
 
 // Опционально: можно добавить интерцепторы (middleware) для авторизации

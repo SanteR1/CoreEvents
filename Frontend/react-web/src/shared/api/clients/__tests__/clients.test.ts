@@ -116,5 +116,22 @@ describe('OpenAPI Clients onRequest interceptors', () => {
       const request = mockFetch.mock.calls[0][0] as Request;
       expect(request.headers.get('Authorization')).toBeNull();
     });
+
+    it('falls back to default URL when env variable is missing', async () => {
+      vi.resetModules();
+      vi.stubEnv('VITE_USERS_API_URL', undefined);
+      vi.stubEnv('VITE_EVENTS_API_URL', undefined);
+      vi.stubEnv('VITE_BOOKINGS_API_URL', undefined);
+
+      const { usersClient: isolatedUsers } = await import('../usersClient');
+      const { eventsClient: isolatedEvents } = await import('../eventsClient');
+      const { bookingsClient: isolatedBookings } = await import('../bookingsClient');
+
+      expect(isolatedUsers).toBeDefined();
+      expect(isolatedEvents).toBeDefined();
+      expect(isolatedBookings).toBeDefined();
+      vi.unstubAllEnvs();
+      vi.resetModules();
+    });
   });
 });
