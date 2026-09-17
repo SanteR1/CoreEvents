@@ -661,3 +661,33 @@ _Правила для формирования запроса на создан
   "traceId": "00-15823b20f6c84f4c4cf8d49fe4290053-a28986f321187b1b-00"
 }
 ```
+
+---
+
+## 🗺 Дорожная карта развития системы (System Roadmap)
+
+План развития общесистемной архитектуры, сетевого контура и безопасности:
+
+- [ ] **Этап 1. Единый API Gateway (YARP) и безопасные сессии (BFF / HttpOnly / Refresh Token)**:
+  - **Шлюз YARP Gateway (`Gateway.Api` на .NET 10)**:
+    - Развертывание нового проекта шлюза на порту `5000` (единая точка входа для всех API-запросов к платформе).
+    - Маршрутизация префиксов:
+      - `/api/users/*` и `/api/auth/*` $\to$ `Users.Api` (`:5003`)
+      - `/api/events/*` $\to$ `Events.Api` (`:5004`)
+      - `/api/bookings/*` $\to$ `Bookings.Api` (`:5005`)
+    - Централизация политик CORS для локальной разработки (`http://localhost:5173`) с поддержкой `AllowCredentials`.
+    - **BFF Cookie-to-Bearer Transform**: шлюз перехватывает защищенную куку `access_token` и автоматически добавляет заголовок `Authorization: Bearer <jwt>` во внутренние запросы к микросервисам (`Events` и `Bookings` остаются чистыми REST API с JWT-авторизацией).
+  - **Доработки Users Service**:
+    - Реализация эндпоинта сессии **`GET /users/me`** (`[Authorize]`) для возврата профиля и роли текущего пользователя (`id`, `userName`, `role`).
+    - Полноценная поддержка **Refresh Token**:
+      - Создание сущности и таблицы `RefreshTokens` в PostgreSQL (`coreevents-users`).
+      - Механизм ротации токенов (Refresh Token Rotation — RTR) и отзыв скомпрометированных сессий при повторном использовании токена.
+      - Эндпоинты `POST /auth/refresh` и `POST /auth/logout`.
+      - Выпуск токенов в `HttpOnly, Secure, SameSite` Cookies (`access_token`: 15 мин, `refresh_token`: 30 дней с изоляцией `Path=/api/auth`).
+- [ ] **Этап 2. Внешний контур и безопасность: Nginx TLS Reverse Proxy**:
+  - Развертывание **Nginx** на внешнем периметре (порты `80` / `443`).
+  - Терминация SSL/TLS сертификатов (HTTPS) и поддержка протокола HTTP/2.
+  - Раздача статического бандла SPA-клиента (`dist/`) и проксирование `/api/*` на YARP Gateway внутри Docker-сети (устранение CORS в production, так как клиент и API обслуживаются на едином origin).
+  - Настройка заголовков безопасности: Content Security Policy (CSP), HSTS, X-Frame-Options, X-Content-Type-Options.
+
+👉 **[Дорожная карта клиентской части (React SPA)](Frontend/react-web/README.md#-дорожная-карта-roadmap)**: интеграция с YARP Gateway, сессии без JWT в JS, клиентский RBAC и сквозное E2E-тестирование (Playwright).
