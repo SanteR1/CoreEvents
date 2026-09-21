@@ -46,6 +46,15 @@ internal class UserService : IAuthService
 
         if (!_hasher.Verify(password: userLoginDto.Password, hash: user.PasswordHash)) throw new InvalidCredentialsException();
 
+        // 1. Миграция: если в базе старый SHA-256,
+        // прозрачно для пользователя хешируем пароль новым Argon2id и сохраняем в БД
+        if (_hasher.NeedsRehash(user.PasswordHash))
+        {
+            var newHash = _hasher.Hash(userLoginDto.Password);
+            user.UpdatePasswordHash(newHash);
+            await _repository.SaveChangesAsync(ct);
+        }
+
         var token = new TokenPayload(user.Id, user.Role);
         return _token.GenerateToken(token);
     }

@@ -56,7 +56,7 @@ public static class DependencyInjection
         services.AddAuthorization();
 
         services.AddSingleton<ITokenProvider, JwtTokenProvider>();
-        services.AddSingleton<IPasswordHasher, Sha256PasswordHasher>();
+        services.AddSingleton<IPasswordHasher, Argon2idPasswordHasher>();
 
         services.AddDataBase(configuration, environment);
         services.AddScoped<IUserRepository, UserRepository>();
