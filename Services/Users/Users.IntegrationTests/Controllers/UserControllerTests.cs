@@ -60,15 +60,15 @@ public class UserControllerTests(ApiOnlyIntegrationTestFactory factory) : ApiOnl
 
         // Act
         using HttpResponseMessage loginResponse = await HttpClient.PostAsJsonAsync(
-            "/auth/login",
+            "/v1/auth/login",
             new UserLoginDto(userName, userPassword),
             TestContext.Current.CancellationToken);
 
         // Assert
         loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        string? token = await loginResponse.Content.ReadFromJsonAsync<string>(TestContext.Current.CancellationToken);
-        token!.Should().NotBeNullOrWhiteSpace();
+        string token = ExtractAccessToken(loginResponse);
+        token.Should().NotBeNullOrWhiteSpace();
 
         HttpClient.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, token);
@@ -102,15 +102,15 @@ public class UserControllerTests(ApiOnlyIntegrationTestFactory factory) : ApiOnl
 
         // Act
         using HttpResponseMessage loginResponse = await HttpClient.PostAsJsonAsync(
-            "/auth/login",
+            "/v1/auth/login",
             new UserLoginDto(userName, userPassword),
             TestContext.Current.CancellationToken);
 
         // Assert
         loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        string? token = await loginResponse.Content.ReadFromJsonAsync<string>(TestContext.Current.CancellationToken);
-        token!.Should().NotBeNullOrWhiteSpace();
+        string token = ExtractAccessToken(loginResponse);
+        token.Should().NotBeNullOrWhiteSpace();
 
         HttpClient.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, token);
@@ -144,15 +144,15 @@ public class UserControllerTests(ApiOnlyIntegrationTestFactory factory) : ApiOnl
 
         // Act
         using HttpResponseMessage loginResponse = await HttpClient.PostAsJsonAsync(
-            "/auth/login",
+            "/v1/auth/login",
             new UserLoginDto(userName, userPassword),
             TestContext.Current.CancellationToken);
 
         // Assert
         loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        string? token = await loginResponse.Content.ReadFromJsonAsync<string>(TestContext.Current.CancellationToken);
-        token!.Should().NotBeNullOrWhiteSpace();
+        string token = ExtractAccessToken(loginResponse);
+        token.Should().NotBeNullOrWhiteSpace();
 
         HttpClient.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, token);
@@ -160,5 +160,25 @@ public class UserControllerTests(ApiOnlyIntegrationTestFactory factory) : ApiOnl
         using HttpResponseMessage response =
             await HttpClient.GetAsync("/api/test-auth/user-only", TestContext.Current.CancellationToken);
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    private static string ExtractAccessToken(HttpResponseMessage response)
+    {
+        if (response.Headers.TryGetValues("Set-Cookie", out var cookies))
+        {
+            foreach (var cookie in cookies)
+            {
+                if (cookie.StartsWith("access_token="))
+                {
+                    var parts = cookie.Split(';')[0].Split('=');
+                    if (parts.Length >= 2)
+                    {
+                        return parts[1];
+                    }
+                }
+            }
+        }
+
+        throw new InvalidOperationException("access_token cookie not found in response Set-Cookie headers.");
     }
 }
