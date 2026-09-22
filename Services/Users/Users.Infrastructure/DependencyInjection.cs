@@ -60,6 +60,7 @@ public static class DependencyInjection
 
         services.AddDataBase(configuration, environment);
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 
         services.AddScoped<DatabaseSeeder>();
 
