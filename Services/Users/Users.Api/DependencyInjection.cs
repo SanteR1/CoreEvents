@@ -1,5 +1,7 @@
 using System.Text.Json.Serialization;
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.OpenApi;
 using Users.Api.ExceptionHandlers;
 using Users.Api.Services;
@@ -13,6 +15,7 @@ public static class DependencyInjection
     {
         services.AddHttpContextAccessor();
         services.AddScoped<IUserContext, UserContext>();
+        services.AddScoped<IAuthCookieService, AuthCookieService>();
 
         services.AddControllers().AddJsonOptions(options =>
         {
@@ -24,22 +27,45 @@ public static class DependencyInjection
         services.AddExceptionHandler<DomainExceptionHandler>();
         services.AddExceptionHandler<GlobalExceptionHandler>();
 
-        services.AddOpenApi();
-        services.AddSwaggerGen(option =>
+        services.AddApiVersioning(options =>
+                {
+                    options.DefaultApiVersion = new ApiVersion(1, 0);
+                    options.ReportApiVersions = true;
+                    options.ApiVersionReader = new UrlSegmentApiVersionReader();
+                })
+                .AddMvc()
+                .AddApiExplorer(options =>
+                {
+                    options.GroupNameFormat = "'v'VVV";
+                    options.SubstituteApiVersionInUrl = true;
+                }).AddOpenApi(options =>
+                {
+                    options.Document.AddDocumentTransformer((document, context, cancellationToken) =>
+                    {
+                        document.Components ??= new OpenApiComponents();
+                        document.Components.SecuritySchemes ??= new Dictionary<string, IOpenApiSecurityScheme>();
+                        document.Components.SecuritySchemes.Add(JwtBearerDefaults.AuthenticationScheme, new OpenApiSecurityScheme
+                        {
+                            Type = SecuritySchemeType.Http,
+                            Scheme = JwtBearerDefaults.AuthenticationScheme,
+                            BearerFormat = "JWT",
+                            Description = "Введите JWT токен"
+                        });
+
+                        document.Security ??= new List<OpenApiSecurityRequirement>();
+                        document.Security.Add(new OpenApiSecurityRequirement
+                        {
+                            [new OpenApiSecuritySchemeReference(JwtBearerDefaults.AuthenticationScheme, document)] = []
+                        });
+                        return Task.CompletedTask;
+                    });
+                });
+
+        services.Configure<ForwardedHeadersOptions>(options =>
         {
-            option.AddSecurityDefinition(JwtBearerDefaults.AuthenticationScheme, new OpenApiSecurityScheme
-            {
-                Description = "Введите JWT токен",
-                Name = "Authorization",
-                In = ParameterLocation.Header,
-                Type = SecuritySchemeType.Http,
-                Scheme = JwtBearerDefaults.AuthenticationScheme,
-                BearerFormat = "JWT"
-            });
-            option.AddSecurityRequirement(document => new OpenApiSecurityRequirement
-            {
-                [new OpenApiSecuritySchemeReference(JwtBearerDefaults.AuthenticationScheme, document)] = []
-            });
+            options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+            options.KnownIPNetworks.Clear();
+            options.KnownProxies.Clear();
         });
 
         return services;

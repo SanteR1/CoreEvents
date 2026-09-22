@@ -1,20 +1,25 @@
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Users.Api.Services;
 using Users.Application.DTOs;
 using Users.Application.Interfaces.Services;
 
 namespace Users.Api.Controllers;
 
-[Route("[controller]")]
 [ApiController]
+[ApiVersion(1.0)]
+[Route("v{version:apiVersion}/[controller]")]
 [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _userService;
+    private readonly IAuthCookieService _cookieService;
 
-    public AuthController(IAuthService userService)
+    public AuthController(IAuthService userService, IAuthCookieService cookieService)
     {
         _userService = userService;
+        _cookieService = cookieService;
     }
 
     [AllowAnonymous]
@@ -35,7 +40,36 @@ public class AuthController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<string>> Login([FromBody] UserLoginDto user, CancellationToken ct)
     {
-        var tokenAsync = await _userService.LoginAsync(user, ct);
-        return Ok(tokenAsync);
+        var result = await _userService.LoginAsync(user, ct);
+        _cookieService.SetAuthCookies(result.AccessToken, result.RefreshToken);
+        return Ok(result.User);
+    }
+
+    [AllowAnonymous]
+    [HttpPost("refresh")]
+    public async Task<IActionResult> Refresh(CancellationToken ct)
+    {
+        var refreshToken = _cookieService.GetRefreshToken();
+        if (string.IsNullOrWhiteSpace(refreshToken))
+            return Unauthorized(new ProblemDetails { Detail = "Refresh token не найден в Cookies." });
+
+        var result = await _userService.RefreshSessionAsync(refreshToken, ct);
+        _cookieService.SetAuthCookies(result.AccessToken, result.RefreshToken);
+
+        return NoContent();
+    }
+
+    [Authorize]
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout(CancellationToken ct)
+    {
+        var refreshToken = _cookieService.GetRefreshToken();
+        if (!string.IsNullOrWhiteSpace(refreshToken))
+        {
+            await _userService.RevokeSessionAsync(refreshToken, ct);
+        }
+
+        _cookieService.ClearAuthCookies();
+        return NoContent();
     }
 }
