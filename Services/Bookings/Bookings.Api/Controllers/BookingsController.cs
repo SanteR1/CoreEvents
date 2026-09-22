@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using Bookings.Application.Abstractions;
 using Bookings.Application.Commands;
 using Bookings.Application.DTOs;
@@ -8,8 +9,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Bookings.Api.Controllers;
 
-[Route("[controller]")]
 [ApiController]
+[ApiVersion(1.0)]
+[Route("v{version:apiVersion}/[controller]")]
 public class BookingsController : ControllerBase
 {
     private readonly IUserContext _userContext;

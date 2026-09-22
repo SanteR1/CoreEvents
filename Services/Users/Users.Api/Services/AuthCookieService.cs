@@ -52,12 +52,13 @@ public class AuthCookieService : IAuthCookieService
     public void ClearAuthCookies()
     {
         var response = HttpContext.Response;
+        var isSecure = _environment.IsProduction() || HttpContext.Request.IsHttps;
 
         var versionPrefix = GetVersionPrefix();
         var refreshPath = $"/api/{versionPrefix}/auth";
 
-        response.Cookies.Delete(AccessTokenCookieName, new CookieOptions{ Path = "/"});
-        response.Cookies.Delete(RefreshTokenCookieName, new CookieOptions{ Path = refreshPath });
+        response.Cookies.Delete(AccessTokenCookieName, new CookieOptions { Path = "/", Secure = isSecure });
+        response.Cookies.Delete(RefreshTokenCookieName, new CookieOptions { Path = refreshPath, Secure = isSecure });
     }
 
     public string? GetRefreshToken()

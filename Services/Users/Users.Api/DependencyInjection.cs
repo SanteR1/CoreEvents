@@ -44,13 +44,13 @@ public static class DependencyInjection
                     {
                         document.Components ??= new OpenApiComponents();
                         document.Components.SecuritySchemes ??= new Dictionary<string, IOpenApiSecurityScheme>();
-                        document.Components.SecuritySchemes.Add(JwtBearerDefaults.AuthenticationScheme, new OpenApiSecurityScheme
+                        document.Components.SecuritySchemes[JwtBearerDefaults.AuthenticationScheme] = new OpenApiSecurityScheme
                         {
                             Type = SecuritySchemeType.Http,
                             Scheme = JwtBearerDefaults.AuthenticationScheme,
                             BearerFormat = "JWT",
                             Description = "Введите JWT токен"
-                        });
+                        };
 
                         document.Security ??= new List<OpenApiSecurityRequirement>();
                         document.Security.Add(new OpenApiSecurityRequirement

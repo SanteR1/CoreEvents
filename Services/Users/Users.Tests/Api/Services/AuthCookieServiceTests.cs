@@ -189,6 +189,34 @@ public class AuthCookieServiceTests
     }
 
     [Fact]
+    public void ClearAuthCookies_InProduction_ShouldDeleteCookiesWithSecureTrue()
+    {
+        // Arrange
+        DefaultHttpContext httpContext = new();
+        httpContext.Request.RouteValues = new RouteValueDictionary
+        {
+            ["version"] = "1"
+        };
+
+        AuthCookieService sut = CreateSut(httpContext, "Production");
+
+        // Act
+        sut.ClearAuthCookies();
+
+        // Assert
+        StringValues setCookies = httpContext.Response.Headers.SetCookie;
+        setCookies.Should().HaveCount(2);
+
+        string? accessCookie = setCookies.FirstOrDefault(c => c != null && c.StartsWith("access_token="));
+        accessCookie.Should().NotBeNull();
+        accessCookie.Should().Contain("secure");
+
+        string? refreshCookie = setCookies.FirstOrDefault(c => c != null && c.StartsWith("refresh_token="));
+        refreshCookie.Should().NotBeNull();
+        refreshCookie.Should().Contain("secure");
+    }
+
+    [Fact]
     public void SetAuthCookies_WhenHttpContextIsNull_ShouldThrowInvalidOperationException()
     {
         // Arrange

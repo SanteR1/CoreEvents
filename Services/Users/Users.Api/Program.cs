@@ -38,10 +38,8 @@ try
 
     await app.ApplyMigrationsAsync();
     await app.UseDatabaseSeedingAsync();
-    
-    app.UseForwardedHeaders();
 
-    app.UseAuthentication();
+    app.UseForwardedHeaders();
 
     // Configure the HTTP request pipeline.
     if (app.Environment.IsDevelopment())
@@ -69,11 +67,16 @@ try
                 var isDefault = i == descriptions.Count - 1;
                 options.AddDocument(description.GroupName, description.GroupName, isDefault: isDefault);
             }
+
+            // 1. Сохранять введенный токен в LocalStorage браузера при перезагрузке страницы:
+            options.EnablePersistentAuthentication();
+
+            // 2. Сделать Bearer схемой по умолчанию при открытии страницы:
+            options.AddPreferredSecuritySchemes("Bearer");
         });
     }
 
-    app.UseHttpsRedirection();
-
+    app.UseAuthentication();
     app.UseAuthorization();
 
     app.MapControllers();
