@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/Gateway/">
+    <Project Path="Gateway/Gateway.Api/Gateway.Api.csproj" />
+  </Folder>
   <Folder Name="/observability/" />
   <Folder Name="/observability/grafana/" />
   <Folder Name="/observability/grafana/dashboards/">
