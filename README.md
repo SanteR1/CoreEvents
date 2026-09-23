@@ -3,33 +3,39 @@
 Современный _RESTful API_ для управления событиями, построенный на базе **ASP.NET Core 10.0** с использование паттерна **Clean Architecture**.
 В основе проекта лежит принцип инверсии зависимостей и слабой связанности (**Loose Coupling**): каждый микросервис полностью автономен, имеет собственное хранилище данных и общается с другими частями системы через брокер сообщений.
 
-## 🏛 Состав системы (Микросервисы):
+## 🏛 Состав системы:
 
-Монолитное приложение было разделено на 3 независимых сервиса (паттерн Database-per-service).
+Архитектура системы построена на базе микросервисного паттерна (Database-per-service) с единой точкой входа через API Gateway.
 
-1. **Users Service (Сервис пользователей)**
+1. **API Gateway (`Gateway.Api`)**
 
-- **Порт**: 5003 (HTTP)
-- **База данных**: PostgreSQL (coreevents-users)
-- **Ответственность**: Управление аутентификацией, регистрация пользователей, генерация JWT-токенов, ролевая модель (Admin/User).
+- **Порт**: `5000` (HTTP) — **Единая точка входа** для внешних клиентов и браузера.
+- **Стек**: .NET 10, YARP (Yet Another Reverse Proxy), OpenTelemetry 1.19.1.
+- **Ответственность**: Маршрутизация запросов к микросервисам (`/v1/auth`, `/v1/users`, `/v1/events`, `/v1/bookings`), реализация паттерна BFF (трансформация сессионных HttpOnly Cookies в заголовок `Authorization: Bearer`), Rate Limiting (защита от брутфорса для `/v1/auth`), централизованный CORS, единая интерактивная витрина документации Scalar UI (`/docs`) и Swagger UI (`/swagger`).
 
-2. **Events Service (Сервис событий)**
+2. **Users Service (Сервис пользователей)**
 
-- **Порт**: 5004 (HTTP)
-- **База данных**: PostgreSQL (coreevents-events)
-- **Ответственность**: Создание, редактирование и удаление мероприятий. Управление квотами и доступными местами (AvailableSeats).
+- **Порт**: `5003` (HTTP, внутренний сервис Docker)
+- **База данных**: PostgreSQL (`coreevents-users`)
+- **Ответственность**: Управление аутентификацией, безопасное хеширование паролей Argon2id, выпуск и ротация Refresh Token (RTR), изоляция сессий в HttpOnly Cookies, профиль пользователя (`/v1/users/me`), ролевая модель (Admin/User).
 
-3. **Bookings Service (Сервис бронирований)**
+3. **Events Service (Сервис событий)**
 
-- **Порт**: 5005 (HTTP)
-- **База данных**: PostgreSQL (coreevents-bookings)
-- **Ответственность**: Оркестрация процесса бронирования. Управление статусами (Pending, Confirmed, Rejected, Cancelled), валидация бизнес-правил владения бронью.
+- **Порт**: `5004` (HTTP, внутренний сервис Docker)
+- **База данных**: PostgreSQL (`coreevents-events`), Redis (кэш событий)
+- **Ответственность**: Создание, редактирование и удаление мероприятий. Управление квотами и доступными местами (AvailableSeats), кэширование популярных событий.
 
-4. **Web Client (React SPA)**
+4. **Bookings Service (Сервис бронирований)**
 
-- **Порт**: 5173 (HTTP)
-- **Стек**: React 19, TypeScript, Vite 8, Tailwind CSS v4, React Router v8
-- **Ответственность**: Пользовательский веб-интерфейс для работы с каталогом событий, авторизации и оформления бронирований.
+- **Порт**: `5005` (HTTP, внутренний сервис Docker)
+- **База данных**: PostgreSQL (`coreevents-bookings`)
+- **Ответственность**: Оркестрация процесса бронирования. Управление статусами (Pending, Confirmed, Rejected, Cancelled), валидация бизнес-правил владения бронью, публикация событий в Apache Kafka (Transactional Outbox).
+
+5. **Web Client (React SPA)**
+
+- **Порт**: `5173` (HTTP)
+- **Стек**: React 19, TypeScript, Vite 8, Tailwind CSS v4, React Router v8, `openapi-fetch`
+- **Ответственность**: Пользовательский веб-интерфейс для работы с каталогом событий, авторизации и оформления бронирований. Взаимодействует с бэкендом через единый адрес шлюза (`VITE_API_URL=http://localhost:5000/v1`).
 
 ---
 
@@ -122,11 +128,11 @@ sudo chown -R 1654:1654 ./logs/
 docker compose up --build -d
 ```
 
-Сервисы и Swagger UI доступны по адресам:
+Вся система и интерактивная документация доступны через единую точку входа (API Gateway):
 
-- `Swagger UI для Users Service: http://localhost:5003/swagger`
-- `Swagger UI для Events Service: http://localhost:5004/swagger`
-- `Swagger UI для Bookings Service: http://localhost:5005/swagger`
+- **Scalar UI (рекомендуется)**: [http://localhost:5000/docs](http://localhost:5000/docs) — современная интерактивная витрина с переключением между спецификациями микросервисов (`Users API v1`, `Events API v1`, `Bookings API v1`) и тестированием вызовов через шлюз.
+- **Swagger UI**: [http://localhost:5000/swagger](http://localhost:5000/swagger) — классическая витрина Swagger с выпадающим списком спецификаций.
+- **API Gateway (HTTP API)**: `http://localhost:5000/v1/...`
 
 #### 3.2. Запуск клиентского приложения (Frontend SPA)
 
@@ -197,32 +203,52 @@ dotnet tool install --global dotnet-ef
 
 ---
 
-## 🛡️ Ролевая модель и JWT Авторизация
+## 🛡️ Безопасность, Ролевая модель и BFF (Backend-for-Frontend)
 
-JWT-токен генерируется в `Users Service`, но валидируется во всех остальных микросервисах с использованием общего публичного ключа или секретного ключа (симметричное шифрование).
+В системе реализован современный стандарт аутентификации и авторизации:
 
-В сервисе две роли: Admin и User. Администратор управляет событиями — создаёт, редактирует, удаляет их и может отменять любые брони. Обычный пользователь может только бронировать события и отменять собственные брони.
+1. **Хеширование паролей Argon2id**:
+   - Пароли пользователей защищены с помощью криптографического алгоритма **Argon2id** (OWASP recommendation) со случайной солью и безопасным PHC-форматом. При логине выполняется автоматический рехешинг устаревших SHA-256 паролей.
 
-> ⚠️ **Важно:** Пользователь может отменить только свою бронь; администратор — любую.
+2. **Безопасные сессии (HttpOnly Cookies) и Refresh Token Rotation (RTR)**:
+   - При успешном логине (`POST /v1/auth/login`) сервер выпускает пару защищённых кук:
+     - `access_token`: короткоживущий JWT (15 минут), `HttpOnly`, `SameSite=Lax`.
+     - `refresh_token`: долгоживущий токен (30 дней), изолированный путём `Path=/api/v1/auth` (или `/v1/auth`).
+   - Механизм ротации: при вызове `POST /v1/auth/refresh` старый токен аннулируется и выпускается новый. При попытке повторного использования старого токена (Reuse Detection) система немедленно отзывает все активные сессии скомпрометированного пользователя.
 
-| Эндпоинт (Метод API)         | Роль: Гость (Без токена) | Роль: User                         | Роль: Admin |
-| :--------------------------- | :----------------------- | :--------------------------------- | :---------- |
-| **POST `/auth/register`**    | ✅ Доступно              | ✅ Доступно                        | ✅ Доступно |
-| **POST `/auth/login`**       | ✅ Доступно              | ✅ Доступно                        | ✅ Доступно |
-| **POST `/events/{id}/book`** | ❌ Запрещено (401)       | ✅ Доступно                        | ✅ Доступно |
-| **POST `/events/`**          | ❌ Запрещено (401)       | ❌ Запрещено (403)                 | ✅ Доступно |
-| **PUT `/events/{id}`**       | ❌ Запрещено (401)       | ❌ Запрещено (403)                 | ✅ Доступно |
-| **DELETE `/events/{id}`**    | ❌ Запрещено (401)       | ❌ Запрещено (403)                 | ✅ Доступно |
-| **GET `/bookings/{id}`**     | ❌ Запрещено (401)       | ✅ Доступно                        | ✅ Доступно |
-| **DELETE `/bookings/{id}`**  | ❌ Запрещено (401)       | ❌ Чужая бронь<br> Запрещено (403) | ✅ Доступно |
+3. **BFF Transform на API Gateway**:
+   - API Gateway перехватывает cookie `access_token` и автоматически трансформирует её в HTTP-заголовок `Authorization: Bearer <token>` при отправке запросов во внутреннюю сеть.
+   - Внутренние микросервисы (`Events.Api`, `Bookings.Api`) остаются классическими REST API с JWT-авторизацией.
 
-> ⚠️ **Важно:** В микросервисной среде параметры Jwt:SecretKey, Jwt:Issuer и Jwt:Audience должны быть синхронизированы в appsettings.json во всех трех сервисах.
+4. **Защита от брутфорса (Rate Limiting)**:
+   - На маршрутах авторизации (`/v1/auth/*`) включена скользящая политика ограничения частоты запросов: максимум 10 запросов в минуту на IP-адрес. При превышении возвращается `HTTP 429 Too Many Requests`.
 
-### Получение JWT-токена через Swagger
+### Таблица прав доступа к API
 
-1. Необходимо пройти регистрацию `/auth/register` с указанием логина и пароля.
-2. Пройти Авторизацию `/auth/login` c указанием ранее введенного логина и пароля, в ответ при успешной авторизации будет отпавлен токен.
-3. В Swagger нажать кнопку "Authorize" и в поле `value` указать этот токен, далее подтвердить нажатием кнопки "Authorize".
+| Эндпоинт (Метод API)            | Роль: Гость (Без токена) | Роль: User                         | Роль: Admin |
+| :------------------------------ | :----------------------- | :--------------------------------- | :---------- |
+| **POST `/v1/auth/register`**    | ✅ Доступно              | ✅ Доступно                        | ✅ Доступно |
+| **POST `/v1/auth/login`**       | ✅ Доступно              | ✅ Доступно                        | ✅ Доступно |
+| **POST `/v1/auth/refresh`**     | ✅ Доступно (по cookie)  | ✅ Доступно                        | ✅ Доступно |
+| **POST `/v1/auth/logout`**      | ❌ Запрещено (401)       | ✅ Доступно                        | ✅ Доступно |
+| **GET `/v1/users/me`**          | ❌ Запрещено (401)       | ✅ Доступно                        | ✅ Доступно |
+| **GET `/v1/events`**            | ✅ Доступно              | ✅ Доступно                        | ✅ Доступно |
+| **GET `/v1/events/{id}`**       | ✅ Доступно              | ✅ Доступно                        | ✅ Доступно |
+| **GET `/v1/events/top`**        | ✅ Доступно              | ✅ Доступно                        | ✅ Доступно |
+| **POST `/v1/events/{id}/book`** | ❌ Запрещено (401)       | ✅ Доступно                        | ✅ Доступно |
+| **POST `/v1/events`**           | ❌ Запрещено (401)       | ❌ Запрещено (403)                 | ✅ Доступно |
+| **PUT `/v1/events/{id}`**       | ❌ Запрещено (401)       | ❌ Запрещено (403)                 | ✅ Доступно |
+| **DELETE `/v1/events/{id}`**    | ❌ Запрещено (401)       | ❌ Запрещено (403)                 | ✅ Доступно |
+| **GET `/v1/bookings/{id}`**     | ❌ Запрещено (401)       | ✅ Доступно                        | ✅ Доступно |
+| **DELETE `/v1/bookings/{id}`**  | ❌ Запрещено (401)       | ❌ Чужая бронь<br> Запрещено (403) | ✅ Доступно |
+
+> ⚠️ **Важно:** Пользователь может отменить только свою бронь; администратор — любую бронь.
+
+### Авторизация в Swagger UI и Scalar UI
+
+1. Зарегистрируйтесь через эндпоинт `POST /v1/auth/register` (логин и пароль).
+2. Выполните вход через `POST /v1/auth/login`. В Swagger UI и Scalar UI куки `access_token` сохраняются браузером автоматически благодаря `EnablePersistAuthorization` и `EnablePersistentAuthentication`.
+3. Также можно скопировать полученный JWT-токен и авторизоваться через кнопку **Authorize** (схема `Bearer`).
 
 ### Настройки JWT-токена в конфигурации
 
@@ -308,8 +334,8 @@ dotnet test --logger "console;verbosity=detailed"
 
 ### Используемый стек
 
-- **OpenTelemetry (.NET OTel SDK):** Встроен в каждый микросервис (`Users`, `Events`, `Bookings`). Автоматически собирает структурированные логи, рантайм-метрики (GC, ThreadPool, CPU) и распределенные трассировки (HTTP-запросы, Entity Framework Core, HttpClient).
-- **Prometheus:** Выступает в роли Time Series Database (TSDB). Периодически собирает (скрапит) метрики с эндпоинтов `/metrics` микросервисов для последующего анализа.
+- **OpenTelemetry (.NET OTel SDK):** Встроен в API Gateway (`gateway-service`) и каждый микросервис (`users-service`, `events-service`, `bookings-service`). Автоматически собирает структурированные логи, рантайм-метрики (GC, ThreadPool, CPU) и распределенные трассировки (HTTP-запросы, Entity Framework Core, HttpClient, YARP ReverseProxy).
+- **Prometheus:** Выступает в роли Time Series Database (TSDB). Периодически собирает (скрапит) метрики с эндпоинтов `/metrics` микросервисов и шлюза для последующего анализа.
 - **Jaeger:** Система распределенной трассировки. Позволяет отследить полный жизненный цикл запроса, проходящего через несколько сервисов, CQRS/MediatR пайплайны и обращения к базе данных PostgreSQL.
 - **Grafana:** Единый интерфейс для визуализации. Содержит дашборды для мониторинга потребления ресурсов (Memory, CPU), работы сборщика мусора (.NET GC) и интенсивности HTTP-трафика.
 
@@ -325,7 +351,7 @@ dotnet test --logger "console;verbosity=detailed"
 
 ### Ключевые отслеживаемые метрики
 
-В проекте настроен кастомный дашборд (".NET dashboard"), который позволяет фильтровать метрики в разрезе каждого микросервиса (`bookings-service`, `events-service`, `users-service`). Основные панели мониторинга включают:
+В проекте настроен кастомный дашборд (".NET dashboard"), который позволяет фильтровать метрики в разрезе каждого микросервиса (`gateway-service`, `bookings-service`, `events-service`, `users-service`). Основные панели мониторинга включают:
 
 **HTTP и Web API:**
 
@@ -344,26 +370,32 @@ dotnet test --logger "console;verbosity=detailed"
 
 ## 🚀 API Эндпоинты
 
-| Метод      | Путь                | Описание                     | Параметры (Query)                                                                                                                                                                            | Ответы        |
-| :--------- | :------------------ | :--------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------ |
-| **GET**    | `/events`           | Получение списка событий     | `Page` (номер страницы, **default: 1**),<br> `PageSize` (количество элементов на странице, **default: 10**),<br> `From` (мин. дата),<br> `To` (макс. дата),<br> `Title` (фильтр по названию) | 200           |
-| **GET**    | `/events/{id}`      | Получение события по ID      | `id` (GUID события)                                                                                                                                                                          | 200, 404      |
-| **GET**    | `/events/top`       | Получение популярных событий |                                                                                                                                                                                              | 200           |
-| **POST**   | `/events`           | Создание нового события      | `body` (JSON: Title, Description, StartAt, EndAt)                                                                                                                                            | 201, 400      |
-| **POST**   | `/events/{id}/book` | Создание брони для события   | `id` (GUID события)                                                                                                                                                                          | 202, 404, 409 |
-| **PUT**    | `/events/{id}`      | Обновление события           | `id` (GUID события),<br> `body` (JSON: Title, Description, StartAt, EndAt)                                                                                                                   | 204, 400, 404 |
-| **DELETE** | `/events/{id}`      | Удаление события             | `id` (GUID события)                                                                                                                                                                          | 204, 404      |
-| **GET**    | `/bookings/{id}`    | Получение брони по ID        | `id` (GUID брони)                                                                                                                                                                            | 200, 404      |
+Все вызовы API выполняются через API Gateway по адресу `http://localhost:5000/v1/...`:
 
-**Примечание по бронированию**: Метод `POST /events/{id}/book` возвращает статус `1`202 Accepted`. Это означает, что бронь принята в очередь и будет обработана фоновым сервисом асинхронно.
+| Метод      | Путь                   | Описание                      | Параметры (Query / Body)                                                                                                                                                                     | Ответы        |
+| :--------- | :--------------------- | :---------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------ |
+| **GET**    | `/v1/events`           | Получение списка событий      | `Page` (номер страницы, **default: 1**),<br> `PageSize` (количество элементов на странице, **default: 10**),<br> `From` (мин. дата),<br> `To` (макс. дата),<br> `Title` (фильтр по названию) | 200           |
+| **GET**    | `/v1/events/{id}`      | Получение события по ID       | `id` (GUID события)                                                                                                                                                                          | 200, 404      |
+| **GET**    | `/v1/events/top`       | Получение популярных событий  |                                                                                                                                                                                              | 200           |
+| **POST**   | `/v1/events`           | Создание нового события       | `body` (JSON: Title, Description, StartAt, EndAt)                                                                                                                                            | 201, 400      |
+| **POST**   | `/v1/events/{id}/book` | Создание брони для события    | `id` (GUID события)                                                                                                                                                                          | 202, 404, 409 |
+| **PUT**    | `/v1/events/{id}`      | Обновление события            | `id` (GUID события),<br> `body` (JSON: Title, Description, StartAt, EndAt)                                                                                                                   | 204, 400, 404 |
+| **DELETE** | `/v1/events/{id}`      | Удаление события              | `id` (GUID события)                                                                                                                                                                          | 204, 404      |
+| **GET**    | `/v1/bookings/{id}`    | Получение брони по ID         | `id` (GUID брони)                                                                                                                                                                            | 200, 404      |
+| **DELETE** | `/v1/bookings/{id}`    | Отмена бронирования           | `id` (GUID брони)                                                                                                                                                                            | 204, 403, 404 |
+| **POST**   | `/v1/auth/register`    | Регистрация пользователя      | `body` (JSON: userName, email, password)                                                                                                                                                     | 204, 400      |
+| **POST**   | `/v1/auth/login`       | Авторизация и выпуск Cookies  | `body` (JSON: userName, password)                                                                                                                                                            | 200, 400, 404 |
+| **POST**   | `/v1/auth/refresh`     | Ротация токенов (RTR)         | Передаётся cookie `refresh_token`                                                                                                                                                            | 204, 401      |
+| **POST**   | `/v1/auth/logout`      | Отзыв сессии и очистка кук    | Передаётся cookie `refresh_token`                                                                                                                                                            | 204           |
+| **GET**    | `/v1/users/me`         | Профиль текущего пользователя | Требует авторизации (передаётся cookie `access_token` или `Bearer`)                                                                                                                          | 200, 401      |
 
-### Пример запроса **<code>GET /events</code>** с пагинацией и фильтрами
+**Примечание по бронированию**: Метод `POST /v1/events/{id}/book` возвращает статус `202 Accepted`. Это означает, что бронь принята в очередь и будет обработана фоновым сервисом асинхронно через Kafka.
 
-Для получения первой страницы событий с даты 2026-05-25 по 2026-05-25, заголовком "C# Event 11", описанием "Ежегодная встреча разработчиков", с 10 элементами на странице:
+### Пример запроса **<code>GET /v1/events</code>** с пагинацией и фильтрами
 
 ```curl
 curl -X 'GET' \
-  'https://localhost:7111/Events?Title=C%23%20Event%2011&From=2026-05-25&To=2026-05-25&Page=1&PageSize=10' \
+  'http://localhost:5000/v1/Events?Title=C%23%20Event%2011&From=2026-05-25&To=2026-05-25&Page=1&PageSize=10' \
   -H 'accept: application/json'
 ```
 
@@ -371,28 +403,29 @@ curl -X 'GET' \
 
 ```json
 {
-  "totalEvents": 1,
-  "events": [
+  "totalCount": 1,
+  "items": [
     {
       "id": "c132de70-de3c-42a5-9576-d9bc4c69421e",
       "title": "C# Event 11",
       "description": "Ежегодная встреча разработчиков",
-      "startAt": "2026-05-25T11:00:00",
-      "endAt": "2026-05-25T18:00:00"
+      "startAt": "2026-05-25T11:00:00Z",
+      "endAt": "2026-05-25T18:00:00Z",
+      "totalSeats": 100,
+      "availableSeats": 99
     }
   ],
   "currentPage": 1,
-  "pageSize": 10
+  "pageSize": 10,
+  "totalPages": 1
 }
 ```
 
-### Пример запроса **<code>GET /events/\{id\}</code>** для получения события по ID
-
-Для получения события с ID "c132de70-de3c-42a5-9576-d9bc4c69421e":
+### Пример запроса **<code>GET /v1/events/{id}</code>** для получения события по ID
 
 ```curl
 curl -X 'GET' \
-  'https://localhost:7111/Events/c132de70-de3c-42a5-9576-d9bc4c69421e' \
+  'http://localhost:5000/v1/Events/c132de70-de3c-42a5-9576-d9bc4c69421e' \
   -H 'accept: application/json'
 ```
 
@@ -403,53 +436,37 @@ curl -X 'GET' \
   "id": "c132de70-de3c-42a5-9576-d9bc4c69421e",
   "title": "C# Event 11",
   "description": "Ежегодная встреча разработчиков",
-  "startAt": "2026-05-25T11:00:00",
-  "endAt": "2026-05-25T18:00:00",
-  "totalSeats": 1,
-  "availableSeats": 1
+  "startAt": "2026-05-25T11:00:00Z",
+  "endAt": "2026-05-25T18:00:00Z",
+  "totalSeats": 100,
+  "availableSeats": 99
 }
 ```
 
-### Пример запроса **<code>POST /events</code>** для создания нового события
-
-Для создания нового cобытия (Event) :
+### Пример запроса **<code>POST /v1/events</code>** для создания нового события
 
 ```curl
 curl -X 'POST' \
-  'https://localhost:7111/Events' \
+  'http://localhost:5000/v1/Events' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer <Admin_JWT_Token>' \
   -d '{
   "title": "C# Event 11",
   "description": "Ежегодная встреча разработчиков",
-  "startAt": "2026-05-25T11:00:00",
-  "endAt": "2026-05-25T18:00:00",
-  "totalSeats": 1
+  "startAt": "2026-05-25T11:00:00Z",
+  "endAt": "2026-05-25T18:00:00Z",
+  "totalSeats": 100
 }'
 ```
 
-**Пример тела ответа:**
-
-```json
-{
-  "id": "c132de70-de3c-42a5-9576-d9bc4c69421e",
-  "title": "C# Event 11",
-  "description": "Ежегодная встреча разработчиков",
-  "startAt": "2026-05-25T11:00:00",
-  "endAt": "2026-05-25T18:00:00",
-  "totalSeats": 1,
-  "availableSeats": 1
-}
-```
-
-### Пример запроса **<code>POST /events/\{id\}/book</code>** для создания новой брони для события
-
-Для создания новой брони (Booking) для cобытия (Event) c ID "008f5339-61a6-4e28-bc6d-b374e2027aca":
+### Пример запроса **<code>POST /v1/events/{id}/book</code>** для создания брони
 
 ```curl
 curl -X 'POST' \
-  'https://localhost:7111/Events/008f5339-61a6-4e28-bc6d-b374e2027aca/book' \
+  'http://localhost:5000/v1/Events/008f5339-61a6-4e28-bc6d-b374e2027aca/book' \
   -H 'accept: application/json' \
+  -b /tmp/cookies.txt \
   -d ''
 ```
 
@@ -460,102 +477,51 @@ curl -X 'POST' \
   "id": "14366ee8-b70b-47c9-b408-a708f5863149",
   "eventId": "008f5339-61a6-4e28-bc6d-b374e2027aca",
   "status": "Pending",
-  "createdAt": "2026-04-27T14:50:01.8614202+05:00",
+  "createdAt": "2026-04-27T14:50:01.8614202Z",
   "processedAt": null
 }
 ```
 
-### Пример запроса **<code>PUT /events/\{id\}</code>** для обновления события
-
-Для обновления cобытия с ID "c132de70-de3c-42a5-9576-d9bc4c69421e":
-
-```curl
-curl -X 'PUT' \
-  'https://localhost:7111/Events/c132de70-de3c-42a5-9576-d9bc4c69421e' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -d '{
-  "title": "Updated C# Event 11",
-  "description": "Updated Ежегодная встреча разработчиков",
-  "startAt": "2026-06-20T15:00:00",
-  "endAt": "2026-06-20T20:00:00"
-}'
-```
-
-**Ответ: 204 No Content (без тела)**
-
-### Пример запроса **<code>DELETE /events/\{id\}</code>** для удаления события
-
-Для удаления cобытия с ID "c132de70-de3c-42a5-9576-d9bc4c69421e":
-
-```curl
-curl -X 'DELETE' \
-  'https://localhost:7111/Events/c132de70-de3c-42a5-9576-d9bc4c69421e' \
-  -H 'accept: application/json'
-```
-
-**Ответ: 204 No Content (без тела)**
-
-### Пример запроса **<code>GET /bookings/\{id\}</code>** для получения брони по ID
-
-Для получения брони с ID "14366ee8-b70b-47c9-b408-a708f5863149":
+### Пример запроса **<code>GET /v1/bookings/{id}</code>** для получения брони по ID
 
 ```curl
 curl -X 'GET' \
-  'https://localhost:7111/Bookings/14366ee8-b70b-47c9-b408-a708f5863149' \
-  -H 'accept: application/json'
+  'http://localhost:5000/v1/Bookings/14366ee8-b70b-47c9-b408-a708f5863149' \
+  -H 'accept: application/json' \
+  -b /tmp/cookies.txt
 ```
 
-**Пример тела ответа:**
-
-```json
-{
-  "id": "14366ee8-b70b-47c9-b408-a708f5863149",
-  "eventId": "008f5339-61a6-4e28-bc6d-b374e2027aca",
-  "status": "Confirmed",
-  "createdAt": "2026-04-27T14:50:01.8614202+05:00",
-  "processedAt": "2026-04-27T14:50:09.5672134+05:00"
-}
-```
-
-### Пример запроса **<code>POST /auth/register</code>** для регистрации
-
-Для создания пользователя, указываем логин и пароль (Role по умолчанию User):
-Можно передать "role": "Admin"
+### Пример запроса **<code>POST /v1/auth/register</code>** для регистрации
 
 ```curl
 curl -X 'POST' \
-  'https://localhost:7111/Auth/register' \
+  'http://localhost:5000/v1/auth/register' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
   -d '{
   "userName": "UserName1",
-  "password": "123"
+  "email": "user1@example.com",
+  "password": "Password123!"
 }'
 ```
 
-**В ответ 204 No Content**
+**Ответ: 204 No Content**
 
-### Пример запроса **<code>POST /auth/login</code>** для авторизации
-
-Для авторизации указываем логин и пароль из регистрации:
+### Пример запроса **<code>POST /v1/auth/login</code>** для авторизации
 
 ```curl
-curl -X 'POST' \
-  'https://localhost:7111/Auth/login' \
+curl -i -X 'POST' \
+  'http://localhost:5000/v1/auth/login' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
+  -c /tmp/cookies.txt \
   -d '{
   "userName": "UserName1",
-  "password": "123"
+  "password": "Password123!"
 }'
 ```
 
-**Пример тела ответа содержащий JWT-токен:**
-
-```json
-"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IlVzZXJOYW1lMSIsImFkbWluIjpmYWxzZSwiaWF0IjoxNTE2MjM5MDIyfQ.eJvviYuixQdiv8K6nVL9KROsobF6AuqROwlUgeeLFAw"
-```
+**Ответ:** `200 OK`, возвращает профиль пользователя в теле и выставляет `Set-Cookie` для `access_token` и `refresh_token`.
 
 ---
 
@@ -668,22 +634,30 @@ _Правила для формирования запроса на создан
 
 План развития общесистемной архитектуры, сетевого контура и безопасности:
 
-- [ ] **Этап 1. Единый API Gateway (YARP) и безопасные сессии (BFF / HttpOnly / Refresh Token)**:
+- [x] **Этап 1. Единый API Gateway (YARP), BFF (HttpOnly / Refresh Token) и витрина документации**:
   - **Шлюз YARP Gateway (`Gateway.Api` на .NET 10)**:
-    - Развертывание нового проекта шлюза на порту `5000` (единая точка входа для всех API-запросов к платформе).
-    - Маршрутизация префиксов:
-      - `/api/users/*` и `/api/auth/*` $\to$ `Users.Api` (`:5003`)
-      - `/api/events/*` $\to$ `Events.Api` (`:5004`)
-      - `/api/bookings/*` $\to$ `Bookings.Api` (`:5005`)
-    - Централизация политик CORS для локальной разработки (`http://localhost:5173`) с поддержкой `AllowCredentials`.
-    - **BFF Cookie-to-Bearer Transform**: шлюз перехватывает защищенную куку `access_token` и автоматически добавляет заголовок `Authorization: Bearer <jwt>` во внутренние запросы к микросервисам (`Events` и `Bookings` остаются чистыми REST API с JWT-авторизацией).
+    - Развёрнут шлюз на порту `5000` (единая точка входа для всех API-запросов к платформе и документации).
+    - Маршрутизация версионированных префиксов:
+      - `/{version}/users/*` и `/{version}/auth/*` $\to$ `Users.Api`
+      - `/{version}/events/*` $\to$ `Events.Api`
+      - `/{version}/bookings/*` $\to$ `Bookings.Api`
+      - `/openapi/{service}/*` $\to$ проксирование OpenAPI-схем в микросервисы
+    - **Интерактивная витрина документации**: Scalar UI (`/docs`) и Swagger UI (`/swagger`) с переключением версий и схем.
+    - **Startup-валидация**: фоновый сервис `OpenApiDocsValidator` с автоматической проверкой доступности спецификаций при старте.
+    - **BFF Cookie-to-Bearer Transform**: шлюз перехватывает защищённую куку `access_token` и автоматически добавляет заголовок `Authorization: Bearer <jwt>` во внутренние запросы к микросервисам.
+    - **Rate Limiting**: скользящее ограничение 10 req/min на эндпоинты авторизации (`/v1/auth/*`) с возвратом HTTP 429.
+    - **Централизация CORS**: доверенный источник `http://localhost:5173` с `AllowCredentials`.
+    - **Observability**: OpenTelemetry 1.19.1 (Jaeger трассировка YARP, Prometheus метрики `/metrics`, структурированные логи Serilog).
   - **Доработки Users Service**:
-    - Реализация эндпоинта сессии **`GET /users/me`** (`[Authorize]`) для возврата профиля и роли текущего пользователя (`id`, `userName`, `role`).
-    - Полноценная поддержка **Refresh Token**:
-      - Создание сущности и таблицы `RefreshTokens` в PostgreSQL (`coreevents-users`).
-      - Механизм ротации токенов (Refresh Token Rotation — RTR) и отзыв скомпрометированных сессий при повторном использовании токена.
-      - Эндпоинты `POST /auth/refresh` и `POST /auth/logout`.
-      - Выпуск токенов в `HttpOnly, Secure, SameSite` Cookies (`access_token`: 15 мин, `refresh_token`: 30 дней с изоляцией `Path=/api/auth`).
+    - Хеширование паролей Argon2id и авто-рехешинг при логине.
+    - Эндпоинт сессии **`GET /v1/users/me`** (`[Authorize]`) для возврата профиля и роли текущего пользователя.
+    - Полноценная поддержка **Refresh Token Rotation (RTR)**:
+      - Сущность и таблица `RefreshTokens` в PostgreSQL (`coreevents-users`).
+      - Отзыв скомпрометированных сессий при повторном использовании токена (Reuse Detection).
+      - Эндпоинты `POST /v1/auth/refresh` и `POST /v1/auth/logout`.
+      - Выпуск токенов в `HttpOnly, SameSite=Lax` Cookies (`access_token`: 15 мин, `refresh_token`: 30 дней с изоляцией пути).
+  - **Интеграция с React SPA**:
+    - Перевод клиентов фронтенда на работу через шлюз по единому адресу `VITE_API_URL=http://localhost:5000/v1`.
 - [ ] **Этап 2. Внешний контур и безопасность: Nginx TLS Reverse Proxy**:
   - Развертывание **Nginx** на внешнем периметре (порты `80` / `443`).
   - Терминация SSL/TLS сертификатов (HTTPS) и поддержка протокола HTTP/2.
