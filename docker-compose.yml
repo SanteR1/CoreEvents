@@ -256,10 +256,10 @@ services:
       dockerfile: Gateway/Gateway.Api/Dockerfile
     container_name: coreevents-gateway-api
     ports:
-      - "5000:8080"
+      - "5000:5000"
     environment:
       ASPNETCORE_ENVIRONMENT: Development
-      ASPNETCORE_HTTP_PORTS: 8080
+      ASPNETCORE_HTTP_PORTS: 5000
       ReverseProxy__Clusters__users-cluster__Destinations__destination1__Address: http://users.api:8080
       ReverseProxy__Clusters__events-cluster__Destinations__destination1__Address: http://events.api:8080
       ReverseProxy__Clusters__bookings-cluster__Destinations__destination1__Address: http://bookings.api:8080

@@ -58,12 +58,32 @@
       }
     }
   },
-  // Открываем порты Web API, Kafka UI или Grafana наружу,
-  // чтобы они пробрасывались через SSH на ваш основной ПК
+  // Открываем порты наружу (нативные сервисы Docker Compose и dev-окружения)
   "forwardPorts": [
-    5001, 5003, 5004, 5005, 5173, 5433, 5434, 5435, 6379, 9090, 16686, 3000,
-    8090
+    "coreevents-gateway-api:5000",
+    "coreevents-grafana:3000",
+    "coreevents-jaeger:16686",
+    "coreevents-prometheus:9090",
+    5173
   ],
+  "portsAttributes": {
+    "coreevents-gateway-api:5000": {
+      "label": "API Gateway (Swagger & Scalar)",
+      "onAutoForward": "openBrowser"
+    },
+    "coreevents-grafana:3000": {
+      "label": "Grafana Dashboards"
+    },
+    "coreevents-jaeger:16686": {
+      "label": "Jaeger Tracing"
+    },
+    "coreevents-prometheus:9090": {
+      "label": "Prometheus Metrics"
+    },
+    "5173": {
+      "label": "React Web Frontend"
+    }
+  },
   "remoteUser": "vscode",
   // Автоматическая установка зависимостей при сборке контейнера
   "postCreateCommand": "dotnet restore CoreEvents.slnx && cd Frontend/react-web && npm install --legacy-peer-deps"
