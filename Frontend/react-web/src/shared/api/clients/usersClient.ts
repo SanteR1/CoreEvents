@@ -3,7 +3,10 @@ import type { paths } from '@/shared/api/generated/users'; // Путь к сге
 import { getToken } from '@/shared/lib/auth/sessionStore';
 
 const USERS_API_URL: string =
-  (import.meta.env.VITE_USERS_API_URL as string | undefined) ?? 'http://localhost:5003';
+  (import.meta.env.VITE_API_URL as string | undefined) ??
+  (import.meta.env.VITE_API_GATEWAY_URL as string | undefined) ??
+  (import.meta.env.VITE_USERS_API_URL as string | undefined) ??
+  'http://localhost:5000/v1';
 
 export const usersClient = createClient<paths>({
   baseUrl: USERS_API_URL,

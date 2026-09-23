@@ -3,7 +3,10 @@ import type { paths } from '@/shared/api/generated/events'; // Путь к сг�
 import { getToken } from '@/shared/lib/auth/sessionStore';
 
 const EVENTS_API_URL: string =
-  (import.meta.env.VITE_EVENTS_API_URL as string | undefined) ?? 'http://localhost:5004';
+  (import.meta.env.VITE_API_URL as string | undefined) ??
+  (import.meta.env.VITE_API_GATEWAY_URL as string | undefined) ??
+  (import.meta.env.VITE_EVENTS_API_URL as string | undefined) ??
+  'http://localhost:5000/v1';
 
 export const eventsClient = createClient<paths>({
   baseUrl: EVENTS_API_URL,
