@@ -24,3 +24,19 @@ scrape_configs:
     static_configs:
       - targets: ["gateway.api:5000"]
     metrics_path: /metrics
+    metric_relabel_configs:
+      # Нормализация YARP-роутов с regex в человекочитаемый вид (/v1/events, /v1/auth, ...)
+      - source_labels: [http_route]
+        regex: '^/\{version.*?\}/([^/]+).*$'
+        target_label: http_route
+        replacement: "/v1/${1}"
+      # Нормализация путей OpenAPI (/openapi/events, ...)
+      - source_labels: [http_route]
+        regex: "^/openapi/([^/]+).*$"
+        target_label: http_route
+        replacement: "/openapi/${1}"
+      # Нормализация fallback-роута /api
+      - source_labels: [http_route]
+        regex: '^/api/\{.*\}$'
+        target_label: http_route
+        replacement: "/api"
