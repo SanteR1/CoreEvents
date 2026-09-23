@@ -9,7 +9,7 @@ scrape_configs:
     static_configs:
       - targets: ["events.api:8080"]
     metrics_path: /metrics
-      
+
   - job_name: bookings-service
     static_configs:
       - targets: ["bookings.api:8080"]
@@ -18,4 +18,9 @@ scrape_configs:
   - job_name: users-service
     static_configs:
       - targets: ["users.api:8080"]
+    metrics_path: /metrics
+
+  - job_name: gateway-service
+    static_configs:
+      - targets: ["gateway.api:8080"]
     metrics_path: /metrics
