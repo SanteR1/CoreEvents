@@ -71,6 +71,8 @@ services:
       - "4317:4317" # OTLP gRPC
     environment:
       COLLECTOR_OTLP_ENABLED: "true"
+      # Отключение self-tracing Jaeger
+      OTEL_TRACES_SAMPLER: "always_off"
   grafana:
     image: grafana/grafana:13.2.0
     container_name: coreevents-grafana
