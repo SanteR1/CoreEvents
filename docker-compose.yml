@@ -271,6 +271,7 @@ services:
       - users.api
       - events.api
       - bookings.api
+      - jaeger
     volumes:
       - ./logs/gateway-api:/var/log/gateway-api
   dev-env:
