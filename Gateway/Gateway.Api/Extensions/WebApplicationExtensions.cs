@@ -25,8 +25,10 @@ public static class WebApplicationExtensions
             for (var i = 0; i < openApiDocs.Count; i++)
             {
                 var doc = openApiDocs[i];
-                options.AddDocument(doc.Key, doc.Url, isDefault: i == 0);
+                var relativeUrl = doc.Url.StartsWith('/') ? $"..{doc.Url}" : doc.Url;
+                options.AddDocument(doc.Key, doc.Title, relativeUrl, isDefault: i == 0);
             }
+            options.WithBaseServerUrl("/");
             options.EnablePersistentAuthentication();
             options.AddPreferredSecuritySchemes("Bearer");
         });

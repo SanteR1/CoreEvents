@@ -24,6 +24,8 @@ public class DocumentationTests
         docsResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var docsContent = await docsResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         docsContent.Should().Contain("scalar");
+        docsContent.Should().Contain("\"title\":\"Users API v1\"");
+        docsContent.Should().Contain("\"url\":\"../openapi/users/v1.json\"");
     }
 
     [Fact]

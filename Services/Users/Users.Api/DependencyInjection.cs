@@ -42,6 +42,7 @@ public static class DependencyInjection
                 {
                     options.Document.AddDocumentTransformer((document, context, cancellationToken) =>
                     {
+                        document.Servers = [new OpenApiServer { Url = "/" }];
                         document.Components ??= new OpenApiComponents();
                         document.Components.SecuritySchemes ??= new Dictionary<string, IOpenApiSecurityScheme>();
                         document.Components.SecuritySchemes[JwtBearerDefaults.AuthenticationScheme] = new OpenApiSecurityScheme
