@@ -92,10 +92,7 @@ internal class UserService : IAuthService
         }
 
         if (existingToken.IsExpired)
-        {
-            if (existingToken.IsExpired)
-                throw new InvalidCredentialsException();
-        }
+            throw new InvalidCredentialsException();
 
         var user = await _userRepository.GetByIdAsync(existingToken.UserId, ct);
         if (user == null)
