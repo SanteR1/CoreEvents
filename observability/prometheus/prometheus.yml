@@ -96,8 +96,3 @@ scrape_configs:
         regex: '^/docs/\{.*$'
         target_label: http_route
         replacement: "/docs"
-      # Нормализация fallback-роута /api
-      - source_labels: [http_route]
-        regex: '^/api/\{.*\}$'
-        target_label: http_route
-        replacement: "/api"
