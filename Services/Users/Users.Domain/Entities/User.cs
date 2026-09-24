@@ -42,4 +42,12 @@ public class User
             Role = userRole
         };
     }
+
+    public void UpdatePasswordHash(string newPasswordHash)
+    {
+        if (string.IsNullOrWhiteSpace(newPasswordHash))
+            throw new ValidationException(nameof(newPasswordHash), "Хеш пароля не может быть пустым.");
+
+        PasswordHash = newPasswordHash;
+    }
 }

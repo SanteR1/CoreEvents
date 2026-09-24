@@ -119,6 +119,8 @@ describe('OpenAPI Clients onRequest interceptors', () => {
 
     it('falls back to default URL when env variable is missing', async () => {
       vi.resetModules();
+      vi.stubEnv('VITE_API_URL', undefined);
+      vi.stubEnv('VITE_API_GATEWAY_URL', undefined);
       vi.stubEnv('VITE_USERS_API_URL', undefined);
       vi.stubEnv('VITE_EVENTS_API_URL', undefined);
       vi.stubEnv('VITE_BOOKINGS_API_URL', undefined);
@@ -130,6 +132,25 @@ describe('OpenAPI Clients onRequest interceptors', () => {
       expect(isolatedUsers).toBeDefined();
       expect(isolatedEvents).toBeDefined();
       expect(isolatedBookings).toBeDefined();
+      vi.unstubAllEnvs();
+      vi.resetModules();
+    });
+
+    it('uses VITE_API_URL as the gateway base URL', async () => {
+      vi.resetModules();
+      vi.stubEnv('VITE_API_URL', 'http://custom-gateway:5000/v1');
+      vi.stubEnv('VITE_API_GATEWAY_URL', undefined);
+      vi.stubEnv('VITE_USERS_API_URL', undefined);
+      vi.stubEnv('VITE_EVENTS_API_URL', undefined);
+      vi.stubEnv('VITE_BOOKINGS_API_URL', undefined);
+
+      const { eventsClient: isolatedEvents } = await import('../eventsClient');
+
+      await isolatedEvents.GET('/Events', { fetch: mockFetch });
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      const request = mockFetch.mock.calls[0][0] as Request;
+      expect(request.url).toBe('http://custom-gateway:5000/v1/Events');
+
       vi.unstubAllEnvs();
       vi.resetModules();
     });

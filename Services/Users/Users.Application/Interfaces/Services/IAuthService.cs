@@ -4,6 +4,8 @@ namespace Users.Application.Interfaces.Services;
 
 public interface IAuthService
 {
-    Task<string> RegisterAsync(UserRegisterDto userRequestDto, CancellationToken ct = default);
-    Task<string> LoginAsync(UserLoginDto userLoginDto, CancellationToken ct = default);
+    Task RegisterAsync(UserRegisterDto userRequestDto, CancellationToken ct = default);
+    Task<AuthResultDto> LoginAsync(UserLoginDto userLoginDto, CancellationToken ct = default);
+    Task<AuthResultDto> RefreshSessionAsync(string rawRefreshToken, CancellationToken ct = default);
+    Task RevokeSessionAsync(string rawRefreshToken, CancellationToken ct = default);
 }

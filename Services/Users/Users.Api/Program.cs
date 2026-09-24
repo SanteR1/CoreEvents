@@ -1,3 +1,4 @@
+using Scalar.AspNetCore;
 using Serilog;
 using Serilog.Events;
 using Serilog.Formatting.Compact;
@@ -14,17 +15,6 @@ try
     Log.Information("Starting Users.Api service");
 
     var builder = WebApplication.CreateBuilder(args);
-
-    builder.Services.AddCors(options =>
-    {
-        options.AddPolicy("AllowFrontend", policy =>
-        {
-            policy.WithOrigins("http://localhost:5173")
-                  .AllowAnyHeader()
-                  .AllowAnyMethod();
-            // .AllowCredentials(); // раскомментируйте, только если будете слать credentials: 'include' (cookie)
-        });
-    });
 
     builder.AddApplicationLogging();
     builder.Services.AddApplicationTelemetry(builder.Configuration);
@@ -49,23 +39,44 @@ try
     await app.ApplyMigrationsAsync();
     await app.UseDatabaseSeedingAsync();
 
-    app.UseCors("AllowFrontend");
-
-    app.UseAuthentication();
+    app.UseForwardedHeaders();
 
     // Configure the HTTP request pipeline.
     if (app.Environment.IsDevelopment())
     {
-        app.MapOpenApi();
-        app.UseSwagger();
+        app.MapOpenApi().WithDocumentPerVersion();
+
         app.UseSwaggerUI(options =>
         {
+            var descriptions = app.DescribeApiVersions();
+            foreach (var description in descriptions)
+            {
+                var url = $"/openapi/{description.GroupName}.json";
+                var name = description.GroupName.ToUpperInvariant();
+                options.SwaggerEndpoint(url, name);
+            }
             options.EnablePersistAuthorization();
+        });
+
+        app.MapScalarApiReference(options =>
+        {
+            var descriptions = app.DescribeApiVersions();
+            for (var i = 0; i < descriptions.Count; i++)
+            {
+                var description = descriptions[i];
+                var isDefault = i == descriptions.Count - 1;
+                options.AddDocument(description.GroupName, description.GroupName, isDefault: isDefault);
+            }
+
+            // 1. Сохранять введенный токен в LocalStorage браузера при перезагрузке страницы:
+            options.EnablePersistentAuthentication();
+
+            // 2. Сделать Bearer схемой по умолчанию при открытии страницы:
+            options.AddPreferredSecuritySchemes("Bearer");
         });
     }
 
-    app.UseHttpsRedirection();
-
+    app.UseAuthentication();
     app.UseAuthorization();
 
     app.MapControllers();

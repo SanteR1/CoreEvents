@@ -25,7 +25,7 @@ public sealed class BookingControllerTests(ApiOnlyIntegrationTestFactory factory
         HttpClient.DefaultRequestHeaders.Add("X-Test-Guid", userId.ToString());
 
         // Act & Assert
-        using var responseCreate = await HttpClient.PostAsync($"/bookings/{eventExist}/book", content: null, cancellationToken: TestContext.Current.CancellationToken);
+        using var responseCreate = await HttpClient.PostAsync($"/v1/bookings/{eventExist}/book", content: null, cancellationToken: TestContext.Current.CancellationToken);
 
         responseCreate.StatusCode.Should().Be(HttpStatusCode.Accepted);
         var returnedCreate = await responseCreate.Content.ReadFromJsonAsync<BookingResponseDto>(DefaultJsonOptions, TestContext.Current.CancellationToken);
@@ -33,7 +33,7 @@ public sealed class BookingControllerTests(ApiOnlyIntegrationTestFactory factory
         returnedCreate.Should().NotBeNull();
         returnedCreate.Id.Should().NotBe(Guid.Empty);
 
-        using var response = await HttpClient.GetAsync($"/bookings/{returnedCreate.Id}", cancellationToken: TestContext.Current.CancellationToken);
+        using var response = await HttpClient.GetAsync($"/v1/bookings/{returnedCreate.Id}", cancellationToken: TestContext.Current.CancellationToken);
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var returnedBooking = await response.Content.ReadFromJsonAsync<BookingResponseDto>(DefaultJsonOptions, TestContext.Current.CancellationToken);
@@ -58,7 +58,7 @@ public sealed class BookingControllerTests(ApiOnlyIntegrationTestFactory factory
         HttpClient.DefaultRequestHeaders.Add("X-Test-Guid", ownerId.ToString());
 
         // Act & Assert
-        using HttpResponseMessage responseCreate = await HttpClient.PostAsync($"/bookings/{eventExist}/book", content: null, cancellationToken: TestContext.Current.CancellationToken);
+        using HttpResponseMessage responseCreate = await HttpClient.PostAsync($"/v1/bookings/{eventExist}/book", content: null, cancellationToken: TestContext.Current.CancellationToken);
 
         responseCreate.StatusCode.Should().Be(HttpStatusCode.Accepted);
         BookingResponseDto? returnedCreate = await responseCreate.Content.ReadFromJsonAsync<BookingResponseDto>(DefaultJsonOptions, TestContext.Current.CancellationToken);
@@ -71,7 +71,7 @@ public sealed class BookingControllerTests(ApiOnlyIntegrationTestFactory factory
         HttpClient.DefaultRequestHeaders.Add("X-Test-Role", "User");
         HttpClient.DefaultRequestHeaders.Add("X-Test-Guid", hackUserId.ToString());
 
-        using HttpResponseMessage response = await HttpClient.DeleteAsync($"/bookings/{returnedCreate.Id}", TestContext.Current.CancellationToken);
+        using HttpResponseMessage response = await HttpClient.DeleteAsync($"/v1/bookings/{returnedCreate.Id}", TestContext.Current.CancellationToken);
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
@@ -89,7 +89,7 @@ public sealed class BookingControllerTests(ApiOnlyIntegrationTestFactory factory
         HttpClient.DefaultRequestHeaders.Add("X-Test-Guid", ownerId.ToString());
 
         // Act & Assert
-        using var responseCreate = await HttpClient.PostAsync($"/bookings/{eventExist}/book", content: null, cancellationToken: TestContext.Current.CancellationToken);
+        using var responseCreate = await HttpClient.PostAsync($"/v1/bookings/{eventExist}/book", content: null, cancellationToken: TestContext.Current.CancellationToken);
 
         responseCreate.StatusCode.Should().Be(HttpStatusCode.Accepted);
         var returnedCreate = await responseCreate.Content.ReadFromJsonAsync<BookingResponseDto>(DefaultJsonOptions, TestContext.Current.CancellationToken);
@@ -102,7 +102,7 @@ public sealed class BookingControllerTests(ApiOnlyIntegrationTestFactory factory
         HttpClient.DefaultRequestHeaders.Add("X-Test-Role", "Admin");
         HttpClient.DefaultRequestHeaders.Add("X-Test-Guid", adminId.ToString());
 
-        using var response = await HttpClient.DeleteAsync($"/bookings/{returnedCreate.Id}", TestContext.Current.CancellationToken);
+        using var response = await HttpClient.DeleteAsync($"/v1/bookings/{returnedCreate.Id}", TestContext.Current.CancellationToken);
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
     }
 }

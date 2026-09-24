@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using Events.Application.DTOs;
 using Events.Application.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -5,8 +6,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Events.Api.Controllers;
 
-[Route("[controller]")]
 [ApiController]
+[ApiVersion(1.0)]
+[Route("v{version:apiVersion}/[controller]")]
 [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
 public class EventsController : ControllerBase
 {

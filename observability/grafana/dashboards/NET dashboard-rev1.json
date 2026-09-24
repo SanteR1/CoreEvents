@@ -868,9 +868,7 @@
                 "orientation": "auto",
                 "percentChangeColorMode": "standard",
                 "reduceOptions": {
-                  "calcs": [
-                    "lastNotNull"
-                  ],
+                  "calcs": ["lastNotNull"],
                   "fields": "",
                   "values": false
                 },
@@ -955,9 +953,7 @@
                 "orientation": "auto",
                 "percentChangeColorMode": "standard",
                 "reduceOptions": {
-                  "calcs": [
-                    "lastNotNull"
-                  ],
+                  "calcs": ["lastNotNull"],
                   "fields": "",
                   "values": false
                 },
@@ -1040,9 +1036,7 @@
                 "orientation": "auto",
                 "percentChangeColorMode": "standard",
                 "reduceOptions": {
-                  "calcs": [
-                    "lastNotNull"
-                  ],
+                  "calcs": ["lastNotNull"],
                   "fields": "",
                   "values": false
                 },
@@ -1229,59 +1223,10 @@
       {
         "kind": "QueryVariable",
         "spec": {
-          "name": "route",
-          "current": {
-            "text": [
-              "Auth/login",
-              "Events"
-            ],
-            "value": [
-              "Auth/login",
-              "Events"
-            ]
-          },
-          "label": "Route",
-          "hide": "dontHide",
-          "refresh": "onDashboardLoad",
-          "skipUrlSync": false,
-          "query": {
-            "kind": "DataQuery",
-            "group": "prometheus",
-            "version": "v0",
-            "datasource": {
-              "name": "PBFA97CFB590B2093"
-            },
-            "spec": {
-              "qryType": 1,
-              "query": "label_values(http_server_request_duration_seconds_count,http_route)",
-              "refId": "PrometheusVariableQueryEditor-VariableQuery"
-            }
-          },
-          "regex": "/^(?!\\/metrics$).*$/",
-          "regexApplyTo": "value",
-          "sort": "alphabeticalAsc",
-          "definition": "label_values(http_server_request_duration_seconds_count,http_route)",
-          "options": [],
-          "multi": true,
-          "includeAll": false,
-          "allowCustomValue": true
-        }
-      },
-      {
-        "kind": "QueryVariable",
-        "spec": {
           "name": "job",
           "current": {
-            "text": [
-              "bookings-service",
-              "events-service",
-              "users-service"
-            ],
-            "value": [
-              "bookings-service",
-              "events-service",
-              "users-service"
-            ]
+            "text": ["All"],
+            "value": ["$__all"]
           },
           "label": "Job",
           "hide": "dontHide",
@@ -1304,6 +1249,41 @@
           "regexApplyTo": "value",
           "sort": "alphabeticalAsc",
           "definition": "label_values(up,job)",
+          "options": [],
+          "multi": true,
+          "includeAll": true,
+          "allowCustomValue": true
+        }
+      },
+      {
+        "kind": "QueryVariable",
+        "spec": {
+          "name": "route",
+          "current": {
+            "text": ["All"],
+            "value": ["$__all"]
+          },
+          "label": "Route",
+          "hide": "dontHide",
+          "refresh": "onDashboardLoad",
+          "skipUrlSync": false,
+          "query": {
+            "kind": "DataQuery",
+            "group": "prometheus",
+            "version": "v0",
+            "datasource": {
+              "name": "PBFA97CFB590B2093"
+            },
+            "spec": {
+              "qryType": 1,
+              "query": "label_values(http_server_request_duration_seconds_count{job=~\"$job\"},http_route)",
+              "refId": "PrometheusVariableQueryEditor-VariableQuery"
+            }
+          },
+          "regex": "/^(?!\\/metrics$).*$/",
+          "regexApplyTo": "value",
+          "sort": "alphabeticalAsc",
+          "definition": "label_values(http_server_request_duration_seconds_count{job=~\"$job\"},http_route)",
           "options": [],
           "multi": true,
           "includeAll": true,

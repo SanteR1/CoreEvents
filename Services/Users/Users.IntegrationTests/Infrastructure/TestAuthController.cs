@@ -1,9 +1,11 @@
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Users.IntegrationTests.Infrastructure;
 
 [ApiController]
+[ApiVersionNeutral]
 [Route("api/test-auth")]
 public class TestAuthController : ControllerBase
 {

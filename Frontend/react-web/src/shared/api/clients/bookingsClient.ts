@@ -3,7 +3,10 @@ import type { paths } from '@/shared/api/generated/bookings'; // Путь к с�
 import { getToken } from '@/shared/lib/auth/sessionStore';
 
 const BOOKINGS_API_URL: string =
-  (import.meta.env.VITE_BOOKINGS_API_URL as string | undefined) ?? 'http://localhost:5005';
+  (import.meta.env.VITE_API_URL as string | undefined) ??
+  (import.meta.env.VITE_API_GATEWAY_URL as string | undefined) ??
+  (import.meta.env.VITE_BOOKINGS_API_URL as string | undefined) ??
+  'http://localhost:5000/v1';
 
 export const bookingsClient = createClient<paths>({
   baseUrl: BOOKINGS_API_URL,

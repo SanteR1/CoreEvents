@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Users.Application.Configuration;
 using Users.Application.Interfaces.Identity;
 using Users.Application.Interfaces.Repositories;
 using Users.Infrastructure.Data;
@@ -56,10 +57,11 @@ public static class DependencyInjection
         services.AddAuthorization();
 
         services.AddSingleton<ITokenProvider, JwtTokenProvider>();
-        services.AddSingleton<IPasswordHasher, Sha256PasswordHasher>();
+        services.AddSingleton<IPasswordHasher, Argon2idPasswordHasher>();
 
         services.AddDataBase(configuration, environment);
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 
         services.AddScoped<DatabaseSeeder>();
 

@@ -71,6 +71,8 @@ services:
       - "4317:4317" # OTLP gRPC
     environment:
       COLLECTOR_OTLP_ENABLED: "true"
+      # Отключение self-tracing Jaeger
+      OTEL_TRACES_SAMPLER: "always_off"
   grafana:
     image: grafana/grafana:13.2.0
     container_name: coreevents-grafana
@@ -173,7 +175,8 @@ services:
       JWT__SECRETKEY: ${JWT__SECRETKEY}
       JWT__ISSUER: ${JWT__ISSUER}
       JWT__AUDIENCE: ${JWT__AUDIENCE}
-      JWT__EXPIRATIONINMINUTES: ${JWT__EXPIRATIONINMINUTES}
+      JWT__EXPIRATIONINMINUTES: ${JWT__EXPIRATIONINMINUTES:-15}
+      JWT__REFRESHTOKENEXPIRATIONINDAYS: ${JWT__REFRESHTOKENEXPIRATIONINDAYS:-30}
       ADMINSETTINGS__LOGIN: ${API_ADMIN_LOGIN}
       ADMINSETTINGS__PASSWORD: ${API_ADMIN_PASSWORD}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
@@ -249,6 +252,31 @@ services:
         condition: service_healthy
     volumes:
       - ./logs/bookings-api:/var/log/bookings-api
+  gateway.api:
+    image: ${DOCKER_REGISTRY-}gatewayapi
+    build:
+      context: .
+      dockerfile: Gateway/Gateway.Api/Dockerfile
+    container_name: coreevents-gateway-api
+    ports:
+      - "5000:5000"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_HTTP_PORTS: 5000
+      ReverseProxy__Clusters__users-cluster__Destinations__destination1__Address: http://users.api:8080
+      ReverseProxy__Clusters__events-cluster__Destinations__destination1__Address: http://events.api:8080
+      ReverseProxy__Clusters__bookings-cluster__Destinations__destination1__Address: http://bookings.api:8080
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+      OTEL_BSP_SCHEDULE_DELAY: 5000
+      OTEL_BSP_EXPORT_TIMEOUT: 3000
+    depends_on:
+      - users.api
+      - events.api
+      - bookings.api
+      - jaeger
+    volumes:
+      - ./logs/gateway-api:/var/log/gateway-api
   dev-env:
     # Официальный образ Microsoft для разработки под .NET 10
     image: mcr.microsoft.com/devcontainers/dotnet:10.0

@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace Users.Infrastructure.Identity;
+namespace Users.Application.Configuration;
 
 public class JwtOptions
 {
@@ -24,5 +24,8 @@ public class JwtOptions
     public string Audience { get; init; } = string.Empty;
 
     [Range(1, 10000, ErrorMessage = "Время жизни токена должно быть больше 0.")]
-    public int ExpirationInMinutes { get; init; }
+    public int ExpirationInMinutes { get; init; } = 15;
+
+    [Range(1, 365, ErrorMessage = "Время жизни refresh токена должно быть от 1 до 365 дней.")]
+    public int RefreshTokenExpirationInDays { get; init; } = 30;
 }
