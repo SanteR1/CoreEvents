@@ -2,6 +2,7 @@ using System.Text;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
+using Users.Application.Configuration;
 using Users.Application.Interfaces.Identity;
 
 namespace Users.Infrastructure.Identity;

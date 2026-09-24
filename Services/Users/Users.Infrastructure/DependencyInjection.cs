@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Users.Application.Configuration;
 using Users.Application.Interfaces.Identity;
 using Users.Application.Interfaces.Repositories;
 using Users.Infrastructure.Data;

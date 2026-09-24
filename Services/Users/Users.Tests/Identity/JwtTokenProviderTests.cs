@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
+using Users.Application.Configuration;
 using Users.Application.Interfaces.Identity;
 using Users.Domain.Enums;
 using Users.Infrastructure.Identity;

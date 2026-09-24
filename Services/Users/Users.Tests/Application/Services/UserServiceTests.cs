@@ -2,6 +2,8 @@ using System.Security.Cryptography;
 using System.Text;
 using AwesomeAssertions;
 using Moq;
+using Microsoft.Extensions.Options;
+using Users.Application.Configuration;
 using Users.Application.DTOs;
 using Users.Application.Exceptions;
 using Users.Application.Interfaces.Identity;
@@ -27,7 +29,8 @@ public class UserServiceTests
             _userRepositoryMock.Object,
             _refreshTokenRepositoryMock.Object,
             _tokenProviderMock.Object,
-            _passwordHasherMock.Object);
+            _passwordHasherMock.Object,
+            Options.Create(new JwtOptions { ExpirationInMinutes = 15, RefreshTokenExpirationInDays = 30 }));
     }
 
     [Fact]

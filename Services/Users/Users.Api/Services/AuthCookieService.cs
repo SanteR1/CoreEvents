@@ -1,3 +1,6 @@
+using Microsoft.Extensions.Options;
+using Users.Application.Configuration;
+
 namespace Users.Api.Services;
 
 public class AuthCookieService : IAuthCookieService
@@ -7,12 +10,16 @@ public class AuthCookieService : IAuthCookieService
 
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IWebHostEnvironment _environment;
+    private readonly JwtOptions _jwtOptions;
 
-    public AuthCookieService(IHttpContextAccessor httpContextAccessor,
-                             IWebHostEnvironment environment)
+    public AuthCookieService(
+        IHttpContextAccessor httpContextAccessor,
+        IWebHostEnvironment environment,
+        IOptions<JwtOptions> jwtOptions)
     {
         _httpContextAccessor = httpContextAccessor;
         _environment = environment;
+        _jwtOptions = jwtOptions.Value;
     }
 
     private HttpContext HttpContext => _httpContextAccessor.HttpContext
@@ -28,24 +35,24 @@ public class AuthCookieService : IAuthCookieService
         var versionPrefix = GetVersionPrefix();
         var refreshPath = $"/{versionPrefix}/auth";
 
-        // Access Token (15 минут, передается на все эндпоинты через Gateway)
+        // Access Token (передается на все эндпоинты через Gateway)
         response.Cookies.Append(AccessTokenCookieName, accessToken, new CookieOptions
         {
             HttpOnly = true,
             Secure = isSecure,
             SameSite = SameSiteMode.Lax,
             Path = "/",
-            Expires = DateTimeOffset.UtcNow.AddMinutes(15)
+            Expires = DateTimeOffset.UtcNow.AddMinutes(_jwtOptions.ExpirationInMinutes)
         });
 
-        // Refresh Token (30 дней, изолирован маршрутом авторизации)
+        // Refresh Token (изолирован маршрутом авторизации)
         response.Cookies.Append(RefreshTokenCookieName, refreshToken, new CookieOptions
         {
             HttpOnly = true,
             Secure = isSecure,
             SameSite = SameSiteMode.Lax,
             Path = refreshPath,
-            Expires = DateTimeOffset.UtcNow.AddDays(30)
+            Expires = DateTimeOffset.UtcNow.AddDays(_jwtOptions.RefreshTokenExpirationInDays)
         });
     }
 

@@ -2,9 +2,11 @@ using AwesomeAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using Moq;
 using Users.Api.Services;
+using Users.Application.Configuration;
 
 namespace Users.Tests.Api.Services;
 
@@ -13,12 +15,13 @@ public class AuthCookieServiceTests
     private readonly Mock<IHttpContextAccessor> _httpContextAccessorMock = new();
     private readonly Mock<IWebHostEnvironment> _environmentMock = new();
 
-    private AuthCookieService CreateSut(HttpContext httpContext, string environment = "Development")
+    private AuthCookieService CreateSut(HttpContext httpContext, string environment = "Development", JwtOptions? jwtOptions = null)
     {
         _httpContextAccessorMock.Setup(a => a.HttpContext).Returns(httpContext);
         _environmentMock.Setup(e => e.EnvironmentName).Returns(environment);
 
-        return new AuthCookieService(_httpContextAccessorMock.Object, _environmentMock.Object);
+        var options = Options.Create(jwtOptions ?? new JwtOptions { ExpirationInMinutes = 15, RefreshTokenExpirationInDays = 30 });
+        return new AuthCookieService(_httpContextAccessorMock.Object, _environmentMock.Object, options);
     }
 
     [Fact]
@@ -221,7 +224,7 @@ public class AuthCookieServiceTests
     {
         // Arrange
         _httpContextAccessorMock.Setup(a => a.HttpContext).Returns((HttpContext?)null);
-        AuthCookieService sut = new(_httpContextAccessorMock.Object, _environmentMock.Object);
+        AuthCookieService sut = new(_httpContextAccessorMock.Object, _environmentMock.Object, Options.Create(new JwtOptions()));
 
         // Act
         Action act = () => sut.SetAuthCookies("token1", "token2");
@@ -229,5 +232,29 @@ public class AuthCookieServiceTests
         // Assert
         act.Should().Throw<InvalidOperationException>()
            .WithMessage("*HttpContext недоступен.*");
+    }
+
+    [Fact]
+    public void SetAuthCookies_WithCustomJwtOptions_ShouldUseConfiguredLifetimes()
+    {
+        // Arrange
+        DefaultHttpContext httpContext = new();
+        var customOptions = new JwtOptions
+        {
+            ExpirationInMinutes = 45,
+            RefreshTokenExpirationInDays = 60
+        };
+        AuthCookieService sut = CreateSut(httpContext, "Development", customOptions);
+
+        // Act
+        sut.SetAuthCookies("access-tok", "refresh-tok");
+
+        // Assert
+        StringValues setCookies = httpContext.Response.Headers.SetCookie;
+        string? accessCookie = setCookies.FirstOrDefault(c => c != null && c.StartsWith("access_token="));
+        accessCookie.Should().NotBeNull();
+
+        string? refreshCookie = setCookies.FirstOrDefault(c => c != null && c.StartsWith("refresh_token="));
+        refreshCookie.Should().NotBeNull();
     }
 }

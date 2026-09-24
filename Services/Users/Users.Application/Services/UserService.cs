@@ -1,5 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.Extensions.Options;
+using Users.Application.Configuration;
 using Users.Application.DTOs;
 using Users.Application.Exceptions;
 using Users.Application.Interfaces.Identity;
@@ -16,13 +18,20 @@ internal class UserService : IAuthService
     private readonly IRefreshTokenRepository _refreshTokenRepository;
     private readonly ITokenProvider _token;
     private readonly IPasswordHasher _hasher;
+    private readonly JwtOptions _jwtOptions;
 
-    public UserService(IUserRepository userRepository, IRefreshTokenRepository refreshTokenRepository, ITokenProvider token, IPasswordHasher hasher)
+    public UserService(
+        IUserRepository userRepository,
+        IRefreshTokenRepository refreshTokenRepository,
+        ITokenProvider token,
+        IPasswordHasher hasher,
+        IOptions<JwtOptions> jwtOptions)
     {
         _userRepository = userRepository;
         _refreshTokenRepository = refreshTokenRepository;
         _token = token;
         _hasher = hasher;
+        _jwtOptions = jwtOptions.Value;
     }
     public async Task RegisterAsync(UserRegisterDto userRequestDto, CancellationToken ct = default)
     {
@@ -57,11 +66,11 @@ internal class UserService : IAuthService
 
         // 1. Создаем Access Token (JWT)
         var accessToken = _token.GenerateToken(new TokenPayload(user.Id, user.Role));
-        
+
         // 2. Создаем и сохраняем Refresh Token в БД
         var rawRefreshToken = GenerateRawToken();
         var refreshTokenHash = HashToken(rawRefreshToken);
-        var refreshToken = RefreshToken.Create(user.Id, refreshTokenHash, TimeSpan.FromDays(30));
+        var refreshToken = RefreshToken.Create(user.Id, refreshTokenHash, TimeSpan.FromDays(_jwtOptions.RefreshTokenExpirationInDays));
 
         _refreshTokenRepository.Add(refreshToken);
         await _refreshTokenRepository.SaveChangesAsync(ct);
@@ -104,7 +113,7 @@ internal class UserService : IAuthService
 
         existingToken.Rotate(newTokenHash);
 
-        var newToken = RefreshToken.Create(user.Id, newTokenHash, TimeSpan.FromDays(30));
+        var newToken = RefreshToken.Create(user.Id, newTokenHash, TimeSpan.FromDays(_jwtOptions.RefreshTokenExpirationInDays));
         _refreshTokenRepository.Add(newToken);
 
         await _refreshTokenRepository.SaveChangesAsync(ct);
