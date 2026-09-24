@@ -9,16 +9,67 @@ scrape_configs:
     static_configs:
       - targets: ["events.api:8080"]
     metrics_path: /metrics
+    metric_relabel_configs:
+      - source_labels: [http_route]
+        regex: '^/?v\{version:apiVersion\}/(.*)$'
+        target_label: http_route
+        replacement: "/v1/${1}"
+      - source_labels: [http_route]
+        regex: '^(.*)\{id:guid\}(.*)$'
+        target_label: http_route
+        replacement: "${1}{id}${2}"
+      - source_labels: [http_route]
+        regex: '^/openapi/\{.*$'
+        target_label: http_route
+        replacement: "/openapi"
 
   - job_name: bookings-service
     static_configs:
       - targets: ["bookings.api:8080"]
     metrics_path: /metrics
+    metric_relabel_configs:
+      - source_labels: [http_route]
+        regex: '^/?v\{version:apiVersion\}/(.*)$'
+        target_label: http_route
+        replacement: "/v1/${1}"
+      - source_labels: [http_route]
+        regex: "^/?Bookings/(.*)$"
+        target_label: http_route
+        replacement: "/v1/Bookings/${1}"
+      - source_labels: [http_route]
+        regex: '^(.*)\{id:guid\}(.*)$'
+        target_label: http_route
+        replacement: "${1}{id}${2}"
+      - source_labels: [http_route]
+        regex: '^/openapi/\{.*$'
+        target_label: http_route
+        replacement: "/openapi"
 
   - job_name: users-service
     static_configs:
       - targets: ["users.api:8080"]
     metrics_path: /metrics
+    metric_relabel_configs:
+      - source_labels: [http_route]
+        regex: '^/?v\{version:apiVersion\}/(.*)$'
+        target_label: http_route
+        replacement: "/v1/${1}"
+      - source_labels: [http_route]
+        regex: "^/?Auth/(.*)$"
+        target_label: http_route
+        replacement: "/v1/Auth/${1}"
+      - source_labels: [http_route]
+        regex: "^/?Users/(.*)$"
+        target_label: http_route
+        replacement: "/v1/Users/${1}"
+      - source_labels: [http_route]
+        regex: '^(.*)\{id:guid\}(.*)$'
+        target_label: http_route
+        replacement: "${1}{id}${2}"
+      - source_labels: [http_route]
+        regex: '^/openapi/\{.*$'
+        target_label: http_route
+        replacement: "/openapi"
 
   - job_name: gateway-service
     static_configs:
@@ -35,6 +86,16 @@ scrape_configs:
         regex: "^/openapi/([^/]+).*$"
         target_label: http_route
         replacement: "/openapi/${1}"
+      # Нормализация OpenAPI схемы шлюза
+      - source_labels: [http_route]
+        regex: '^/openapi/\{.*$'
+        target_label: http_route
+        replacement: "/openapi"
+      # Нормализация витрины Scalar UI
+      - source_labels: [http_route]
+        regex: '^/docs/\{.*$'
+        target_label: http_route
+        replacement: "/docs"
       # Нормализация fallback-роута /api
       - source_labels: [http_route]
         regex: '^/api/\{.*\}$'

@@ -47,7 +47,16 @@ public static partial class OpenTelemetryExtensions
                         }
                     };
                 })
-                .AddHttpClientInstrumentation()
+                .AddHttpClientInstrumentation(options =>
+                {
+                    options.EnrichWithHttpRequestMessage = (activity, request) =>
+                    {
+                        var rawPath = request.RequestUri?.AbsolutePath ?? "";
+                        var cleanRoute = GuidRegex().Replace(rawPath, "{id}");
+                        activity.DisplayName = $"{request.Method} {cleanRoute}";
+                        activity.SetTag("http.route", cleanRoute);
+                    };
+                })
                 .AddSource("Yarp.ReverseProxy")
                 .AddOtlpExporter())
             .WithMetrics(metrics => metrics
@@ -55,7 +64,13 @@ public static partial class OpenTelemetryExtensions
                 .AddRuntimeInstrumentation()
                 .AddProcessInstrumentation()
                 .AddMeter("Yarp.ReverseProxy")
-                .AddPrometheusExporter());
+                .AddPrometheusExporter(options =>
+                {
+                    // Жестко фиксируем стратегию: всегда менять точки на подчеркивания
+                    // и добавлять суффиксы (например, _total, _count), 
+                    // игнорируя заголовки Content Negotiation от Prometheus.
+                    options.TranslationStrategy = PrometheusAspNetCoreTranslationStrategy.UnderscoreEscapingWithSuffixes;
+                }));
 
         return services;
     }

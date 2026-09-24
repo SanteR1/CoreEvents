@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -5,8 +6,11 @@ using OpenTelemetry.Trace;
 
 namespace Users.Api.Extensions;
 
-public static class OpenTelemetryExtensions
+public static partial class OpenTelemetryExtensions
 {
+    [GeneratedRegex(@"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")]
+    private static partial Regex GuidRegex();
+
     public static IServiceCollection AddApplicationTelemetry(this IServiceCollection service, IConfiguration configuration)
     {
         service.AddOpenTelemetry()
@@ -21,6 +25,15 @@ public static class OpenTelemetryExtensions
                                                var path = httpContext.Request.Path;
                                                return !path.StartsWithSegments("/metrics");
                                            };
+                                           options.EnrichWithHttpResponse = (activity, response) =>
+                                           {
+                                               var req = response.HttpContext.Request;
+                                               var rawPath = req.Path.Value ?? "";
+                                               var cleanRoute = GuidRegex().Replace(rawPath, "{id}");
+
+                                               activity.DisplayName = $"{req.Method} {cleanRoute}";
+                                               activity.SetTag("http.route", cleanRoute);
+                                           };
                                        })
                                        .AddHttpClientInstrumentation()
                                        .AddEntityFrameworkCoreInstrumentation()
@@ -34,7 +47,7 @@ public static class OpenTelemetryExtensions
                                            // Жестко фиксируем стратегию: всегда менять точки на подчеркивания
                                            // и добавлять суффиксы (например, _total, _count), 
                                            // игнорируя заголовки Content Negotiation от Prometheus.
-                                           options.TranslationStrategy = PrometheusTranslationStrategy.UnderscoreEscapingWithSuffixes;
+                                           options.TranslationStrategy = PrometheusAspNetCoreTranslationStrategy.UnderscoreEscapingWithSuffixes;
                                        }));
 
         return service;

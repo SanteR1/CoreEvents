@@ -359,6 +359,11 @@ dotnet test --logger "console;verbosity=detailed"
 - **Latency (Задержка / время отклика):** Время обработки HTTP-запросов с расчетом перцентилей p50, p95 и p99 с использованием гистограммы `http_server_request_duration_seconds_bucket`.
 - **Active Requests:** Текущее количество активных входящих запросов в моменте (`http_server_active_requests`).
 
+**Нормализация и качество телеметрии:**
+
+- **Чистые спаны в Jaeger (Distributed Tracing):** Вся цепочка трейсинга от шлюза (`gateway-service`) до целевых микросервисов (`users-service`, `events-service`, `bookings-service`) нормализована через `EnrichWithHttpResponse` и `EnrichWithHttpRequestMessage`. Вместо сырых плейсхолдеров шаблонов (вроде `v{version:apiVersion}/...` или regex YARP) отображаются унифицированные пути (`GET /v1/Events`, `GET /v1/Events/{id}`, `POST /v1/Auth/login`). Динамические UUID автоматически заменяются на `{id}` для предотвращения раздувания кардинальности (High Cardinality).
+- **Каскадная фильтрация в Grafana:** Переменная дашборда `$route` настроена с каскадной зависимостью от выбранного `$job` (`label_values(...{job=~"$job"}, route)`), что исключает смешивание нерелевантных маршрутов других сервисов при анализе.
+
 **.NET Runtime (GC и Thread Pool):**
 
 - **Пул потоков (Thread Pool):** Отслеживание общего количества потоков пула (`dotnet_thread_pool_thread_count_total`) и скорости добавления задач в очередь (`dotnet_thread_pool_thread_count_created`).
