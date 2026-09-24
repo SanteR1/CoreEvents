@@ -48,7 +48,7 @@ public class AuthCookieServiceTests
         string? refreshTokenHeader = setCookies.FirstOrDefault(c => c != null && c.StartsWith("refresh_token="));
         refreshTokenHeader.Should().NotBeNull();
         refreshTokenHeader.Should().Contain("refresh_token=test-refresh-token");
-        refreshTokenHeader.Should().Contain("path=/api/v1/auth");
+        refreshTokenHeader.Should().Contain("path=/v1/auth");
         refreshTokenHeader.Should().Contain("httponly");
         refreshTokenHeader.Should().Contain("samesite=lax");
         refreshTokenHeader.Should().NotContain("secure");
@@ -124,7 +124,7 @@ public class AuthCookieServiceTests
         string? refreshTokenHeader = setCookies.FirstOrDefault(c => c != null && c.StartsWith("refresh_token="));
 
         refreshTokenHeader.Should().NotBeNull();
-        refreshTokenHeader.Should().Contain("path=/api/v2/auth");
+        refreshTokenHeader.Should().Contain("path=/v2/auth");
     }
 
     [Fact]
@@ -184,7 +184,7 @@ public class AuthCookieServiceTests
 
         string? refreshCookie = setCookies.FirstOrDefault(c => c != null && c.StartsWith("refresh_token="));
         refreshCookie.Should().NotBeNull();
-        refreshCookie.Should().Contain("path=/api/v1/auth");
+        refreshCookie.Should().Contain("path=/v1/auth");
         refreshCookie.Should().Contain("expires=Thu, 01 Jan 1970 00:00:00 GMT");
     }
 

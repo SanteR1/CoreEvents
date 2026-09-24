@@ -26,7 +26,7 @@ public class AuthCookieService : IAuthCookieService
         var isSecure = _environment.IsProduction() || HttpContext.Request.IsHttps;
 
         var versionPrefix = GetVersionPrefix();
-        var refreshPath = $"/api/{versionPrefix}/auth";
+        var refreshPath = $"/{versionPrefix}/auth";
 
         // Access Token (15 минут, передается на все эндпоинты через Gateway)
         response.Cookies.Append(AccessTokenCookieName, accessToken, new CookieOptions
@@ -55,7 +55,7 @@ public class AuthCookieService : IAuthCookieService
         var isSecure = _environment.IsProduction() || HttpContext.Request.IsHttps;
 
         var versionPrefix = GetVersionPrefix();
-        var refreshPath = $"/api/{versionPrefix}/auth";
+        var refreshPath = $"/{versionPrefix}/auth";
 
         response.Cookies.Delete(AccessTokenCookieName, new CookieOptions { Path = "/", Secure = isSecure });
         response.Cookies.Delete(RefreshTokenCookieName, new CookieOptions { Path = refreshPath, Secure = isSecure });

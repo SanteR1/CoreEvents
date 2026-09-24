@@ -213,7 +213,7 @@ dotnet tool install --global dotnet-ef
 2. **Безопасные сессии (HttpOnly Cookies) и Refresh Token Rotation (RTR)**:
    - При успешном логине (`POST /v1/auth/login`) сервер выпускает пару защищённых кук:
      - `access_token`: короткоживущий JWT (15 минут), `HttpOnly`, `SameSite=Lax`.
-     - `refresh_token`: долгоживущий токен (30 дней), изолированный путём `Path=/api/v1/auth` (или `/v1/auth`).
+     - `refresh_token`: долгоживущий токен (30 дней), изолированный путём `Path=/v1/auth`.
    - Механизм ротации: при вызове `POST /v1/auth/refresh` старый токен аннулируется и выпускается новый. При попытке повторного использования старого токена (Reuse Detection) система немедленно отзывает все активные сессии скомпрометированного пользователя.
 
 3. **BFF Transform на API Gateway**:
