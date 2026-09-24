@@ -22,12 +22,12 @@ public class RateLimitingTests
         // Act & Assert: первые 3 запроса не должны возвращать 429
         for (int i = 0; i < 3; i++)
         {
-            var response = await client.GetAsync("/v1/auth/me", TestContext.Current.CancellationToken);
+            using var response = await client.GetAsync("/v1/auth/me", TestContext.Current.CancellationToken);
             response.StatusCode.Should().NotBe(HttpStatusCode.TooManyRequests);
         }
 
         // 4-й запрос превышает лимит и блокируется Rate Limiter
-        var blockedResponse = await client.GetAsync("/v1/auth/me", TestContext.Current.CancellationToken);
+        using var blockedResponse = await client.GetAsync("/v1/auth/me", TestContext.Current.CancellationToken);
         blockedResponse.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
     }
 
@@ -48,7 +48,7 @@ public class RateLimitingTests
         // Act & Assert: отправляем 4 запроса на роут events (без политики AuthRateLimit)
         for (int i = 0; i < 4; i++)
         {
-            var response = await client.GetAsync("/v1/events", TestContext.Current.CancellationToken);
+            using var response = await client.GetAsync("/v1/events", TestContext.Current.CancellationToken);
             response.StatusCode.Should().NotBe(HttpStatusCode.TooManyRequests);
         }
     }

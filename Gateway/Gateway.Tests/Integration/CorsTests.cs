@@ -19,7 +19,7 @@ public class CorsTests
         request.Headers.Add("Origin", AllowedOrigin);
 
         // Act
-        var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+        using var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
 
         // Assert
         response.Headers.Contains("Access-Control-Allow-Origin").Should().BeTrue();
@@ -42,7 +42,7 @@ public class CorsTests
         request.Headers.Add("Access-Control-Request-Headers", "Content-Type, Authorization");
 
         // Act
-        var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+        using var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
@@ -62,7 +62,7 @@ public class CorsTests
         request.Headers.Add("Origin", DisallowedOrigin);
 
         // Act
-        var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+        using var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
 
         // Assert
         response.Headers.Contains("Access-Control-Allow-Origin").Should().BeFalse();

@@ -13,8 +13,8 @@ public class DocumentationTests
         using var client = factory.CreateClient();
 
         // Act
-        var swaggerResponse = await client.GetAsync("/swagger/index.html", TestContext.Current.CancellationToken);
-        var docsResponse = await client.GetAsync("/docs", TestContext.Current.CancellationToken);
+        using var swaggerResponse = await client.GetAsync("/swagger/index.html", TestContext.Current.CancellationToken);
+        using var docsResponse = await client.GetAsync("/docs", TestContext.Current.CancellationToken);
 
         // Assert
         swaggerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -36,8 +36,8 @@ public class DocumentationTests
         using var client = factory.CreateClient();
 
         // Act
-        var swaggerResponse = await client.GetAsync("/swagger/index.html", TestContext.Current.CancellationToken);
-        var docsResponse = await client.GetAsync("/docs", TestContext.Current.CancellationToken);
+        using var swaggerResponse = await client.GetAsync("/swagger/index.html", TestContext.Current.CancellationToken);
+        using var docsResponse = await client.GetAsync("/docs", TestContext.Current.CancellationToken);
 
         // Assert
         swaggerResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);

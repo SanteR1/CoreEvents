@@ -16,7 +16,7 @@ public class MetricsTests
         using var client = factory.CreateClient();
 
         // Act
-        var response = await client.GetAsync("/metrics", TestContext.Current.CancellationToken);
+        using var response = await client.GetAsync("/metrics", TestContext.Current.CancellationToken);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);

@@ -22,7 +22,7 @@ public sealed class OpenApiDocsValidator : BackgroundService
         // Небольшая задержка перед первой попыткой для холодного старта зависимостей
         await Task.Delay(TimeSpan.FromSeconds(3), ct);
 
-        var client = _httpClientFactory.CreateClient("openapi-validator");
+        using var client = _httpClientFactory.CreateClient("openapi-validator");
         foreach (var doc in _docs.Value)
         {
             bool isSuccess = false;
@@ -31,7 +31,7 @@ public sealed class OpenApiDocsValidator : BackgroundService
             {
                 try
                 {
-                    var response = await client.GetAsync(doc.Url, ct);
+                    using var response = await client.GetAsync(doc.Url, ct);
                     if (response.IsSuccessStatusCode)
                     {
                         isSuccess = true;

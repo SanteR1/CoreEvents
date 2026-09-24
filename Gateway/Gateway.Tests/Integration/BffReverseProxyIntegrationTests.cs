@@ -42,7 +42,7 @@ public class BffReverseProxyIntegrationTests
             request.Headers.Add("Cookie", "access_token=super-secure-jwt-token");
 
             // 3. Отправляем запрос через шлюз
-            var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+            using var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
 
             // 4. Проверяем, что запрос успешно дошел и заголовок Bearer был добавлен
             response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -88,7 +88,7 @@ public class BffReverseProxyIntegrationTests
             request.Headers.Add("Authorization", "Bearer existing-bearer-token");
             request.Headers.Add("Cookie", "access_token=ignored-cookie-token");
 
-            var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+            using var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
 
             response.StatusCode.Should().Be(HttpStatusCode.OK);
             capturedAuthHeader.Should().Be("Bearer existing-bearer-token");
