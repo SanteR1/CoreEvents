@@ -1,7 +1,6 @@
 // src/features/bookings/api/bookingsApi.ts
 import { bookingsClient } from '@/shared/api';
 import type { BookingSchema } from '@/shared/api';
-import { getToken } from '@/shared/lib/auth/sessionStore';
 // Импортируем типы ошибок
 import { toFormError, isProblemDetails, type FormActionError } from '@/shared/api/errors';
 
@@ -15,6 +14,7 @@ export interface BookingResponse {
   status: BookingStatus;
   createdAt: Date;
   processedAt: Date | null;
+  userId?: string;
 }
 
 // 2. Размеченные объединения (Discriminated Unions)
@@ -68,6 +68,7 @@ function mapBookingResponse(dto: BookingResponseDto): BookingResponse {
     status: dto.status ?? 'Pending',
     createdAt: dto.createdAt ? new Date(dto.createdAt) : new Date(),
     processedAt: dto.processedAt ? new Date(dto.processedAt) : null,
+    userId: (dto as { userId?: string }).userId,
   };
 }
 
@@ -76,14 +77,12 @@ export async function getBookingById(
   id: string,
   options?: { signal?: AbortSignal },
 ): Promise<BookingResult> {
-  const token = getToken();
   try {
-    const { data, error, response } = await bookingsClient.GET('/Bookings/{id}', {
+    const { data, error, response } = await bookingsClient.GET('/v1/bookings/{id}', {
       params: { path: { id } },
       signal: options?.signal,
       cache: 'no-store',
       headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         Pragma: 'no-cache',
       },
@@ -117,11 +116,9 @@ export async function getBookingById(
 
 export async function createBooking(id: string, seats?: string): Promise<CreateBookingResult> {
   void seats;
-  const token = getToken();
   try {
-    const { data, error, response } = await bookingsClient.POST('/Bookings/{id}/book', {
+    const { data, error, response } = await bookingsClient.POST('/v1/bookings/{id}/book', {
       params: { path: { id } },
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
 
     const isProblem = isProblemDetails(data);
@@ -155,11 +152,9 @@ export async function createBooking(id: string, seats?: string): Promise<CreateB
 }
 
 export async function deleteBookingById(id: string): Promise<DeleteBookingResult> {
-  const token = getToken();
   try {
-    const { data, error, response } = await bookingsClient.DELETE('/Bookings/{id}', {
+    const { data, error, response } = await bookingsClient.DELETE('/v1/bookings/{id}', {
       params: { path: { id } },
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
 
     const isProblem = isProblemDetails(data);

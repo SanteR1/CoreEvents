@@ -1,5 +1,6 @@
 import { Form, Link, useNavigation } from 'react-router';
 import { type BookingResponse } from '@/features/bookings/api/bookingsApi';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 
 interface BookingDetailsProps {
   booking: BookingResponse;
@@ -8,11 +9,17 @@ interface BookingDetailsProps {
 
 export const BookingDetails = ({ booking, isCancellingInProgress }: BookingDetailsProps) => {
   const navigation = useNavigation();
+  const { user, isAdmin, isAuthenticated } = useAuth();
   const isCancelling =
     navigation.state === 'submitting' && navigation.formData?.get('intent') === 'cancel';
 
+  const isOwner = Boolean(user?.id && booking.userId && user.id === booking.userId);
+  const hasCancelPermission = isAdmin || (booking.userId ? isOwner : isAuthenticated);
+
   const canCancel =
-    (booking.status === 'Pending' || booking.status === 'Confirmed') && !isCancellingInProgress;
+    (booking.status === 'Pending' || booking.status === 'Confirmed') &&
+    !isCancellingInProgress &&
+    hasCancelPermission;
 
   const getStatusBadge = (status: BookingResponse['status']) => {
     if (isCancellingInProgress) {

@@ -1,14 +1,13 @@
 // src/features/events/api/eventsApi.ts
 import { eventsClient } from '@/shared/api';
 import type { EventSchema } from '@/shared/api';
-import { getToken } from '@/shared/lib/auth/sessionStore';
 // Импортируем типы ошибок
 import { toFormError, isProblemDetails, type FormActionError } from '@/shared/api/errors';
 
 type EventCreateDto = EventSchema<'EventCreateDto'>;
 type EventUpdateDto = EventSchema<'EventUpdateDto'>;
 type EventResponseDto = EventSchema<'EventResponseDto'>;
-type EventResponsePaginatedResultDto = EventSchema<'EventResponseDtoPaginatedResult'>;
+type EventResponsePaginatedResultDto = EventSchema<'PaginatedResultOfEventResponseDto'>;
 
 // 1. Чистые доменные типы
 export interface EventCreate {
@@ -49,63 +48,19 @@ export type EventResult =
       error: FormActionError;
     };
 
-export type ItemPaginatedResult =
-  | {
-      event: EventResponse[];
-    }
-  | {
-      event: null;
-    };
-
-export type TopEventsResult =
-  | {
-      success: true;
-      event: EventResponse[];
-      httpStatus: number;
-      error?: never;
-    }
-  | {
-      success: false;
-      event?: never;
-      httpStatus: number;
-      error: FormActionError;
-    };
-
-export interface EventPaginatedResult {
-  totalCount: number;
-  items: ItemPaginatedResult;
-  currentPage: number;
-  pageSize: number;
-  totalPages: number;
-}
-
-export type PaginatedResult =
-  | {
-      success: true;
-      event: EventPaginatedResult;
-      httpStatus: number;
-      error?: never;
-    }
-  | {
-      success: false;
-      event?: never;
-      httpStatus: number;
-      error: FormActionError;
-    };
-
 export type CreateEventResult =
   | {
       success: true;
       event: EventResponse;
-      statusUrl: string | null;
       httpStatus: number;
+      statusUrl: string | null;
       error?: never;
     }
   | {
       success: false;
       event?: never;
-      statusUrl?: never;
       httpStatus: number;
+      statusUrl?: never;
       error: FormActionError;
     };
 
@@ -133,6 +88,46 @@ export type DeleteEventResult =
       error: FormActionError;
     };
 
+export interface EventItem {
+  event: EventResponse[] | null;
+}
+
+export interface EventPaginatedResult {
+  totalCount: number;
+  items: EventItem;
+  currentPage: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export type PaginatedResult =
+  | {
+      success: true;
+      event: EventPaginatedResult;
+      httpStatus: number;
+      error?: never;
+    }
+  | {
+      success: false;
+      event?: never;
+      httpStatus: number;
+      error: FormActionError;
+    };
+
+export type TopEventsResult =
+  | {
+      success: true;
+      event: EventResponse[];
+      httpStatus: number;
+      error?: never;
+    }
+  | {
+      success: false;
+      event?: never;
+      httpStatus: number;
+      error: FormActionError;
+    };
+
 // 3. Мапперы
 function mapEventResponse(dto: EventResponseDto): EventResponse {
   return {
@@ -141,18 +136,18 @@ function mapEventResponse(dto: EventResponseDto): EventResponse {
     description: dto.description ?? null,
     startAt: dto.startAt ? new Date(dto.startAt) : new Date(),
     endAt: dto.endAt ? new Date(dto.endAt) : new Date(),
-    totalSeats: dto.totalSeats ?? 0,
-    availableSeats: dto.availableSeats ?? 0,
+    totalSeats: Number(dto.totalSeats) || 0,
+    availableSeats: Number(dto.availableSeats) || 0,
   };
 }
 
 function mapPaginatedEventResponse(dto: EventResponsePaginatedResultDto): EventPaginatedResult {
   return {
-    totalCount: dto.totalCount ?? 0,
+    totalCount: Number(dto.totalCount) || 0,
     items: dto.items ? { event: dto.items.map(mapEventResponse) } : { event: null },
-    currentPage: dto.currentPage ?? 0,
-    pageSize: dto.pageSize ?? 0,
-    totalPages: dto.totalPages ?? 0,
+    currentPage: Number(dto.currentPage) || 0,
+    pageSize: Number(dto.pageSize) || 0,
+    totalPages: Number(dto.totalPages) || 0,
   };
 }
 
@@ -176,11 +171,9 @@ export function mapEventUpdateToDto(domain: EventUpdate): EventUpdateDto {
 }
 
 export async function createEvent(event: EventCreate): Promise<CreateEventResult> {
-  const token = getToken();
   try {
-    const { data, error, response } = await eventsClient.POST('/Events', {
+    const { data, error, response } = await eventsClient.POST('/v1/events', {
       body: mapEventCreateToDto(event),
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
 
     const isProblem = isProblemDetails(data);
@@ -215,13 +208,10 @@ export async function updateEventById(
   id: string,
   eventUpdate: EventUpdate,
 ): Promise<UpdateEventResult> {
-  const token = getToken();
-
   try {
-    const { data, error, response } = await eventsClient.PUT('/Events/{id}', {
+    const { data, error, response } = await eventsClient.PUT('/v1/events/{id}', {
       body: mapEventUpdateToDto(eventUpdate),
       params: { path: { id } },
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
 
     const isProblem = isProblemDetails(data);
@@ -244,12 +234,9 @@ export async function updateEventById(
 }
 
 export async function getEventById(id: string): Promise<EventResult> {
-  const token = getToken();
-
   try {
-    const { data, error, response } = await eventsClient.GET('/Events/{id}', {
+    const { data, error, response } = await eventsClient.GET('/v1/events/{id}', {
       params: { path: { id } },
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
 
     const isProblem = isProblemDetails(data);
@@ -277,7 +264,7 @@ export async function getEventById(id: string): Promise<EventResult> {
 
 export async function getTopEvents(): Promise<TopEventsResult> {
   try {
-    const { data, error, response } = await eventsClient.GET('/Events/top');
+    const { data, error, response } = await eventsClient.GET('/v1/events/top');
     const isProblem = isProblemDetails(data) || !Array.isArray(data);
 
     if (!response.ok || error || !data || isProblem) {
@@ -308,38 +295,46 @@ export async function getAllEvents(
   Page?: number,
   PageSize?: number,
 ): Promise<PaginatedResult> {
-  const { data, error, response } = await eventsClient.GET('/Events', {
-    params: {
-      query: { Title, From, To, Page, PageSize },
-    },
-  });
+  try {
+    const { data, error, response } = await eventsClient.GET('/v1/events', {
+      params: {
+        query: { Title, From, To, Page, PageSize },
+      },
+    });
 
-  const isProblem = isProblemDetails(data);
+    const isProblem = isProblemDetails(data);
 
-  if (!response.ok || error || !data || isProblem) {
+    if (!response.ok || error || !data || isProblem) {
+      return {
+        success: false,
+        httpStatus:
+          isProblem && typeof (data as Record<string, unknown>)?.status === 'number'
+            ? Number((data as Record<string, unknown>).status)
+            : response.status,
+        error: toFormError<PaginatedResult>(error ?? data, {
+          defaultMessage: 'Не удалось загрузить события',
+        }) ?? { message: 'Не удалось загрузить события' },
+      };
+    }
+
+    return {
+      success: true,
+      event: mapPaginatedEventResponse(data),
+      httpStatus: response.status,
+    };
+  } catch (ex) {
     return {
       success: false,
-      httpStatus:
-        isProblem && typeof (data as Record<string, unknown>)?.status === 'number'
-          ? Number((data as Record<string, unknown>).status)
-          : response.status,
-      error: toFormError<PaginatedResult>(error ?? data)!,
+      httpStatus: 0,
+      error: toFormError(ex, { defaultMessage: 'Не удалось загрузить события' })!,
     };
   }
-
-  return {
-    success: true,
-    event: mapPaginatedEventResponse(data),
-    httpStatus: response.status,
-  };
 }
 
 export async function deleteEventById(id: string): Promise<DeleteEventResult> {
-  const token = getToken();
   try {
-    const { data, error, response } = await eventsClient.DELETE('/Events/{id}', {
+    const { data, error, response } = await eventsClient.DELETE('/v1/events/{id}', {
       params: { path: { id } },
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
 
     const isProblem = isProblemDetails(data);
