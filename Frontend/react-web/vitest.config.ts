@@ -27,6 +27,7 @@ export default defineConfig({
         'src/**/index.ts',
         'src/**/*.d.ts',
         'src/**/types/**',
+        'src/shared/lib/auth/user.ts',
         'test/**',
         '**/*.test.{ts,tsx}',
       ],
