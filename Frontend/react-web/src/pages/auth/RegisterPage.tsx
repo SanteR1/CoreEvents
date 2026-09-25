@@ -2,7 +2,7 @@
 import { type ActionFunctionArgs, redirect, useActionData, useSearchParams } from 'react-router';
 import { RegisterForm } from '@/features/auth/components/RegisterForm';
 import { registerUser, loginUser } from '@/features/auth/api/authApi';
-import { setToken, getSafeReturnUrl } from '@/shared/lib/auth';
+import { setUser, getSafeReturnUrl } from '@/shared/lib/auth';
 
 interface ActionData {
   error?: string;
@@ -52,8 +52,8 @@ export async function action({ request }: ActionFunctionArgs): Promise<Response 
       );
     }
 
-    // 3. Сохраняем токен в хранилище сессии
-    setToken(loginResult.data);
+    // 3. Сохраняем пользователя в хранилище сессии
+    setUser(loginResult.data);
 
     // 4. Перенаправляем на целевую страницу
     return redirect(returnUrl);

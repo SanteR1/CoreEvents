@@ -1,12 +1,31 @@
 // src/pages/events/CreateEventPage.tsx
-import { useActionData, useNavigation, type ActionFunctionArgs } from 'react-router';
+import {
+  useActionData,
+  useNavigation,
+  type ActionFunctionArgs,
+  type LoaderFunctionArgs,
+} from 'react-router';
 import { createEvent, type EventCreate } from '@/features/events/api/eventsApi';
 import { EventRequestForm } from '@/features/events/components/EventRequestForm';
 import { EventResponseForm } from '@/features/events/components/EventResponseForm';
 import { toFormError, type FieldErrors } from '@/shared/api/errors';
+import { requireAdminLoader } from '@/shared/lib/auth';
+
+export async function loader(args: LoaderFunctionArgs) {
+  const authRedirect = await requireAdminLoader(args);
+  if (authRedirect) {
+    return authRedirect;
+  }
+  return null;
+}
 
 // 1. Action функция роутера
 export async function action({ request }: ActionFunctionArgs) {
+  const authRedirect = await requireAdminLoader({ request });
+  if (authRedirect) {
+    return authRedirect;
+  }
+
   const formData = await request.formData();
 
   const rawTitle = formData.get('title');

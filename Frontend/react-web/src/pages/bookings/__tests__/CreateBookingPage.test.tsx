@@ -177,6 +177,21 @@ describe('CreateBookingPage', () => {
   });
 
   describe('action', () => {
+    beforeEach(() => {
+      setToken(createMockJwt());
+    });
+
+    it('redirects unauthenticated users to login with returnUrl', async () => {
+      clearToken();
+      const args = createActionArgs({ eventId: 'ev-1', seats: '2' });
+      const result = await action(args);
+
+      expect(result).toBeInstanceOf(Response);
+      const response = result as Response;
+      expect(response.status).toBe(302);
+      expect(response.headers.get('Location')).toContain('/login?returnUrl=');
+    });
+
     it('returns error if eventId is missing in formData', async () => {
       const args = createActionArgs({ seats: '2' });
       const result = await action(args);

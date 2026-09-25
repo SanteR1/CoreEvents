@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { loader, action, GetEventByIdPage } from '../GetEventById';
 import { getEventById, deleteEventById } from '@/features/events/api/eventsApi';
-import { setToken, clearToken } from '@/shared/lib/auth';
+import { setUser, clearUser } from '@/shared/lib/auth';
 import { checkA11y } from '@/shared/lib/test/axe';
 import type { EventResponse } from '@/features/events/api/eventsApi';
 
@@ -12,14 +12,6 @@ vi.mock('@/features/events/api/eventsApi', () => ({
   getEventById: vi.fn(),
   deleteEventById: vi.fn(),
 }));
-
-function createMockJwt(expSecondsFromNow = 3600): string {
-  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-  const payload = btoa(
-    JSON.stringify({ sub: 'user_123', exp: Math.floor(Date.now() / 1000) + expSecondsFromNow }),
-  );
-  return `${header}.${payload}.signature`;
-}
 
 type LoaderArgs = Parameters<typeof loader>[0];
 type ActionArgs = Parameters<typeof action>[0];
@@ -63,11 +55,12 @@ describe('GetEventById', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    clearUser();
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
-    clearToken();
+    clearUser();
   });
 
   describe('loader function', () => {
@@ -165,7 +158,7 @@ describe('GetEventById', () => {
 
   describe('action function', () => {
     it('redirects unauthenticated user to /login?returnUrl=...', async () => {
-      clearToken();
+      clearUser();
       const args = createActionArgs(
         'ev-test-1',
         { intent: 'delete' },
@@ -179,8 +172,19 @@ describe('GetEventById', () => {
       expect(response.headers.get('Location')).toBe('/login?returnUrl=%2Fevents%2Fev-test-1');
     });
 
+    it('throws 403 Response for non-admin user', async () => {
+      setUser({ id: 'u1', userName: 'User', role: 'User' });
+      const args = createActionArgs('ev-test-1', { intent: 'delete' });
+
+      await expect(action(args)).rejects.toSatisfy((err: Response) => {
+        expect(err).toBeInstanceOf(Response);
+        expect(err.status).toBe(403);
+        return true;
+      });
+    });
+
     it('returns form error when id is missing from params', async () => {
-      setToken(createMockJwt());
+      setUser({ id: 'a1', userName: 'Admin', role: 'Admin' });
       const args = createActionArgs(undefined, { intent: 'delete' });
 
       const res = await action(args);
@@ -192,7 +196,7 @@ describe('GetEventById', () => {
     });
 
     it('returns null when intent is not "delete"', async () => {
-      setToken(createMockJwt());
+      setUser({ id: 'a1', userName: 'Admin', role: 'Admin' });
       const args = createActionArgs('ev-test-1', { intent: 'unknown' });
 
       const res = await action(args);
@@ -200,7 +204,7 @@ describe('GetEventById', () => {
     });
 
     it('calls deleteEventById and returns error when API deletion fails', async () => {
-      setToken(createMockJwt());
+      setUser({ id: 'a1', userName: 'Admin', role: 'Admin' });
       vi.mocked(deleteEventById).mockResolvedValueOnce({
         success: false,
         httpStatus: 400,
@@ -219,7 +223,7 @@ describe('GetEventById', () => {
     });
 
     it('calls deleteEventById and redirects to "/" on success', async () => {
-      setToken(createMockJwt());
+      setUser({ id: 'a1', userName: 'Admin', role: 'Admin' });
       vi.mocked(deleteEventById).mockResolvedValueOnce({
         success: true,
         httpStatus: 200,
@@ -237,6 +241,19 @@ describe('GetEventById', () => {
   });
 
   describe('Component Rendering & Interactions', () => {
+    beforeEach(() => {
+      setUser({ id: 'admin_1', userName: 'Admin', role: 'Admin' });
+    });
+
+    it('hides edit and delete controls for regular users', async () => {
+      setUser({ id: 'user_1', userName: 'User', role: 'User' });
+      renderGetEventByIdPage();
+
+      await screen.findByRole('heading', { name: mockEvent.title });
+      expect(screen.queryByRole('link', { name: '✏️ Редактировать' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /удалить/i })).not.toBeInTheDocument();
+    });
+
     function renderGetEventByIdPage(event = mockEvent, actionData: unknown = null) {
       const router = createMemoryRouter(
         [

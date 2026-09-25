@@ -4,7 +4,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router';
 import axe from 'axe-core';
 import { action, LoginPage } from '../LoginPage';
 import { loginUser } from '@/features/auth/api/authApi';
-import { setToken } from '@/shared/lib/auth';
+import { setUser } from '@/shared/lib/auth';
 
 vi.mock('@/features/auth/api/authApi', () => ({
   loginUser: vi.fn(),
@@ -14,7 +14,7 @@ vi.mock('@/shared/lib/auth', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/shared/lib/auth')>();
   return {
     ...actual,
-    setToken: vi.fn(),
+    setUser: vi.fn(),
   };
 });
 
@@ -57,6 +57,12 @@ function createActionArgs(
     context: {},
   } as unknown as Parameters<typeof action>[0];
 }
+
+const mockUser = {
+  id: 'u-alex',
+  userName: 'alex',
+  role: 'User' as const,
+};
 
 describe('LoginPage Component & Action', () => {
   beforeEach(() => {
@@ -120,7 +126,7 @@ describe('LoginPage Component & Action', () => {
     it('returns custom error message when login fails', async () => {
       vi.mocked(loginUser).mockResolvedValueOnce({
         status: 401,
-        error: { message: 'Неверный пароль' },
+        error: { detail: 'Неверный пароль' },
         data: undefined,
       });
 
@@ -143,27 +149,27 @@ describe('LoginPage Component & Action', () => {
       expect(result).toEqual({ error: 'Неверный логин или пароль' });
     });
 
-    it('stores token and redirects to default "/" on successful login', async () => {
+    it('stores user and redirects to default "/" on successful login', async () => {
       vi.mocked(loginUser).mockResolvedValueOnce({
         status: 200,
-        data: 'jwt.token.val',
+        data: mockUser,
         error: undefined,
       });
 
       const args = createActionArgs({ username: 'alex', password: 'correct' });
       const result = await action(args);
 
-      expect(setToken).toHaveBeenCalledWith('jwt.token.val');
+      expect(setUser).toHaveBeenCalledWith(mockUser);
       expect(result).toBeInstanceOf(Response);
       const res = result as Response;
       expect(res.status).toBe(302);
       expect(res.headers.get('Location')).toBe('/');
     });
 
-    it('stores token and redirects to safe returnUrl from search params', async () => {
+    it('stores user and redirects to safe returnUrl from search params', async () => {
       vi.mocked(loginUser).mockResolvedValueOnce({
         status: 200,
-        data: 'jwt.token.val',
+        data: mockUser,
         error: undefined,
       });
 
@@ -173,7 +179,7 @@ describe('LoginPage Component & Action', () => {
       );
       const result = await action(args);
 
-      expect(setToken).toHaveBeenCalledWith('jwt.token.val');
+      expect(setUser).toHaveBeenCalledWith(mockUser);
       expect(result).toBeInstanceOf(Response);
       const res = result as Response;
       expect(res.status).toBe(302);

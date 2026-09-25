@@ -4,7 +4,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router';
 import axe from 'axe-core';
 import { action, RegisterPage } from '../RegisterPage';
 import { registerUser, loginUser } from '@/features/auth/api/authApi';
-import { setToken } from '@/shared/lib/auth';
+import { setUser } from '@/shared/lib/auth';
 
 vi.mock('@/features/auth/api/authApi', () => ({
   registerUser: vi.fn(),
@@ -15,7 +15,7 @@ vi.mock('@/shared/lib/auth', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/shared/lib/auth')>();
   return {
     ...actual,
-    setToken: vi.fn(),
+    setUser: vi.fn(),
   };
 });
 
@@ -58,6 +58,12 @@ function createActionArgs(
     context: {},
   } as unknown as Parameters<typeof action>[0];
 }
+
+const mockUser = {
+  id: 'u-reg-1',
+  userName: 'alex',
+  role: 'User' as const,
+};
 
 describe('RegisterPage Component & Action', () => {
   beforeEach(() => {
@@ -150,7 +156,7 @@ describe('RegisterPage Component & Action', () => {
     it('returns message error when registration fails with message but no detail/title', async () => {
       vi.mocked(registerUser).mockResolvedValueOnce({
         status: 400,
-        error: { message: 'Пользователь уже существует' },
+        error: { message: 'Пользователь уже существует' } as unknown as undefined,
         data: undefined,
       });
 
@@ -183,7 +189,7 @@ describe('RegisterPage Component & Action', () => {
       });
       vi.mocked(loginUser).mockResolvedValueOnce({
         status: 401,
-        error: { message: 'Invalid credentials' },
+        error: { detail: 'Invalid credentials' },
         data: undefined,
       });
 
@@ -207,7 +213,7 @@ describe('RegisterPage Component & Action', () => {
       });
       vi.mocked(loginUser).mockResolvedValueOnce({
         status: 401,
-        error: { message: 'Invalid credentials' },
+        error: { detail: 'Invalid credentials' },
         data: undefined,
       });
 
@@ -220,7 +226,7 @@ describe('RegisterPage Component & Action', () => {
       expect(res.headers.get('Location')).toBe('/login');
     });
 
-    it('stores token and redirects to target returnUrl on complete success', async () => {
+    it('stores user and redirects to target returnUrl on complete success', async () => {
       vi.mocked(registerUser).mockResolvedValueOnce({
         status: 204,
         error: undefined,
@@ -228,7 +234,7 @@ describe('RegisterPage Component & Action', () => {
       });
       vi.mocked(loginUser).mockResolvedValueOnce({
         status: 200,
-        data: 'jwt.registered.token',
+        data: mockUser,
         error: undefined,
       });
 
@@ -238,7 +244,7 @@ describe('RegisterPage Component & Action', () => {
       );
       const result = await action(args);
 
-      expect(setToken).toHaveBeenCalledWith('jwt.registered.token');
+      expect(setUser).toHaveBeenCalledWith(mockUser);
       expect(result).toBeInstanceOf(Response);
       const res = result as Response;
       expect(res.status).toBe(302);

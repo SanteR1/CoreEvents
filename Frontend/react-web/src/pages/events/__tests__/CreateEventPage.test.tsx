@@ -1,16 +1,19 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
-import { action, CreateEventPage } from '../CreateEventPage';
+import { action, loader, CreateEventPage } from '../CreateEventPage';
 import { createEvent } from '@/features/events/api/eventsApi';
 import { checkA11y } from '@/shared/lib/test/axe';
 import type { EventResponse } from '@/features/events/api/eventsApi';
+import { setUser, clearUser } from '@/shared/lib/auth';
 
 vi.mock('@/features/events/api/eventsApi', () => ({
   createEvent: vi.fn(),
 }));
 
 type ActionArgs = Parameters<typeof action>[0];
+
+type LoaderArgs = Parameters<typeof loader>[0];
 
 function createActionArgs(formDataRecord: Record<string, string>): ActionArgs {
   const formData = new FormData();
@@ -26,6 +29,14 @@ function createActionArgs(formDataRecord: Record<string, string>): ActionArgs {
   } as unknown as ActionArgs;
 }
 
+function createLoaderArgs(request: Request): LoaderArgs {
+  return {
+    request,
+    params: {},
+    context: {} as LoaderArgs['context'],
+  } as unknown as LoaderArgs;
+}
+
 describe('CreateEventPage', () => {
   const mockCreatedEvent: EventResponse = {
     id: 'ev-created-99',
@@ -38,14 +49,46 @@ describe('CreateEventPage', () => {
   };
 
   beforeEach(() => {
+    clearUser();
+    setUser({ id: 'a1', userName: 'Admin', role: 'Admin' });
     vi.clearAllMocks();
   });
 
   afterEach(() => {
+    clearUser();
     vi.restoreAllMocks();
   });
 
+  describe('loader function', () => {
+    it('redirects unauthenticated user to /login?returnUrl=...', async () => {
+      clearUser();
+      const request = new Request('http://localhost/events/create');
+      const res = await loader(createLoaderArgs(request));
+      expect(res).toBeInstanceOf(Response);
+      const response = res!;
+      expect(response.status).toBe(302);
+      expect(response.headers.get('Location')).toContain('/login?returnUrl=');
+    });
+
+    it('returns null when user is admin', async () => {
+      setUser({ id: 'a1', userName: 'Admin', role: 'Admin' });
+      const request = new Request('http://localhost/events/create');
+      const res = await loader(createLoaderArgs(request));
+      expect(res).toBeNull();
+    });
+  });
+
   describe('action function - Form Validation & Boundaries', () => {
+    it('redirects unauthenticated user to /login?returnUrl=...', async () => {
+      clearUser();
+      const args = createActionArgs({});
+      const result = await action(args);
+      expect(result).toBeInstanceOf(Response);
+      const response = result as Response;
+      expect(response.status).toBe(302);
+      expect(response.headers.get('Location')).toContain('/login?returnUrl=');
+    });
+
     it('returns field errors when all required fields are empty', async () => {
       const args = createActionArgs({});
       const result = await action(args);

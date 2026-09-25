@@ -7,7 +7,7 @@ import {
   redirect,
   Link,
 } from 'react-router';
-import { requireAuthLoader } from '@/shared/lib/auth';
+import { requireAdminLoader } from '@/shared/lib/auth';
 import {
   getEventById,
   updateEventById,
@@ -18,7 +18,7 @@ import { EventEditForm } from '@/features/events/components/EventEditForm';
 import { toFormError, type FieldErrors } from '@/shared/api/errors';
 
 export async function loader(args: LoaderFunctionArgs) {
-  const authRedirect = requireAuthLoader(args);
+  const authRedirect = await requireAdminLoader(args);
   if (authRedirect) {
     return authRedirect;
   }
@@ -37,6 +37,11 @@ export async function loader(args: LoaderFunctionArgs) {
 }
 
 export async function action({ request, params }: ActionFunctionArgs) {
+  const authRedirect = await requireAdminLoader({ request });
+  if (authRedirect) {
+    return authRedirect;
+  }
+
   const eventId = params.eventId ?? params.id;
   if (!eventId) {
     return { error: toFormError('Идентификатор события не найден') };

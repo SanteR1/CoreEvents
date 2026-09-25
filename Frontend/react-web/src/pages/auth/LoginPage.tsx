@@ -2,7 +2,7 @@
 import { type ActionFunctionArgs, redirect, useActionData, useSearchParams } from 'react-router';
 import { LoginForm } from '@/features/auth/components/LoginForm';
 import { loginUser } from '@/features/auth/api/authApi';
-import { setToken, getSafeReturnUrl } from '@/shared/lib/auth';
+import { setUser, getSafeReturnUrl } from '@/shared/lib/auth';
 
 interface ActionData {
   error?: string;
@@ -21,10 +21,13 @@ export async function action({ request }: ActionFunctionArgs): Promise<Response 
     const { data, error } = await loginUser({ userName, password });
 
     if (error || !data) {
-      return { error: (error as { message?: string })?.message ?? 'Неверный логин или пароль' };
+      const errObj = error as { detail?: string; title?: string; message?: string } | undefined;
+      return {
+        error: errObj?.detail ?? errObj?.title ?? errObj?.message ?? 'Неверный логин или пароль',
+      };
     }
 
-    setToken(data);
+    setUser(data);
 
     const url = new URL(request.url);
     const returnUrl = getSafeReturnUrl(url.searchParams.get('returnUrl'));
