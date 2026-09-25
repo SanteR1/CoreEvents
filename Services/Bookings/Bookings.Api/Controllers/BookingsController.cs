@@ -11,7 +11,7 @@ namespace Bookings.Api.Controllers;
 
 [ApiController]
 [ApiVersion(1.0)]
-[Route("v{version:apiVersion}/[controller]")]
+[Route("v{version:apiVersion}/bookings")]
 public class BookingsController : ControllerBase
 {
     private readonly IUserContext _userContext;
