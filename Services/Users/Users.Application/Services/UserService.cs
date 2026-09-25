@@ -65,7 +65,7 @@ internal class UserService : IAuthService
         }
 
         // 1. Создаем Access Token (JWT)
-        var accessToken = _token.GenerateToken(new TokenPayload(user.Id, user.Role));
+        var accessToken = _token.GenerateToken(new TokenPayload(user.Id, user.Role, user.UserName));
 
         // 2. Создаем и сохраняем Refresh Token в БД
         var rawRefreshToken = GenerateRawToken();
@@ -118,7 +118,7 @@ internal class UserService : IAuthService
 
         await _refreshTokenRepository.SaveChangesAsync(ct);
 
-        var newAccessToken = _token.GenerateToken(new TokenPayload(user.Id, user.Role));
+        var newAccessToken = _token.GenerateToken(new TokenPayload(user.Id, user.Role, user.UserName));
 
         return new AuthResultDto(
             AccessToken: newAccessToken,

@@ -24,6 +24,9 @@ public class JwtTokenProvider(IOptions<JwtOptions> options) : ITokenProvider
         if (!string.IsNullOrWhiteSpace(payload.Email))
         {
             claims[JwtRegisteredClaimNames.Email] = payload.Email;
+            claims[JwtRegisteredClaimNames.Name] = payload.Email;
+            claims["name"] = payload.Email;
+            claims["unique_name"] = payload.Email;
         }
 
         var signingKey = new SymmetricSecurityKey(
