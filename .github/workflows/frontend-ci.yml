@@ -7,7 +7,7 @@ on:
       - "Frontend/react-web/**"
       - ".github/workflows/frontend-ci.yml"
   pull_request:
-    branches: [main, master]
+    branches: [main, master, dev]
     paths:
       - "Frontend/react-web/**"
       - ".github/workflows/frontend-ci.yml"
