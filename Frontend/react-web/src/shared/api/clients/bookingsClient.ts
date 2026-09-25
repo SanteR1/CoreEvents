@@ -1,6 +1,7 @@
 import createClient from 'openapi-fetch';
-import type { paths } from '@/shared/api/generated/bookings'; // Путь к сгенерированным типам
+import type { paths } from '@/shared/api/generated/bookings';
 import { getToken } from '@/shared/lib/auth/sessionStore';
+import { authRefreshMiddleware } from './authRefreshMiddleware';
 
 const BOOKINGS_API_URL: string =
   (import.meta.env.VITE_API_URL as string | undefined) ??
@@ -10,6 +11,7 @@ const BOOKINGS_API_URL: string =
 
 export const bookingsClient = createClient<paths>({
   baseUrl: BOOKINGS_API_URL,
+  credentials: 'include',
 });
 
 // Опционально: можно добавить интерцепторы (middleware) для авторизации
@@ -22,3 +24,4 @@ bookingsClient.use({
     return request;
   },
 });
+bookingsClient.use(authRefreshMiddleware);

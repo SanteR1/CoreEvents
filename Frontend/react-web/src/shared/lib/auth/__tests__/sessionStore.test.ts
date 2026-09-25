@@ -1,173 +1,185 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { getToken, setToken, clearToken, subscribe } from '../sessionStore';
-import { useToken, useIsAuthenticated } from '../useAuthSession';
+import {
+  getUser,
+  setUser,
+  clearUser,
+  isAuthenticated,
+  isAdmin,
+  subscribe,
+  getToken,
+  setToken,
+  clearToken,
+} from '../sessionStore';
+import { useCurrentUser, useIsAuthenticated, useIsAdmin, useToken } from '../useAuthSession';
+import type { User } from '../user';
 
-function createMockJwt(expSecondsFromNow?: number): string {
-  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-  const payloadData =
-    expSecondsFromNow !== undefined
-      ? { exp: Math.floor(Date.now() / 1000) + expSecondsFromNow }
-      : { sub: '123' };
-  const payload = btoa(JSON.stringify(payloadData));
-  const signature = 'fake_signature';
-  return `${header}.${payload}.${signature}`;
-}
+const mockUser: User = {
+  id: 'user-123',
+  userName: 'testuser',
+  role: 'User',
+};
 
-describe('sessionStore.ts', () => {
+const mockAdmin: User = {
+  id: 'admin-456',
+  userName: 'adminuser',
+  role: 'Admin',
+};
+
+describe('sessionStore.ts and useAuthSession.ts', () => {
   beforeEach(() => {
     localStorage.clear();
+    clearUser();
+    vi.restoreAllMocks();
+  });
+
+  it('returns null and false when no user is set', () => {
+    expect(getUser()).toBeNull();
+    expect(isAuthenticated()).toBe(false);
+    expect(isAdmin()).toBe(false);
+    expect(getToken()).toBeNull();
+  });
+
+  it('stores user, sets flags, and notifies listeners upon setUser', () => {
+    const listener = vi.fn();
+    const unsubscribe = subscribe(listener);
+
+    setUser(mockUser);
+
+    expect(getUser()).toEqual(mockUser);
+    expect(isAuthenticated()).toBe(true);
+    expect(isAdmin()).toBe(false);
+    expect(listener).toHaveBeenCalledTimes(1);
+
+    unsubscribe();
+  });
+
+  it('identifies Admin role correctly with isAdmin', () => {
+    setUser(mockAdmin);
+
+    expect(getUser()).toEqual(mockAdmin);
+    expect(isAuthenticated()).toBe(true);
+    expect(isAdmin()).toBe(true);
+  });
+
+  it('clears user, resets flags, and notifies listeners upon clearUser', () => {
+    const listener = vi.fn();
+    setUser(mockUser);
+
+    const unsubscribe = subscribe(listener);
+    clearUser();
+
+    expect(getUser()).toBeNull();
+    expect(isAuthenticated()).toBe(false);
+    expect(isAdmin()).toBe(false);
+    expect(listener).toHaveBeenCalledTimes(1);
+
+    unsubscribe();
+  });
+
+  it('handles cross-tab storage events and unsubscribes cleanly', () => {
+    const listener = vi.fn();
+    const unsubscribe = subscribe(listener);
+
+    window.dispatchEvent(
+      new StorageEvent('storage', {
+        key: 'auth_sync',
+        newValue: Date.now().toString(),
+      }),
+    );
+
+    expect(listener).toHaveBeenCalledTimes(1);
+
+    unsubscribe();
+
+    window.dispatchEvent(
+      new StorageEvent('storage', {
+        key: 'auth_sync',
+        newValue: Date.now().toString(),
+      }),
+    );
+
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it('safely catches errors when localStorage is disabled or throws', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('Quota exceeded');
+    });
+
+    expect(() => setUser(mockUser)).not.toThrow();
+    expect(() => clearUser()).not.toThrow();
+  });
+
+  it('supports backwards compatibility helpers getToken, setToken, clearToken', () => {
+    expect(getToken()).toBeNull();
+
+    setToken(mockUser);
+    expect(getUser()).toEqual(mockUser);
+
+    setToken('invalid-primitive-token');
+    expect(getUser()).toEqual(mockUser);
+
     clearToken();
+    expect(getUser()).toBeNull();
+
+    setToken('token_for_legacy_user');
+    expect(getUser()).toEqual({ id: 'legacy_admin_id', userName: 'Admin', role: 'Admin' });
+    expect(getToken()).toBe('token_for_legacy_user');
+
+    setToken(undefined);
   });
 
-  it('returns null when no token is stored in localStorage', () => {
-    expect(getToken()).toBeNull();
-  });
-
-  it('returns null when stored token is literal "undefined" or "null"', () => {
-    localStorage.setItem('auth_token', 'undefined');
-    expect(getToken()).toBeNull();
-
-    localStorage.setItem('auth_token', 'null');
-    expect(getToken()).toBeNull();
-  });
-
-  it('returns valid token when JWT is active and not expired', () => {
-    const validToken = createMockJwt(3600); // 1 час вперед
-    setToken(validToken);
-
-    expect(getToken()).toBe(validToken);
-  });
-
-  it('returns token conditionally valid when exp field is absent', () => {
-    const tokenWithoutExp = createMockJwt(undefined);
-    setToken(tokenWithoutExp);
-
-    expect(getToken()).toBe(tokenWithoutExp);
-  });
-
-  it('detects expired JWT, immediately returns null, and defers removal to microtask', async () => {
-    const expiredToken = createMockJwt(-60); // протух 60 секунд назад
-    localStorage.setItem('auth_token', expiredToken);
-
-    // 1. Непосредственный вызов должен вернуть null (чистый getter)
-    const token = getToken();
-    expect(token).toBeNull();
-
-    // 2. В синхронном цикле localStorage ещё не должен мутироваться (side-effect отложен)
-    expect(localStorage.getItem('auth_token')).toBe(expiredToken);
-
-    // 3. Явный флаш очереди микротасок
-    await Promise.resolve();
-
-    // 4. После микротаски токен удалён из хранилища
-    expect(localStorage.getItem('auth_token')).toBeNull();
-  });
-
-  it('handles malformed JWT strings as expired/invalid', async () => {
-    localStorage.setItem('auth_token', 'not.a.valid.jwt.payload');
-
-    expect(getToken()).toBeNull();
-
-    await Promise.resolve();
-    expect(localStorage.getItem('auth_token')).toBeNull();
-  });
-
-  it('handles 3-part tokens with invalid base64 or invalid json as expired', async () => {
-    // 1. Некорректный base64
-    localStorage.setItem('auth_token', 'header.%%%invalid-base64%%%.sig');
-    expect(getToken()).toBeNull();
-    await Promise.resolve();
-    expect(localStorage.getItem('auth_token')).toBeNull();
-
-    // 2. Валидный base64, но невалидный JSON
-    localStorage.setItem('auth_token', `header.${btoa('invalid-json')}.sig`);
-    expect(getToken()).toBeNull();
-    await Promise.resolve();
-    expect(localStorage.getItem('auth_token')).toBeNull();
-  });
-
-  it('stores token and notifies listeners upon setToken', () => {
-    const listener = vi.fn();
-    const unsubscribe = subscribe(listener);
-
-    const token = createMockJwt(3600);
-    setToken(token);
-
-    expect(localStorage.getItem('auth_token')).toBe(token);
-    expect(listener).toHaveBeenCalledTimes(1);
-
-    unsubscribe();
-  });
-
-  it('removes token and notifies listeners upon clearToken', () => {
-    const token = createMockJwt(3600);
-    setToken(token);
-
-    const listener = vi.fn();
-    const unsubscribe = subscribe(listener);
-
-    clearToken();
-
-    expect(localStorage.getItem('auth_token')).toBeNull();
-    expect(listener).toHaveBeenCalledTimes(1);
-
-    unsubscribe();
-  });
-
-  it('responds to StorageEvent across tabs and unbinds cleanly', () => {
-    const listener = vi.fn();
-    const unsubscribe = subscribe(listener);
-
-    // Имитируем событие storage из другой вкладки браузера
-    window.dispatchEvent(new StorageEvent('storage'));
-    expect(listener).toHaveBeenCalledTimes(1);
-
-    unsubscribe();
-
-    window.dispatchEvent(new StorageEvent('storage'));
-    expect(listener).toHaveBeenCalledTimes(1); // Не должен вызываться повторно
-  });
-
-  it('useToken and useIsAuthenticated hooks reactively update with session store', () => {
-    const { result } = renderHook(() => ({
+  it('reactively updates useCurrentUser, useIsAuthenticated, useIsAdmin, and useToken hooks', () => {
+    const { result, unmount } = renderHook(() => ({
+      user: useCurrentUser(),
+      isAuth: useIsAuthenticated(),
+      admin: useIsAdmin(),
       token: useToken(),
-      isAuthenticated: useIsAuthenticated(),
     }));
 
+    expect(result.current.user).toBeNull();
+    expect(result.current.isAuth).toBe(false);
+    expect(result.current.admin).toBe(false);
     expect(result.current.token).toBeNull();
-    expect(result.current.isAuthenticated).toBe(false);
-
-    const token = createMockJwt(3600);
-    act(() => {
-      setToken(token);
-    });
-
-    expect(result.current.token).toBe(token);
-    expect(result.current.isAuthenticated).toBe(true);
 
     act(() => {
-      clearToken();
+      setUser(mockAdmin);
     });
 
-    expect(result.current.token).toBeNull();
-    expect(result.current.isAuthenticated).toBe(false);
+    expect(result.current.user).toEqual(mockAdmin);
+    expect(result.current.isAuth).toBe(true);
+    expect(result.current.admin).toBe(true);
+
+    act(() => {
+      clearUser();
+    });
+
+    expect(result.current.user).toBeNull();
+    expect(result.current.isAuth).toBe(false);
+    expect(result.current.admin).toBe(false);
+
+    unmount();
   });
 
-  it('does not remove token in cleanup microtask if token was replaced before microtask runs', async () => {
-    const expiredToken = createMockJwt(-3600);
-    const freshToken = createMockJwt(3600);
+  it('returns default fallback values during SSR snapshot', async () => {
+    const { createElement } = await import('react');
+    const { renderToString } = await import('react-dom/server');
 
-    localStorage.setItem('auth_token', expiredToken);
-    expect(getToken()).toBeNull();
+    function SsrComponent() {
+      const user = useCurrentUser();
+      const isAuth = useIsAuthenticated();
+      const admin = useIsAdmin();
+      const token = useToken();
 
-    // Immediately replace token before microtask fires
-    localStorage.setItem('auth_token', freshToken);
+      return createElement(
+        'div',
+        { 'data-testid': 'ssr' },
+        `${user === null}-${isAuth}-${admin}-${token === null}`,
+      );
+    }
 
-    // Wait for microtask queue to drain
-    await new Promise<void>((resolve) => queueMicrotask(() => resolve()));
-
-    // Fresh token was preserved
-    expect(localStorage.getItem('auth_token')).toBe(freshToken);
+    const html = renderToString(createElement(SsrComponent));
+    expect(html).toContain('true-false-false-true');
   });
 });
