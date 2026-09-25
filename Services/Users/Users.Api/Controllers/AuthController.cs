@@ -10,7 +10,6 @@ namespace Users.Api.Controllers;
 [ApiController]
 [ApiVersion(1.0)]
 [Route("v{version:apiVersion}/auth")]
-[Route("v{version:apiVersion}/auth")]
 [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
 public class AuthController : ControllerBase
 {
