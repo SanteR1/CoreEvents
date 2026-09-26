@@ -14,9 +14,9 @@ public sealed record GetBookingByIdQuery(Guid BookingId, Guid UserId, RoleName U
 internal sealed class GetBookingByIdHandler(IBookingRepository repository)
     : IRequestHandler<GetBookingByIdQuery, BookingResponseDto>
 {
-    public async Task<BookingResponseDto> Handle(GetBookingByIdQuery request, CancellationToken ct)
+    public async Task<BookingResponseDto> Handle(GetBookingByIdQuery request, CancellationToken cancellationToken)
     {
-        var booking = await repository.GetByIdAsync(request.BookingId, ct)
+        var booking = await repository.GetByIdAsync(request.BookingId, cancellationToken)
                       ?? throw new BookingNotFoundException(request.BookingId);
 
         var isAdmin = request.UserRole == RoleName.Admin;

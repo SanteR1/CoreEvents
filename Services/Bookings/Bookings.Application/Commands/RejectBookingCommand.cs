@@ -13,9 +13,9 @@ public record RejectBookingCommand(Guid BookingId, ValidationFailureReason Reaso
 
 internal class RejectBookingHandler(IBookingRepository repository, ILogger<RejectBookingHandler> logger) : IRequestHandler<RejectBookingCommand, Unit>
 {
-    public async Task<Unit> Handle(RejectBookingCommand request, CancellationToken ct)
+    public async Task<Unit> Handle(RejectBookingCommand request, CancellationToken cancellationToken)
     {
-        var booking = await repository.GetByIdAsync(request.BookingId, ct);
+        var booking = await repository.GetByIdAsync(request.BookingId, cancellationToken);
         if (booking == null)
         {
             logger.LogWarning("Booking with ID {BookingId} not found for Reject. Message ignored.", request.BookingId);
@@ -26,7 +26,7 @@ internal class RejectBookingHandler(IBookingRepository repository, ILogger<Rejec
 
         repository.Update(booking);
 
-        await repository.SaveChangesAsync(ct);
+        await repository.SaveChangesAsync(cancellationToken);
 
         return Unit.Value;
     }

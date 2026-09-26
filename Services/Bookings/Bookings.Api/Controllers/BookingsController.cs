@@ -82,12 +82,6 @@ public class BookingsController : ControllerBase
             userRole.GetValueOrDefault()
             );
         await _mediator.Send(command, ct);
-        //var cancelBooking = await _mediator.Send(command, ct);
-        //return AcceptedAtRoute(
-        //    "GetBookingStatus",
-        //    new { id = cancelBooking },
-        //    cancelBooking
-        //);
         return NoContent();
     }
 }

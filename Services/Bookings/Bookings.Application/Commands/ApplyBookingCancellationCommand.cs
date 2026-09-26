@@ -12,9 +12,9 @@ public record ApplyBookingCancellationCommand(Guid BookingId) : ICommand<Unit>;
 
 internal class ApplyBookingCancellationCommandHandler(IBookingRepository repository, ILogger<ApplyBookingCancellationCommandHandler> logger) : IRequestHandler<ApplyBookingCancellationCommand, Unit>
 {
-    public async Task<Unit> Handle(ApplyBookingCancellationCommand request, CancellationToken ct)
+    public async Task<Unit> Handle(ApplyBookingCancellationCommand request, CancellationToken cancellationToken)
     {
-        var booking = await repository.GetByIdAsync(request.BookingId, ct);
+        var booking = await repository.GetByIdAsync(request.BookingId, cancellationToken);
         if (booking == null)
         {
             logger.LogWarning("Booking with ID {BookingId} not found for cancellation. Message ignored.", request.BookingId);
@@ -25,7 +25,7 @@ internal class ApplyBookingCancellationCommandHandler(IBookingRepository reposit
 
         repository.Update(booking);
 
-        await repository.SaveChangesAsync(ct);
+        await repository.SaveChangesAsync(cancellationToken);
 
         return Unit.Value;
     }

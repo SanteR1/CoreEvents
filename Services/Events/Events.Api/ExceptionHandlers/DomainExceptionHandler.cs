@@ -65,22 +65,6 @@ public class DomainExceptionHandler(
         return true;
     }
 
-    //private static int GetStatusCode(Exception ex) => ex switch
-    //{
-    //    DomainValidationException => StatusCodes.Status400BadRequest,
-    //    DomainPastEventBookingException => StatusCodes.Status400BadRequest,
-    //    DomainUnauthorizedAccessException => StatusCodes.Status401Unauthorized,
-    //    DomainNotBookingOwnerException => StatusCodes.Status403Forbidden,
-    //    DomainNotFoundException => StatusCodes.Status404NotFound,
-    //    DomainAuthorizationException => StatusCodes.Status404NotFound,
-    //    DomainNoAvailableSeatsException => StatusCodes.Status409Conflict,
-    //    DomainUserAlreadyExistsException => StatusCodes.Status409Conflict,
-    //    DomainInvalidStatusTransitionException => StatusCodes.Status409Conflict,
-    //    DomainActiveBookingLimitExceededException => StatusCodes.Status409Conflict,
-    //    DomainReleaseSeatsException => StatusCodes.Status409Conflict,
-    //    OperationCanceledException => StatusCodes.Status499ClientClosedRequest,
-    //    _ => StatusCodes.Status400BadRequest 
-    //};
     private static int GetStatusCode(Exception ex) => ex switch
     {
         ValidationException => StatusCodes.Status400BadRequest, // Базовый для ошибок валидации
@@ -93,22 +77,6 @@ public class DomainExceptionHandler(
         _ => StatusCodes.Status500InternalServerError
     };
 
-    //private static string GetTitle(Exception ex) => ex switch
-    //{
-    //    DomainValidationException => "Validation failed",
-    //    DomainPastEventBookingException => "Event already started or passed",
-    //    DomainUnauthorizedAccessException => "Authorized access only",
-    //    DomainNotBookingOwnerException => "Not have permission",
-    //    DomainNotFoundException => "Resource not found",
-    //    DomainAuthorizationException => "Wrong authorization",
-    //    DomainNoAvailableSeatsException => "No available seats for this event",
-    //    DomainUserAlreadyExistsException => "User already exists",
-    //    DomainInvalidStatusTransitionException => "Status transition conflict",
-    //    DomainActiveBookingLimitExceededException => "Exceeded maximum number of bookings",
-    //    DomainReleaseSeatsException => "Failed to release seats",
-    //    OperationCanceledException => "The operation was canceled",
-    //    _ => "Domain rule violation"
-    //};
     private static string GetTitle(Exception ex) => ex switch
     {
         ValidationException => "Validation failed",

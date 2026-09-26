@@ -5,6 +5,7 @@ using Konscious.Security.Cryptography;
 
 namespace Users.Infrastructure.Identity;
 
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "S101:Types should be named in PascalCase", Justification = "Argon2id is the standard cryptographic algorithm name")]
 public class Argon2idPasswordHasher : IPasswordHasher
 {
     private const int SaltSize = 16;       // 128 бит соли
@@ -30,7 +31,7 @@ public class Argon2idPasswordHasher : IPasswordHasher
 
 
         // Обратная совместимость со старым SHA-256 хешами
-        if (!hash.StartsWith("$argon2id$"))
+        if (!hash.StartsWith("$argon2id$", StringComparison.Ordinal))
         {
             return VerifyLegacySha256(password, hash);
         }
@@ -53,13 +54,13 @@ public class Argon2idPasswordHasher : IPasswordHasher
         if (string.IsNullOrWhiteSpace(hash)) return true;
 
         // Если это старый SHA-256 хеш — нужен рехеш
-        if (!hash.StartsWith("$argon2id$")) return true;
+        if (!hash.StartsWith("$argon2id$", StringComparison.Ordinal)) return true;
 
         // Проверяем, соответствуют ли параметры хеша актуальным настройкам сложности
-        return !hash.Contains($"m={MemorySize},t={Iterations},p={DegreeOfParallelism}");
+        return !hash.Contains($"m={MemorySize},t={Iterations},p={DegreeOfParallelism}", StringComparison.Ordinal);
     }
 
-    private byte[] GenerateHash(string password, byte[] salt)
+    private static byte[] GenerateHash(string password, byte[] salt)
     {
         using var argon2 = new Argon2id(Encoding.UTF8.GetBytes(password))
         {
@@ -69,13 +70,13 @@ public class Argon2idPasswordHasher : IPasswordHasher
         return argon2.GetBytes(HashSize);
     }
 
-    private bool VerifyLegacySha256(string password, string legacyHexHash)
+    private static bool VerifyLegacySha256(string password, string legacyHexHash)
     {
         var inputHashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(password));
 
-            var userHashBytes = Convert.FromHexString(legacyHexHash);
-            if (CryptographicOperations.FixedTimeEquals(inputHashBytes, userHashBytes)) return true;
+        var userHashBytes = Convert.FromHexString(legacyHexHash);
+        if (CryptographicOperations.FixedTimeEquals(inputHashBytes, userHashBytes)) return true;
 
-            return false;
+        return false;
     }
 }

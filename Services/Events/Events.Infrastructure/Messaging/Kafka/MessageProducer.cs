@@ -22,7 +22,7 @@ internal sealed class MessageProducer : IMessageProducer, IDisposable
         _producer = new ProducerBuilder<string, string>(config).Build();
     }
 
-    public async Task ProduceAsync(string topic, string key, string value, IDictionary<string, string>? headers = null, CancellationToken ct = default)
+    public async Task ProduceAsync(string topic, string key, string payload, IDictionary<string, string>? headers = null, CancellationToken cancellationToken = default)
     {
         Headers? kafkaHeaders = null;
         if (headers != null && headers.Any())
@@ -37,11 +37,11 @@ internal sealed class MessageProducer : IMessageProducer, IDisposable
         var message = new Message<string, string>
         {
             Key = key,
-            Value = value,
+            Value = payload,
             Headers = kafkaHeaders
         };
 
-        await _producer.ProduceAsync(topic, message, ct);
+        await _producer.ProduceAsync(topic, message, cancellationToken);
     }
 
     public void Dispose()

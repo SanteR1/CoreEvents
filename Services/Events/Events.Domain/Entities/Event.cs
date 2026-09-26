@@ -137,7 +137,6 @@ public sealed class Event
     }
 
     private readonly List<IDomainEvent> _domainEvents = new();
-    // public IReadOnlyList<IDomainEvent> GetDomainEvents() => _domainEvents.AsReadOnly();
     private void RaiseDomainEvent(IDomainEvent domainEvent) => _domainEvents.Add(domainEvent);
     public IReadOnlyList<IDomainEvent> PopDomainEvents()
     {

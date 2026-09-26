@@ -42,7 +42,7 @@ public class UserContextTests
     }
 
     [Fact]
-    public void Role_WithUnknownRoleClaim_ShouldThrowArgumentOutOfRangeException()
+    public void Role_WithUnknownRoleClaim_ShouldThrowInvalidOperationException()
     {
         // Arrange
         Claim[] claims = new[] { new Claim("role", "SuperHackerRole") };
@@ -52,7 +52,7 @@ public class UserContextTests
         Action act = () => _ = context.Role;
 
         // Assert
-        act.Should().Throw<ArgumentOutOfRangeException>()
+        act.Should().Throw<InvalidOperationException>()
            .WithMessage("*Неизвестная роль в токене: SuperHackerRole*");
     }
 

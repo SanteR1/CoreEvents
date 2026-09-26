@@ -14,7 +14,7 @@ internal sealed class EventRepository : IEventRepository
     {
         _context = context;
     }
-    public async Task<PaginatedResult<Event>> GetAllAsync(EventFilter eventFilter, CancellationToken cancellationToken = default)
+    public async Task<PaginatedResult<Event>> GetAllAsync(EventFilter eventFilter, CancellationToken ct = default)
     {
         var entity = _context.Events
             .AsQueryable()
@@ -28,7 +28,10 @@ internal sealed class EventRepository : IEventRepository
             }
             else
             {
-                entity = entity.Where(e => e.Title.ToLower().Contains(eventFilter.Title.ToLower()));
+                var titleLower = eventFilter.Title.ToLowerInvariant();
+#pragma warning disable CA1862, CA1304, CA1311, RCS1155 // EF Core expression tree does not translate StringComparison overloads
+                entity = entity.Where(e => e.Title.ToLower().Contains(titleLower));
+#pragma warning restore CA1862, CA1304, CA1311, RCS1155
             }
         }
 
@@ -44,7 +47,7 @@ internal sealed class EventRepository : IEventRepository
             entity = entity.Where(e => e.EndAt < eventFilter.To.Value);
         }
 
-        var totalEvents = await entity.CountAsync(cancellationToken);
+        var totalEvents = await entity.CountAsync(ct);
 
         if (totalEvents == 0)
         {
@@ -61,7 +64,7 @@ internal sealed class EventRepository : IEventRepository
             .OrderByDescending(e => e.StartAt)
             .Skip((eventFilter.Page - 1) * eventFilter.PageSize)
             .Take(eventFilter.PageSize)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(ct);
 
         return new PaginatedResult<Event>()
         {

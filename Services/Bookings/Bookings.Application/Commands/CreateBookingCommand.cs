@@ -14,9 +14,9 @@ public record CreateBookingCommand(Guid EventId, Guid UserId, int? Seats = 1) : 
 
 internal class CreateBookingHandler(IBookingRepository repository, IOutboxService outboxService, BookingSettings bookingSettings) : IRequestHandler<CreateBookingCommand, BookingResponseDto>
 {
-    public async Task<BookingResponseDto> Handle(CreateBookingCommand request, CancellationToken ct)
+    public async Task<BookingResponseDto> Handle(CreateBookingCommand request, CancellationToken cancellationToken)
     {
-        var bookingCount = await repository.GetBookingCountForUserAsync(request.UserId, ct);
+        var bookingCount = await repository.GetBookingCountForUserAsync(request.UserId, cancellationToken);
         if (bookingCount >= bookingSettings.MaxBookingsPerUser) throw new ActiveBookingLimitExceededException(bookingSettings.MaxBookingsPerUser);
 
         var booking = Booking.Create(request.EventId, request.UserId, request.Seats ?? 1);
@@ -33,7 +33,7 @@ internal class CreateBookingHandler(IBookingRepository repository, IOutboxServic
             },
             partitionKey: request.EventId.ToString());
 
-        await repository.SaveChangesAsync(ct);
+        await repository.SaveChangesAsync(cancellationToken);
 
         return BookingResponseDto.FromEntity(booking);
     }

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using Confluent.Kafka;
@@ -31,7 +32,7 @@ internal static class EventMetadataHeaderMapper
         MessageId = Guid.Parse(GetHeader(headers, "messageId")),
         CorrelationId = Guid.Parse(GetHeader(headers, "correlationId")),
         CausationId = TryGetHeader(headers, "causationId", out var c) ? Guid.Parse(c) : null,
-        CreatedAt = DateTimeOffset.Parse(GetHeader(headers, "createdAt")),
+        CreatedAt = DateTimeOffset.Parse(GetHeader(headers, "createdAt"), CultureInfo.InvariantCulture),
         EventType = GetHeader(headers, "eventType")
     };
 

@@ -69,7 +69,7 @@ public static class MigrationExtensions
         catch (Exception ex)
         {
             logger.LogCritical(ex, "Произошла критическая ошибка при миграции или сидировании базы данных.");
-            throw;
+            throw new InvalidOperationException("Произошла критическая ошибка при миграции или сидировании базы данных.", ex);
         }
     }
 }
