@@ -132,6 +132,10 @@ dotnet_remove_unnecessary_suppression_exclusions = none
 dotnet_style_allow_multiple_blank_lines_experimental = true
 dotnet_style_allow_statement_immediately_after_block_experimental = true
 
+# Roslynator: отключение устаревшего правила RCS1036 и использование RCS0063
+dotnet_diagnostic.RCS1036.severity = none
+dotnet_diagnostic.RCS0063.severity = suggestion
+
 #### Рекомендации по написанию кода C# ####
 
 # Предпочтения var

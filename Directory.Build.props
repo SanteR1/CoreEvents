@@ -33,13 +33,14 @@
          - CA1716: слово 'Shared' в неймспейсах (из-за ключевого слова в VB.NET)
          - CS1591: требование XML-документации на каждый класс/метод (актуально только для публичных NuGet-пакетов)
          - RCS1194: требование 3 конструкторов исключений (конфликтует с современными Primary Constructors в C# 12+)
+         - RCS1036: устаревший анализатор удаления пустых строк (заменен на RCS0063 в Roslynator.Formatting.Analyzers)
          - CA1848, CA1873: требование LoggerMessage source-generator вместо обычного ILogger
          - CA1861: требование static readonly массивов (встречается в автогенерируемых миграциях EF Core)
          - S1144: приватные сеттеры/конструкторы для гидратации сущностей EF Core
          - S1135: предупреждение о TODO комментариях
          - S1118, S6966: особенности статического Program.cs для интеграционных тестов WebApplicationFactory
     -->
-    <NoWarn>$(NoWarn);CA1716;CS1591;RCS1194;CA1848;CA1873;CA1861;S1144;S1135;S1118;S6966</NoWarn>
+    <NoWarn>$(NoWarn);CA1716;CS1591;RCS1194;RCS1036;CA1848;CA1873;CA1861;S1144;S1135;S1118;S6966</NoWarn>
   </PropertyGroup>
 
   <!-- Специфические настройки для тестовых проектов -->
@@ -84,13 +85,13 @@
     </PackageReference>
 
     <!-- Roslynator: идиоматичный C#, чистота синтаксиса, оптимизация производительности (LINQ) -->
-    <PackageReference Include="Roslynator.Analyzers" Version="4.13.1">
+    <PackageReference Include="Roslynator.Analyzers" Version="5.0.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
 
     <!-- Roslynator Formatting: проверка форматирования кода в соответствии со стилем -->
-    <PackageReference Include="Roslynator.Formatting.Analyzers" Version="4.13.1">
+    <PackageReference Include="Roslynator.Formatting.Analyzers" Version="5.0.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
