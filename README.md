@@ -1,5 +1,8 @@
 # CoreEvents API 📅
 
+[![Backend CI/CD](https://github.com/SanteR1/CoreEvents/actions/workflows/backend-ci.yml/badge.svg?branch=main)](https://github.com/SanteR1/CoreEvents/actions/workflows/backend-ci.yml)
+[![Frontend CI](https://github.com/SanteR1/CoreEvents/actions/workflows/frontend-ci.yml/badge.svg?branch=main)](https://github.com/SanteR1/CoreEvents/actions/workflows/frontend-ci.yml)
+
 Современный _RESTful API_ для управления событиями, построенный на базе **ASP.NET Core 10.0** с использование паттерна **Clean Architecture**.
 В основе проекта лежит принцип инверсии зависимостей и слабой связанности (**Loose Coupling**): каждый микросервис полностью автономен, имеет собственное хранилище данных и общается с другими частями системы через брокер сообщений.
 
