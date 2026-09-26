@@ -51,6 +51,6 @@
     <File Path=".editorconfig" />
   </Folder>
   <Project Path="docker-compose.dcproj">
-    <Build Solution="Release|*" />
+    <Build Project="false" />
   </Project>
 </Solution>

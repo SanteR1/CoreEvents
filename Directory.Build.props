@@ -3,7 +3,7 @@
   <!-- ======================================================== -->
   <!-- 1. Базовые настройки компилятора C# / .NET               -->
   <!-- ======================================================== -->
-  <PropertyGroup>
+  <PropertyGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -15,7 +15,7 @@
   <!-- ======================================================== -->
   <!-- 2. Анализ качества кода и интеграция с .editorconfig    -->
   <!-- ======================================================== -->
-  <PropertyGroup>
+  <PropertyGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
     <!-- Включаем встроенные рекомендуемые анализаторы .NET SDK -->
     <AnalysisLevel>latest-recommended</AnalysisLevel>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
@@ -43,7 +43,7 @@
   </PropertyGroup>
 
   <!-- Специфические настройки для тестовых проектов -->
-  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('Tests'))">
+  <PropertyGroup Condition="'$(MSBuildProjectExtension)' == '.csproj' and $(MSBuildProjectName.EndsWith('Tests'))">
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <!-- Подавляем правила именования и структуры тестов (xUnit Test Collections, protected fields, fixtures) -->
     <NoWarn>$(NoWarn);CA1707;CA1051;CA1711;S2743;S4144;CA1310;CA1304;CA1311;CA1305;S6968;S3971;S1481;S3267;S3626;S2325;CA1822;S927;S1066;S125</NoWarn>
@@ -52,7 +52,7 @@
   <!-- ======================================================== -->
   <!-- 3. Безопасность зависимостей (NuGet Audit)              -->
   <!-- ======================================================== -->
-  <PropertyGroup>
+  <PropertyGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
     <!-- Проверяет используемые NuGet-пакеты по базе уязвимостей (CVE) при сборке -->
     <NuGetAudit>true</NuGetAudit>
     <NuGetAuditMode>all</NuGetAuditMode>
@@ -62,7 +62,7 @@
   <!-- ======================================================== -->
   <!-- 4. Оптимизация скорости сборки                           -->
   <!-- ======================================================== -->
-  <PropertyGroup>
+  <PropertyGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
     <!-- Ускоряет инкрементальную сборку в Visual Studio 2022+ -->
     <AccelerateBuildsInVisualStudio>true</AccelerateBuildsInVisualStudio>
   </PropertyGroup>
@@ -70,7 +70,7 @@
   <!-- ======================================================== -->
   <!-- 5. Глобальные анализаторы (NuGet)                       -->
   <!-- ======================================================== -->
-  <ItemGroup>
+  <ItemGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
     <!-- Поиск утечек памяти и некорректного использования IDisposable/IAsyncDisposable -->
     <PackageReference Include="IDisposableAnalyzers" Version="4.0.8">
       <PrivateAssets>all</PrivateAssets>
