@@ -1,5 +1,6 @@
 {
   "antigravity.enableTelemetry": false,
-  "files.autoSave": "afterDelay",
-  "files.autoSaveDelay": 500
+  "antigravity.enableInlineDiff": true,
+  "antigravity.autoOpenFiles": true,
+  "files.autoSave": "off"
 }
