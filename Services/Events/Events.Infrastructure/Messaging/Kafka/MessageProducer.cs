@@ -25,7 +25,7 @@ internal sealed class MessageProducer : IMessageProducer, IDisposable
     public async Task ProduceAsync(string topic, string key, string payload, IDictionary<string, string>? headers = null, CancellationToken cancellationToken = default)
     {
         Headers? kafkaHeaders = null;
-        if (headers != null && headers.Any())
+        if (headers != null && headers.Count > 0)
         {
             kafkaHeaders = new Headers();
             foreach (var header in headers)
