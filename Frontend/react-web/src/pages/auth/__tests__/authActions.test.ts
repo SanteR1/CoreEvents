@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { action as loginAction } from '../LoginPage';
 import { action as registerAction } from '../RegisterPage';
 import { loginUser, registerUser } from '@/features/auth/api/authApi';
-import { getToken, clearToken } from '@/shared/lib/auth';
+import { getUser, clearUser } from '@/shared/lib/auth';
 
 vi.mock('@/features/auth/api/authApi', () => ({
   loginUser: vi.fn(),
@@ -27,19 +27,17 @@ function createActionRequest(url: string, body: Record<string, string>): ActionA
   } as unknown as ActionArgs;
 }
 
-function createMockJwt(expSecondsFromNow = 3600): string {
-  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-  const payload = btoa(
-    JSON.stringify({ sub: 'user_123', exp: Math.floor(Date.now() / 1000) + expSecondsFromNow }),
-  );
-  return `${header}.${payload}.signature`;
-}
+const mockUser = {
+  id: 'user_123',
+  userName: 'alice',
+  role: 'User' as const,
+};
 
 describe('Auth Pages Actions', () => {
   const originalConsoleError = console.error;
 
   beforeEach(() => {
-    clearToken();
+    clearUser();
     vi.clearAllMocks();
     console.error = vi.fn();
   });
@@ -68,7 +66,7 @@ describe('Auth Pages Actions', () => {
     it('returns error message from API if login fails', async () => {
       vi.mocked(loginUser).mockResolvedValueOnce({
         data: undefined,
-        error: { message: 'Неверный логин или пароль' },
+        error: { detail: 'Неверный логин или пароль' },
         status: 400,
       });
 
@@ -80,10 +78,9 @@ describe('Auth Pages Actions', () => {
       expect(result).toEqual({ error: 'Неверный логин или пароль' });
     });
 
-    it('saves token and redirects to default "/" on successful login', async () => {
-      const mockToken = createMockJwt();
+    it('saves user and redirects to default "/" on successful login', async () => {
       vi.mocked(loginUser).mockResolvedValueOnce({
-        data: mockToken,
+        data: mockUser,
         error: undefined,
         status: 200,
       });
@@ -98,13 +95,12 @@ describe('Auth Pages Actions', () => {
       const response = result as Response;
       expect(response.status).toBe(302);
       expect(response.headers.get('Location')).toBe('/');
-      expect(getToken()).toBe(mockToken);
+      expect(getUser()).toEqual(mockUser);
     });
 
     it('redirects to safe returnUrl on successful login', async () => {
-      const mockToken = createMockJwt();
       vi.mocked(loginUser).mockResolvedValueOnce({
-        data: mockToken,
+        data: mockUser,
         error: undefined,
         status: 200,
       });
@@ -119,13 +115,12 @@ describe('Auth Pages Actions', () => {
       const response = result as Response;
       expect(response.status).toBe(302);
       expect(response.headers.get('Location')).toBe('/events/42');
-      expect(getToken()).toBe(mockToken);
+      expect(getUser()).toEqual(mockUser);
     });
 
     it('sanitizes malicious open redirect returnUrl to "/"', async () => {
-      const mockToken = createMockJwt();
       vi.mocked(loginUser).mockResolvedValueOnce({
-        data: mockToken,
+        data: mockUser,
         error: undefined,
         status: 200,
       });
@@ -187,7 +182,7 @@ describe('Auth Pages Actions', () => {
       });
       vi.mocked(loginUser).mockResolvedValueOnce({
         data: undefined,
-        error: { message: 'Временная ошибка входа' },
+        error: { detail: 'Временная ошибка входа' },
         status: 500,
       });
 
@@ -204,14 +199,13 @@ describe('Auth Pages Actions', () => {
     });
 
     it('automatically logs in and redirects to safe returnUrl on successful registration', async () => {
-      const mockToken = createMockJwt();
       vi.mocked(registerUser).mockResolvedValueOnce({
         data: undefined,
         error: undefined,
         status: 201,
       });
       vi.mocked(loginUser).mockResolvedValueOnce({
-        data: mockToken,
+        data: mockUser,
         error: undefined,
         status: 200,
       });
@@ -229,18 +223,17 @@ describe('Auth Pages Actions', () => {
       const response = result as Response;
       expect(response.status).toBe(302);
       expect(response.headers.get('Location')).toBe('/bookings/create/5');
-      expect(getToken()).toBe(mockToken);
+      expect(getUser()).toEqual(mockUser);
     });
 
     it('sanitizes malicious open redirect returnUrl to "/" during registration', async () => {
-      const mockToken = createMockJwt();
       vi.mocked(registerUser).mockResolvedValueOnce({
         data: undefined,
         error: undefined,
         status: 201,
       });
       vi.mocked(loginUser).mockResolvedValueOnce({
-        data: mockToken,
+        data: mockUser,
         error: undefined,
         status: 200,
       });

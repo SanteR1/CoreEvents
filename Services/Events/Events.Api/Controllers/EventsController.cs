@@ -8,7 +8,7 @@ namespace Events.Api.Controllers;
 
 [ApiController]
 [ApiVersion(1.0)]
-[Route("v{version:apiVersion}/[controller]")]
+[Route("v{version:apiVersion}/events")]
 [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
 public class EventsController : ControllerBase
 {

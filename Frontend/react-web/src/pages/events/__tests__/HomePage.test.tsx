@@ -6,6 +6,7 @@ import { loader, HomePage } from '../HomePage';
 import { getAllEvents } from '@/features/events/api/eventsApi';
 import { checkA11y } from '@/shared/lib/test/axe';
 import type { EventResponse, PaginatedResult } from '@/features/events/api/eventsApi';
+import { setUser, clearUser } from '@/shared/lib/auth';
 
 vi.mock('@/features/events/api/eventsApi', () => ({
   getAllEvents: vi.fn(),
@@ -57,10 +58,12 @@ describe('HomePage', () => {
   };
 
   beforeEach(() => {
+    clearUser();
     vi.clearAllMocks();
   });
 
   afterEach(() => {
+    clearUser();
     vi.restoreAllMocks();
   });
 
@@ -165,7 +168,7 @@ describe('HomePage', () => {
       return render(<RouterProvider router={router} />);
     }
 
-    it('renders header, description, and quick-action links', async () => {
+    it('renders header, description, top events link and hides create event button for guests', async () => {
       renderHomePage();
 
       expect(await screen.findByRole('heading', { name: 'Афиша событий' })).toBeInTheDocument();
@@ -174,7 +177,14 @@ describe('HomePage', () => {
       const topEventsLink = screen.getByRole('link', { name: /топ событий/i });
       expect(topEventsLink).toHaveAttribute('href', '/events/topevents');
 
-      const createEventLink = screen.getByRole('link', { name: /\+ Создать событие/i });
+      expect(screen.queryByRole('link', { name: /\+ Создать событие/i })).not.toBeInTheDocument();
+    });
+
+    it('renders create event link when user is admin', async () => {
+      setUser({ id: 'a1', userName: 'Admin', role: 'Admin' });
+      renderHomePage();
+
+      const createEventLink = await screen.findByRole('link', { name: /\+ Создать событие/i });
       expect(createEventLink).toHaveAttribute('href', '/events/create');
     });
 

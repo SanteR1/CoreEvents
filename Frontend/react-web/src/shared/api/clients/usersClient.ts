@@ -1,6 +1,7 @@
 import createClient from 'openapi-fetch';
-import type { paths } from '@/shared/api/generated/users'; // Путь к сгенерированным типам
+import type { paths } from '@/shared/api/generated/users';
 import { getToken } from '@/shared/lib/auth/sessionStore';
+import { authRefreshMiddleware } from './authRefreshMiddleware';
 
 const USERS_API_URL: string =
   (import.meta.env.VITE_API_URL as string | undefined) ??
@@ -10,6 +11,7 @@ const USERS_API_URL: string =
 
 export const usersClient = createClient<paths>({
   baseUrl: USERS_API_URL,
+  credentials: 'include',
 });
 
 // Опционально: можно добавить интерцепторы (middleware) для авторизации
@@ -22,3 +24,4 @@ usersClient.use({
     return request;
   },
 });
+usersClient.use(authRefreshMiddleware);

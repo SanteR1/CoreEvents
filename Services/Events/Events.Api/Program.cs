@@ -51,12 +51,9 @@ try
 
         app.UseSwaggerUI(options =>
         {
-            var descriptions = app.DescribeApiVersions();
-            foreach (var description in descriptions)
+            foreach (var groupName in app.DescribeApiVersions().Select(d => d.GroupName))
             {
-                var url = $"/openapi/{description.GroupName}.json";
-                var name = description.GroupName.ToUpperInvariant();
-                options.SwaggerEndpoint(url, name);
+                options.SwaggerEndpoint($"/openapi/{groupName}.json", groupName.ToUpperInvariant());
             }
             options.EnablePersistAuthorization();
         });

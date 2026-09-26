@@ -1,16 +1,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import axe from 'axe-core';
 import { Header } from '../Header';
 import { ThemeProvider } from '@/shared/lib/theme';
+import { setUser, clearUser } from '@/shared/lib/auth';
+import { logoutUser } from '@/features/auth/api/authApi';
 
 const mockUseNavigation = vi.fn<() => { state: 'idle' | 'loading' | 'submitting' }>(() => ({
   state: 'idle',
 }));
-const mockUseIsAuthenticated = vi.fn<() => boolean>(() => false);
-const mockClearToken = vi.fn<() => void>();
 
 vi.mock('react-router', async (importOriginal) => {
   const actual = await importOriginal<typeof import('react-router')>();
@@ -20,11 +20,8 @@ vi.mock('react-router', async (importOriginal) => {
   };
 });
 
-vi.mock('@/shared/lib/auth', () => ({
-  useIsAuthenticated: () => mockUseIsAuthenticated(),
-  clearToken: () => {
-    mockClearToken();
-  },
+vi.mock('@/features/auth/api/authApi', () => ({
+  logoutUser: vi.fn(),
 }));
 
 function renderHeaderWithRouter(initialEntry = '/') {
@@ -78,12 +75,12 @@ function renderHeaderWithRouter(initialEntry = '/') {
 
 describe('Header Component', () => {
   beforeEach(() => {
-    mockUseIsAuthenticated.mockReturnValue(false);
+    clearUser();
     mockUseNavigation.mockReturnValue({ state: 'idle' });
-    mockClearToken.mockClear();
   });
 
   afterEach(() => {
+    clearUser();
     vi.clearAllMocks();
   });
 
@@ -121,8 +118,17 @@ describe('Header Component', () => {
     expect(screen.queryByRole('button', { name: 'Выйти' })).not.toBeInTheDocument();
   });
 
-  it('renders in authenticated mode: displays "Создать событие" and "Выйти", hides "Вход"', () => {
-    mockUseIsAuthenticated.mockReturnValue(true);
+  it('renders in regular user mode: displays "Выйти", hides "Создать событие" and "Вход"', () => {
+    setUser({ id: 'u1', userName: 'RegularUser', role: 'User' });
+    renderHeaderWithRouter('/');
+
+    expect(screen.queryByRole('link', { name: 'Создать событие' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Выйти' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Вход' })).not.toBeInTheDocument();
+  });
+
+  it('renders in admin mode: displays "Создать событие" and "Выйти", hides "Вход"', () => {
+    setUser({ id: 'a1', userName: 'AdminUser', role: 'Admin' });
     renderHeaderWithRouter('/');
 
     expect(screen.getByRole('link', { name: 'Создать событие' })).toBeInTheDocument();
@@ -130,18 +136,20 @@ describe('Header Component', () => {
     expect(screen.queryByRole('link', { name: 'Вход' })).not.toBeInTheDocument();
   });
 
-  it('clears token and navigates to /login when clicking "Выйти"', async () => {
+  it('calls logoutUser and navigates to /login when clicking "Выйти"', async () => {
     const user = userEvent.setup();
-    mockUseIsAuthenticated.mockReturnValue(true);
+    setUser({ id: 'a1', userName: 'AdminUser', role: 'Admin' });
 
     const { router } = renderHeaderWithRouter('/');
 
     const logoutBtn = screen.getByRole('button', { name: 'Выйти' });
     await user.click(logoutBtn);
 
-    expect(mockClearToken).toHaveBeenCalledTimes(1);
-    expect(router.state.location.pathname).toBe('/login');
-    expect(screen.getByTestId('page-content')).toHaveTextContent('Login Page Content');
+    expect(logoutUser).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/login');
+    });
+    expect(await screen.findByTestId('page-content')).toHaveTextContent('Login Page Content');
   });
 
   it('displays loading indicator when navigation state is "loading"', () => {
@@ -175,7 +183,7 @@ describe('Header Component', () => {
 
     unmount();
 
-    mockUseIsAuthenticated.mockReturnValue(true);
+    setUser({ id: 'a1', userName: 'AdminUser', role: 'Admin' });
     const { container: authContainer } = renderHeaderWithRouter('/');
     results = await axe.run(authContainer, {
       rules: { 'color-contrast': { enabled: false } },

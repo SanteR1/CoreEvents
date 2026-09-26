@@ -424,6 +424,7 @@ describe('BookingStatusPage', () => {
     });
 
     it('displays actionData error when cancellation fails', async () => {
+      setToken(createMockJwt());
       const user = userEvent.setup();
       vi.spyOn(window, 'confirm').mockReturnValue(true);
       const router = createMemoryRouter(
@@ -447,6 +448,7 @@ describe('BookingStatusPage', () => {
     });
 
     it('displays actionData success message when cancellation is completed without inProgress', async () => {
+      setToken(createMockJwt());
       const user = userEvent.setup();
       vi.spyOn(window, 'confirm').mockReturnValue(true);
       let callCount = 0;
@@ -515,6 +517,7 @@ describe('BookingStatusPage', () => {
     });
 
     it('displays fallback cancelling message when action returns inProgress without message', async () => {
+      setToken(createMockJwt());
       const user = userEvent.setup();
       vi.spyOn(window, 'confirm').mockReturnValue(true);
       const router = createMemoryRouter(

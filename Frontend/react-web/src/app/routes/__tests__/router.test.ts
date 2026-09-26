@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { router } from '../router';
-import { requireAuthLoader, anonymousOnlyLoader } from '@/shared/lib/auth';
+import { requireAdminLoader, anonymousOnlyLoader, rootLoader } from '@/shared/lib/auth';
 
 describe('App Router Configuration', () => {
   it('configures root layout, error boundary and hydrate fallback', () => {
@@ -10,6 +10,7 @@ describe('App Router Configuration', () => {
     expect(rootRoute.path).toBe('/');
     expect(rootRoute.id).toBeDefined();
     expect(rootRoute.element).toBeDefined();
+    expect(rootRoute.loader).toBe(rootLoader);
   });
 
   it('configures public, guest, protected, and 404 routes', () => {
@@ -36,10 +37,11 @@ describe('App Router Configuration', () => {
     expect(registerRoute).toBeDefined();
     expect(registerRoute?.loader).toBe(anonymousOnlyLoader);
 
-    // Protected guards
+    // Admin guards
     expect(createEventRoute).toBeDefined();
-    expect(createEventRoute?.loader).toBe(requireAuthLoader);
+    expect(createEventRoute?.loader).toBe(requireAdminLoader);
     expect(editEventRoute).toBeDefined();
+    expect(editEventRoute?.loader).toBe(requireAdminLoader);
 
     // Bookings nested routes
     expect(bookingsRoute).toBeDefined();

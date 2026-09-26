@@ -9,8 +9,9 @@ import {
   type ActionFunctionArgs,
 } from 'react-router';
 import { getEventById, deleteEventById } from '@/features/events/api/eventsApi';
-import { requireAuthLoader } from '@/shared/lib/auth';
+import { requireAdminLoader } from '@/shared/lib/auth';
 import { toFormError } from '@/shared/api/errors';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 
 export async function loader({ params }: LoaderFunctionArgs) {
   const { id } = params;
@@ -44,7 +45,7 @@ export async function loader({ params }: LoaderFunctionArgs) {
 }
 
 export async function action({ params, request }: ActionFunctionArgs) {
-  const authRedirect = requireAuthLoader({ request });
+  const authRedirect = await requireAdminLoader({ request });
   if (authRedirect) {
     return authRedirect;
   }
@@ -72,6 +73,7 @@ export const GetEventByIdPage = () => {
   const { event } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
+  const { isAdmin } = useAuth();
   const isDeleting =
     navigation.state === 'submitting' && navigation.formData?.get('intent') === 'delete';
 
@@ -166,36 +168,40 @@ export const GetEventByIdPage = () => {
               </Link>
             )}
 
-            <Link
-              to={`/events/${event.id}/edit`}
-              className="rounded-lg border border-(--border) px-4 py-2.5 text-sm font-medium text-(--text-h) transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
-            >
-              ✏️ Редактировать
-            </Link>
+            {isAdmin && (
+              <Link
+                to={`/events/${event.id}/edit`}
+                className="rounded-lg border border-(--border) px-4 py-2.5 text-sm font-medium text-(--text-h) transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                ✏️ Редактировать
+              </Link>
+            )}
           </div>
 
           {/* Кнопка удаления события */}
-          <Form
-            method="post"
-            onSubmit={(e) => {
-              if (
-                !window.confirm(
-                  'Вы уверены, что хотите удалить это событие? Это действие необратимо.',
-                )
-              ) {
-                e.preventDefault();
-              }
-            }}
-          >
-            <input type="hidden" name="intent" value="delete" />
-            <button
-              type="submit"
-              disabled={isDeleting}
-              className="flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300 dark:hover:bg-red-900/50"
+          {isAdmin && (
+            <Form
+              method="post"
+              onSubmit={(e) => {
+                if (
+                  !window.confirm(
+                    'Вы уверены, что хотите удалить это событие? Это действие необратимо.',
+                  )
+                ) {
+                  e.preventDefault();
+                }
+              }}
             >
-              {isDeleting ? 'Удаление...' : '🗑️ Удалить'}
-            </button>
-          </Form>
+              <input type="hidden" name="intent" value="delete" />
+              <button
+                type="submit"
+                disabled={isDeleting}
+                className="flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300 dark:hover:bg-red-900/50"
+              >
+                {isDeleting ? 'Удаление...' : '🗑️ Удалить'}
+              </button>
+            </Form>
+          )}
         </div>
       </div>
     </div>

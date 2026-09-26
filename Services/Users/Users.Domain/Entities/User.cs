@@ -11,14 +11,6 @@ public class User
     public RoleName Role { get; private set; }
     private User() { }
 
-    private User(Guid id, string userName, string passwordHash, RoleName role)
-    {
-        Id = id;
-        UserName = userName;
-        PasswordHash = passwordHash;
-        Role = role;
-    }
-
     public static User Create(string userName, string passwordHash, string? role = "User")
     {
         if (string.IsNullOrWhiteSpace(userName))

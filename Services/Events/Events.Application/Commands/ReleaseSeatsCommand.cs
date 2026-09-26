@@ -13,9 +13,9 @@ public record ReleaseSeatsCommand(Guid BookingId, Guid EventId, int Seats) : ICo
 
 internal class ReleaseSeatsHandler(IEventRepository repository, IOutboxService outboxService) : IRequestHandler<ReleaseSeatsCommand, Unit>
 {
-    public async Task<Unit> Handle(ReleaseSeatsCommand request, CancellationToken ct)
+    public async Task<Unit> Handle(ReleaseSeatsCommand request, CancellationToken cancellationToken)
     {
-        var @event = await repository.GetByIdAsync(request.EventId, ct);
+        var @event = await repository.GetByIdAsync(request.EventId, cancellationToken);
         if (@event == null)
         {
             outboxService.Publish(

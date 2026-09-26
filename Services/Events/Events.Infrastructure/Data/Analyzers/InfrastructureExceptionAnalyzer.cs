@@ -20,18 +20,9 @@ public sealed class InfrastructureExceptionAnalyzer : IExceptionAnalyzer
             return true;
 
         // 2. Ошибки Kafka (При публикации сообщений)
-        if (rootCause is KafkaException kafkaEx)
+        if (rootCause is KafkaException kafkaEx && !kafkaEx.Error.IsFatal && !kafkaEx.Error.IsLocalError)
         {
-            // У Kafka есть свой флаг IsFatal (например, если брокер вернул ошибку авторизации).
-            // Если ошибка не фатальная (например, брокер временно недоступен или Local_QueueFull),
-            // значит она транзитная.
-            // Если ошибка не фатальная и не локальная (например, не проблема с памятью/размером сообщения),
-            // то это временная проблема сети или брокера.
-            if (!kafkaEx.Error.IsFatal && !kafkaEx.Error.IsLocalError)
-                return true;
-
-            // Можно проверять конкретные коды, если нужно:
-            // if (kafkaEx.Error.Code == ErrorCode.Local_Transport) return true;
+            return true;
         }
 
         // 3. Общие сетевые ошибки (.NET)

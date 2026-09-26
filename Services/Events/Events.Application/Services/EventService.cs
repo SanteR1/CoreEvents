@@ -110,30 +110,30 @@ internal sealed class EventService : IEventService
         return EventResponseDto.FromEntity(eventEntity);
     }
 
-    public async Task<EventResponseDto> CreateEventAsync(EventCreateDto entityDto, CancellationToken ct = default)
+    public async Task<EventResponseDto> CreateEventAsync(EventCreateDto createDto, CancellationToken ct = default)
     {
         var entity = Event.Create(
-            title: entityDto.Title!,
-            startAt: entityDto.StartAt!.Value,
-            endAt: entityDto.EndAt!.Value,
-            totalSeats: entityDto.TotalSeats!.Value,
-            description: entityDto.Description);
+            title: createDto.Title!,
+            startAt: createDto.StartAt!.Value,
+            endAt: createDto.EndAt!.Value,
+            totalSeats: createDto.TotalSeats!.Value,
+            description: createDto.Description);
 
         _eventRepository.Add(entity);
         await _eventRepository.SaveChangesAsync(ct);
 
         return EventResponseDto.FromEntity(entity);
     }
-    public async Task<EventResponseDto> UpdateEventAsync(Guid id, EventUpdateDto entityDto, CancellationToken ct = default)
+    public async Task<EventResponseDto> UpdateEventAsync(Guid id, EventUpdateDto updateDto, CancellationToken ct = default)
     {
         var existing = await _eventRepository.GetByIdAsync(id, ct);
         if (existing == null) throw new EventNotFoundException(id);
 
         existing.Update(
-            entityDto.Title,
-            entityDto.StartAt,
-            entityDto.EndAt,
-            entityDto.Description
+            updateDto.Title,
+            updateDto.StartAt,
+            updateDto.EndAt,
+            updateDto.Description
             );
 
         await _eventRepository.SaveChangesAsync(ct);

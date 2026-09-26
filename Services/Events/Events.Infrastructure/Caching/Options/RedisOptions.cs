@@ -15,5 +15,5 @@ internal sealed record RedisOptions
     public int SyncTimeout { get; init; } = 3000;
     [Range(0, int.MaxValue)]
     public int ConnectRetry { get; init; } = 3;
-    public bool AbortOnConnectFail { get; init; } = false;
+    public bool AbortOnConnectFail { get; init; }
 }

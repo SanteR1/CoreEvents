@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using Bookings.Application.Abstractions;
 using Bookings.Application.Abstractions.Messaging;
@@ -152,7 +153,7 @@ sealed class KafkaConsumerBackgroundService(
                 }
                 catch (OperationCanceledException ex)
                 {
-                    logger.LogInformation("Kafka остановлен. {message}", ex.Message);
+                    logger.LogInformation(ex, "Kafka остановлен: {Message}", ex.Message);
                     break;
                 }
                 catch (Exception ex)
@@ -173,7 +174,7 @@ sealed class KafkaConsumerBackgroundService(
                         {
                             // Если даже DLT не сработал — Останавливаем весь сервис!
                             logger.LogCritical(dltEx, "DLT Unavailable. Crashing to prevent data loss.");
-                            throw;
+                            throw new InvalidOperationException("DLT Unavailable. Crashing to prevent data loss.", dltEx);
                         }
                     }
                     else
@@ -208,8 +209,8 @@ sealed class KafkaConsumerBackgroundService(
         dltMessage.Headers.Add("error-Reason", Encoding.UTF8.GetBytes(dltReason));
         dltMessage.Headers.Add("error-ExceptionType", Encoding.UTF8.GetBytes(exception.GetType().FullName ?? exception.GetType().Name));
         dltMessage.Headers.Add("error-SourceTopic", Encoding.UTF8.GetBytes(result.Topic));
-        dltMessage.Headers.Add("error-SourcePartition", Encoding.UTF8.GetBytes(result.Partition.Value.ToString()));
-        dltMessage.Headers.Add("error-SourceOffset", Encoding.UTF8.GetBytes(result.Offset.Value.ToString()));
+        dltMessage.Headers.Add("error-SourcePartition", Encoding.UTF8.GetBytes(result.Partition.Value.ToString(CultureInfo.InvariantCulture)));
+        dltMessage.Headers.Add("error-SourceOffset", Encoding.UTF8.GetBytes(result.Offset.Value.ToString(CultureInfo.InvariantCulture)));
         dltMessage.Headers.Add("error-Timestamp", Encoding.UTF8.GetBytes(DateTimeOffset.UtcNow.ToString("O")));
 
         // Пытаемся записать в DLT

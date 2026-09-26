@@ -1,68 +1,45 @@
-// Эта логика не привязана к React — её можно вызывать откуда угодно,
-// в том числе из action/loader роутера, у которых нет доступа к контексту.
-const TOKEN_KEY = 'auth_token';
+import type { User } from './user';
+
+// In-Memory хранилище сессии пользователя (No-JWT Architecture)
+let currentUser: User | null = null;
+let legacyToken: string | null = null;
 const listeners = new Set<() => void>();
 
-// TODO: Переделать на HttpOnly cookie, чтобы токен не был доступен в JS и не мог быть украден XSS-атакой.
-// TODO: добавить проверку на refreshToken, если будет реализован
-
-/**
- * Проверяет, не истек ли срок действия JWT токена.
- * Не валидирует подпись (это делает бэкенд), но отсекает протухшие токены.
- */
-function isTokenExpired(token: string): boolean {
+function notifyListeners(): void {
+  listeners.forEach((listener) => listener());
   try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return true;
-
-    // Декодируем только payload для чтения поля "exp"
-    const payloadJson = atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'));
-    const payload = JSON.parse(payloadJson) as { exp?: number };
-
-    if (!payload.exp) {
-      return false; // Если поле exp отсутствует, считаем токен условно валидным
-    }
-
-    const currentTimeInSeconds = Math.floor(Date.now() / 1000);
-    // Добавляем буфер 5 секунд на погрешность времени сети
-    return payload.exp <= currentTimeInSeconds + 5;
+    localStorage.setItem('auth_sync', Date.now().toString());
   } catch {
-    return true; // Любая ошибка парсинга означает невалидный токен
+    // Игнорируем ошибки квот или приватного режима
   }
 }
 
-export function getToken(): string | null {
-  const token = localStorage.getItem(TOKEN_KEY);
-
-  if (!token || token === 'undefined' || token === 'null') {
-    return null;
-  }
-
-  // Если токен протух — возвращаем null, а зачистку откладываем во избежание side-effects во время рендера
-  if (isTokenExpired(token)) {
-    queueMicrotask(() => {
-      if (localStorage.getItem(TOKEN_KEY) === token) {
-        localStorage.removeItem(TOKEN_KEY);
-      }
-    });
-    return null;
-  }
-
-  return token;
+export function getUser(): User | null {
+  return currentUser;
 }
 
-export function setToken(token: string): void {
-  localStorage.setItem(TOKEN_KEY, token);
-  listeners.forEach((listener) => listener());
+export function setUser(user: User | null): void {
+  currentUser = user;
+  legacyToken = null;
+  notifyListeners();
 }
 
-export function clearToken(): void {
-  localStorage.removeItem(TOKEN_KEY);
-  listeners.forEach((listener) => listener());
+export function clearUser(): void {
+  currentUser = null;
+  legacyToken = null;
+  notifyListeners();
 }
 
-// Подписка для useSyncExternalStore: реагирует и на локальные вызовы setToken/clearToken,
-// и на изменение localStorage из другой вкладки.
+export function isAuthenticated(): boolean {
+  return Boolean(currentUser);
+}
+
+export function isAdmin(): boolean {
+  return currentUser?.role === 'Admin';
+}
+
+// Подписка для useSyncExternalStore: реагирует на setUser/clearUser
+// и на событие 'storage' из других вкладок.
 export function subscribe(callback: () => void): () => void {
   listeners.add(callback);
   window.addEventListener('storage', callback);
@@ -70,4 +47,23 @@ export function subscribe(callback: () => void): () => void {
     listeners.delete(callback);
     window.removeEventListener('storage', callback);
   };
+}
+
+// Вспомогательные функции для обратной совместимости
+export function getToken(): string | null {
+  return legacyToken;
+}
+
+export function setToken(token?: unknown): void {
+  if (token && typeof token === 'object' && 'id' in token) {
+    setUser(token as User);
+  } else if (typeof token === 'string' && token.length > 0) {
+    legacyToken = token;
+    currentUser ??= { id: 'legacy_admin_id', userName: 'Admin', role: 'Admin' };
+    notifyListeners();
+  }
+}
+
+export function clearToken(): void {
+  clearUser();
 }

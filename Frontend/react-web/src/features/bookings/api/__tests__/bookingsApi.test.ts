@@ -1,21 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getBookingById, createBooking, deleteBookingById } from '../bookingsApi';
 import { bookingsClient } from '@/shared/api';
-import { setToken, clearToken } from '@/shared/lib/auth';
-
-function createMockJwt(): string {
-  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-  const payload = btoa(
-    JSON.stringify({ sub: 'user_123', exp: Math.floor(Date.now() / 1000) + 3600 }),
-  );
-  return `${header}.${payload}.signature`;
-}
 
 describe('bookingsApi Service', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    localStorage.clear();
-    clearToken();
   });
 
   describe('getBookingById', () => {
@@ -26,6 +15,7 @@ describe('bookingsApi Service', () => {
         status: 'Confirmed' as const,
         createdAt: '2026-09-16T10:00:00.000Z',
         processedAt: '2026-09-16T10:05:00.000Z',
+        userId: 'user_1',
       };
 
       vi.spyOn(bookingsClient, 'GET').mockResolvedValueOnce({
@@ -44,6 +34,7 @@ describe('bookingsApi Service', () => {
           status: 'Confirmed',
           createdAt: new Date('2026-09-16T10:00:00.000Z'),
           processedAt: new Date('2026-09-16T10:05:00.000Z'),
+          userId: 'user_1',
         },
         httpStatus: 200,
       });
@@ -62,7 +53,7 @@ describe('bookingsApi Service', () => {
         data: mockDto,
         error: undefined,
         response: new Response(JSON.stringify(mockDto), { status: 200 }),
-      });
+      } as unknown as never);
 
       const result = await getBookingById('booking_fallback');
 
@@ -76,25 +67,21 @@ describe('bookingsApi Service', () => {
       }
     });
 
-    it('attaches Authorization header when token is present and passes abort signal', async () => {
-      const jwt = createMockJwt();
-      setToken(jwt);
-
+    it('passes abort signal and cache headers', async () => {
       const controller = new AbortController();
       const getSpy = vi.spyOn(bookingsClient, 'GET').mockResolvedValueOnce({
         data: { id: 'b1', eventId: 'e1' },
         error: undefined,
         response: new Response(JSON.stringify({}), { status: 200 }),
-      });
+      } as unknown as never);
 
       await getBookingById('b1', { signal: controller.signal });
 
-      expect(getSpy).toHaveBeenCalledWith('/Bookings/{id}', {
+      expect(getSpy).toHaveBeenCalledWith('/v1/bookings/{id}', {
         params: { path: { id: 'b1' } },
         signal: controller.signal,
         cache: 'no-store',
         headers: {
-          Authorization: `Bearer ${jwt}`,
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           Pragma: 'no-cache',
         },
@@ -158,7 +145,7 @@ describe('bookingsApi Service', () => {
         data: undefined,
         error: { message: 'Failed to fetch' },
         response: new Response(null, { status: 500 }),
-      });
+      } as unknown as never);
 
       const result = await getBookingById('b1');
 
@@ -195,7 +182,7 @@ describe('bookingsApi Service', () => {
 
       const response = new Response(JSON.stringify(mockDto), {
         status: 201,
-        headers: { Location: '/Bookings/booking_new' },
+        headers: { Location: '/v1/bookings/booking_new' },
       });
 
       const postSpy = vi.spyOn(bookingsClient, 'POST').mockResolvedValueOnce({
@@ -206,9 +193,8 @@ describe('bookingsApi Service', () => {
 
       const result = await createBooking('event_1');
 
-      expect(postSpy).toHaveBeenCalledWith('/Bookings/{id}/book', {
+      expect(postSpy).toHaveBeenCalledWith('/v1/bookings/{id}/book', {
         params: { path: { id: 'event_1' } },
-        headers: {},
       });
 
       expect(result).toEqual({
@@ -220,26 +206,8 @@ describe('bookingsApi Service', () => {
           createdAt: new Date('2026-09-16T12:00:00.000Z'),
           processedAt: null,
         },
-        statusUrl: '/Bookings/booking_new',
+        statusUrl: '/v1/bookings/booking_new',
         httpStatus: 201,
-      });
-    });
-
-    it('attaches token in headers when user is authenticated', async () => {
-      const jwt = createMockJwt();
-      setToken(jwt);
-
-      const postSpy = vi.spyOn(bookingsClient, 'POST').mockResolvedValueOnce({
-        data: { id: 'b1' },
-        error: undefined,
-        response: new Response(JSON.stringify({ id: 'b1' }), { status: 201 }),
-      });
-
-      await createBooking('event_1');
-
-      expect(postSpy).toHaveBeenCalledWith('/Bookings/{id}/book', {
-        params: { path: { id: 'event_1' } },
-        headers: { Authorization: `Bearer ${jwt}` },
       });
     });
 
@@ -332,31 +300,12 @@ describe('bookingsApi Service', () => {
 
       const result = await deleteBookingById('booking_1');
 
-      expect(deleteSpy).toHaveBeenCalledWith('/Bookings/{id}', {
+      expect(deleteSpy).toHaveBeenCalledWith('/v1/bookings/{id}', {
         params: { path: { id: 'booking_1' } },
-        headers: {},
       });
       expect(result).toEqual({
         success: true,
         httpStatus: 204,
-      });
-    });
-
-    it('attaches Authorization header when token is present', async () => {
-      const jwt = createMockJwt();
-      setToken(jwt);
-
-      const deleteSpy = vi.spyOn(bookingsClient, 'DELETE').mockResolvedValueOnce({
-        data: undefined,
-        error: undefined,
-        response: new Response(null, { status: 204 }),
-      });
-
-      await deleteBookingById('booking_1');
-
-      expect(deleteSpy).toHaveBeenCalledWith('/Bookings/{id}', {
-        params: { path: { id: 'booking_1' } },
-        headers: { Authorization: `Bearer ${jwt}` },
       });
     });
 
@@ -371,7 +320,7 @@ describe('bookingsApi Service', () => {
         data: problem,
         error: undefined,
         response: new Response(JSON.stringify(problem), { status: 404 }),
-      } as unknown as Awaited<ReturnType<typeof bookingsClient.DELETE>>);
+      });
 
       const result = await deleteBookingById('booking_unknown');
 
@@ -395,7 +344,7 @@ describe('bookingsApi Service', () => {
         data: problem,
         error: undefined,
         response: new Response(JSON.stringify(problem), { status: 400 }),
-      } as unknown as Awaited<ReturnType<typeof bookingsClient.DELETE>>);
+      });
 
       const result = await deleteBookingById('booking_1');
 
@@ -409,7 +358,7 @@ describe('bookingsApi Service', () => {
         data: undefined,
         error: { message: 'Internal Server Error' },
         response: new Response(null, { status: 500 }),
-      });
+      } as unknown as never);
 
       const result = await deleteBookingById('booking_1');
 

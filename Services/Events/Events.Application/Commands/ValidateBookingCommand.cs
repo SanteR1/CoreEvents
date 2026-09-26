@@ -13,9 +13,9 @@ public record ValidateBookingCommand(Guid BookingId, Guid EventId, int Seats) : 
 
 internal class ValidateBookingHandler(IEventRepository repository, IOutboxService outboxService) : IRequestHandler<ValidateBookingCommand, Unit>
 {
-    public async Task<Unit> Handle(ValidateBookingCommand request, CancellationToken ct)
+    public async Task<Unit> Handle(ValidateBookingCommand request, CancellationToken cancellationToken)
     {
-        var @event = await repository.GetByIdAsync(request.EventId, ct);
+        var @event = await repository.GetByIdAsync(request.EventId, cancellationToken);
         if (@event == null)
         {
             outboxService.Publish(

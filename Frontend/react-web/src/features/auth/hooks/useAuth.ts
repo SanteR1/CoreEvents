@@ -1,7 +1,18 @@
-import { useToken, useIsAuthenticated } from '@/shared/lib/auth';
+import { useCurrentUser, useIsAuthenticated, useIsAdmin, useToken } from '@/shared/lib/auth';
+import type { User } from '@/shared/lib/auth';
 
-export function useAuth() {
-  const token = useToken();
+export interface UseAuthReturn {
+  user: User | null;
+  isAuthenticated: boolean;
+  isAdmin: boolean;
+  token: string | null;
+}
+
+export function useAuth(): UseAuthReturn {
+  const user = useCurrentUser();
   const isAuthenticated = useIsAuthenticated();
-  return { token, isAuthenticated };
+  const isAdmin = useIsAdmin();
+  const token = useToken();
+
+  return { user, isAuthenticated, isAdmin, token };
 }

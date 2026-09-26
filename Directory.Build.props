@@ -1,0 +1,99 @@
+<Project>
+
+  <!-- ======================================================== -->
+  <!-- 1. Базовые настройки компилятора C# / .NET               -->
+  <!-- ======================================================== -->
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    
+    <!-- Детерминированная сборка в CI (нормализует пути в PDB и трейсах) -->
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <!-- ======================================================== -->
+  <!-- 2. Анализ качества кода и интеграция с .editorconfig    -->
+  <!-- ======================================================== -->
+  <PropertyGroup>
+    <!-- Включаем встроенные рекомендуемые анализаторы .NET SDK -->
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+
+    <!-- Заставляет проверять правила .editorconfig во время сборки dotnet build -->
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+
+    <!-- 
+      Превращение предупреждений в ошибки:
+      Гарантирует чистоту кодовой базы и отсутствие регрессий качества в CI/CD и релизах.
+    -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+
+    <!-- Подавление устаревших и неактуальных правил:
+         - CA1716: слово 'Shared' в неймспейсах (из-за ключевого слова в VB.NET)
+         - CS1591: требование XML-документации на каждый класс/метод (актуально только для публичных NuGet-пакетов)
+         - RCS1194: требование 3 конструкторов исключений (конфликтует с современными Primary Constructors в C# 12+)
+         - CA1848, CA1873: требование LoggerMessage source-generator вместо обычного ILogger
+         - CA1861: требование static readonly массивов (встречается в автогенерируемых миграциях EF Core)
+         - S1144: приватные сеттеры/конструкторы для гидратации сущностей EF Core
+         - S1135: предупреждение о TODO комментариях
+         - S1118, S6966: особенности статического Program.cs для интеграционных тестов WebApplicationFactory
+    -->
+    <NoWarn>$(NoWarn);CA1716;CS1591;RCS1194;CA1848;CA1873;CA1861;S1144;S1135;S1118;S6966</NoWarn>
+  </PropertyGroup>
+
+  <!-- Специфические настройки для тестовых проектов -->
+  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('Tests'))">
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <!-- Подавляем правила именования и структуры тестов (xUnit Test Collections, protected fields, fixtures) -->
+    <NoWarn>$(NoWarn);CA1707;CA1051;CA1711;S2743;S4144;CA1310;CA1304;CA1311;CA1305;S6968;S3971;S1481;S3267;S3626;S2325;CA1822;S927;S1066;S125</NoWarn>
+  </PropertyGroup>
+
+  <!-- ======================================================== -->
+  <!-- 3. Безопасность зависимостей (NuGet Audit)              -->
+  <!-- ======================================================== -->
+  <PropertyGroup>
+    <!-- Проверяет используемые NuGet-пакеты по базе уязвимостей (CVE) при сборке -->
+    <NuGetAudit>true</NuGetAudit>
+    <NuGetAuditMode>all</NuGetAuditMode>
+    <NuGetAuditLevel>high</NuGetAuditLevel>
+  </PropertyGroup>
+
+  <!-- ======================================================== -->
+  <!-- 4. Оптимизация скорости сборки                           -->
+  <!-- ======================================================== -->
+  <PropertyGroup>
+    <!-- Ускоряет инкрементальную сборку в Visual Studio 2022+ -->
+    <AccelerateBuildsInVisualStudio>true</AccelerateBuildsInVisualStudio>
+  </PropertyGroup>
+
+  <!-- ======================================================== -->
+  <!-- 5. Глобальные анализаторы (NuGet)                       -->
+  <!-- ======================================================== -->
+  <ItemGroup>
+    <!-- Поиск утечек памяти и некорректного использования IDisposable/IAsyncDisposable -->
+    <PackageReference Include="IDisposableAnalyzers" Version="4.0.8">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+
+    <!-- SonarAnalyzer: баги, безопасность, надежность, code smells, логические ошибки -->
+    <PackageReference Include="SonarAnalyzer.CSharp" Version="10.7.0.110445">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+
+    <!-- Roslynator: идиоматичный C#, чистота синтаксиса, оптимизация производительности (LINQ) -->
+    <PackageReference Include="Roslynator.Analyzers" Version="4.13.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+
+    <!-- Roslynator Formatting: проверка форматирования кода в соответствии со стилем -->
+    <PackageReference Include="Roslynator.Formatting.Analyzers" Version="4.13.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+</Project>

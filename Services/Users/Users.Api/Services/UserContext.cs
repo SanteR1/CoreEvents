@@ -34,7 +34,7 @@ public class UserContext(IHttpContextAccessor httpContextAccessor) : IUserContex
             if (Enum.TryParse<RoleName>(roleClaim, ignoreCase: true, out var role))
                 return role;
 
-            throw new ArgumentOutOfRangeException(nameof(Role), $"Неизвестная роль в токене: {roleClaim}");
+            throw new InvalidOperationException($"Неизвестная роль в токене: {roleClaim}");
         }
     }
 }

@@ -18,6 +18,17 @@ vi.mock('@/shared/lib/auth', () => ({
   useIsAuthenticated: () => false,
   clearToken: vi.fn(),
 }));
+vi.mock('@/shared/lib/auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/shared/lib/auth')>();
+  return {
+    ...actual,
+    useCurrentUser: () => null,
+    useIsAuthenticated: () => false,
+    useIsAdmin: () => false,
+    useToken: () => null,
+    clearToken: vi.fn(),
+  };
+});
 
 function renderApp() {
   const router = createMemoryRouter([

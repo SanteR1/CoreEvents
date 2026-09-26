@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { registerUser, loginUser } from '../authApi';
+import { registerUser, loginUser, getCurrentUser, refreshSession, logoutUser } from '../authApi';
 import { usersClient } from '@/shared/api';
+import * as sessionStore from '@/shared/lib/auth/sessionStore';
 
 describe('authApi Service', () => {
   beforeEach(() => {
@@ -100,13 +101,17 @@ describe('authApi Service', () => {
   });
 
   describe('loginUser', () => {
-    it('returns JWT token on successful login', async () => {
-      const mockToken = 'mock_jwt_token_xyz';
+    it('returns user data on successful login', async () => {
+      const mockUser = {
+        id: 'u-123',
+        userName: 'testuser',
+        role: 'User' as const,
+      };
 
       vi.spyOn(usersClient, 'POST').mockResolvedValueOnce({
-        data: mockToken,
+        data: mockUser,
         error: undefined,
-        response: new Response(JSON.stringify(mockToken), { status: 200 }),
+        response: new Response(JSON.stringify(mockUser), { status: 200 }),
       });
 
       const result = await loginUser({
@@ -115,7 +120,7 @@ describe('authApi Service', () => {
       });
 
       expect(result).toEqual({
-        data: mockToken,
+        data: mockUser,
         error: undefined,
         status: 200,
       });
@@ -190,6 +195,116 @@ describe('authApi Service', () => {
         error: genericError,
         status: 503,
       });
+    });
+  });
+
+  describe('getCurrentUser', () => {
+    it('returns user data on successful GET /v1/users/me', async () => {
+      const mockUserDto = {
+        id: 'u-456',
+        userName: 'adminuser',
+        role: 'Admin' as const,
+      };
+
+      vi.spyOn(usersClient, 'GET').mockResolvedValueOnce({
+        data: mockUserDto,
+        error: undefined,
+        response: new Response(JSON.stringify(mockUserDto), { status: 200 }),
+      });
+
+      const user = await getCurrentUser();
+
+      expect(user).toEqual({
+        id: 'u-456',
+        userName: 'adminuser',
+        role: 'Admin',
+      });
+    });
+
+    it('returns null when response is not ok', async () => {
+      vi.spyOn(usersClient, 'GET').mockResolvedValueOnce({
+        data: undefined,
+        error: { message: 'Unauthorized' },
+        response: new Response(null, { status: 401 }),
+      });
+
+      const user = await getCurrentUser();
+      expect(user).toBeNull();
+    });
+
+    it('returns null when data is a ProblemDetails object', async () => {
+      const problem = { title: 'Not Found', status: 404 };
+      vi.spyOn(usersClient, 'GET').mockResolvedValueOnce({
+        data: problem as unknown as { id: string; userName: string; role: 'Admin' | 'User' },
+        error: undefined,
+        response: new Response(JSON.stringify(problem), { status: 404 }),
+      });
+
+      const user = await getCurrentUser();
+      expect(user).toBeNull();
+    });
+
+    it('returns null when GET throws an exception', async () => {
+      vi.spyOn(usersClient, 'GET').mockRejectedValueOnce(new Error('Network failure'));
+
+      const user = await getCurrentUser();
+      expect(user).toBeNull();
+    });
+  });
+
+  describe('refreshSession', () => {
+    it('returns true when refresh succeeds', async () => {
+      vi.spyOn(usersClient, 'POST').mockResolvedValueOnce({
+        data: undefined,
+        error: undefined,
+        response: new Response(null, { status: 204 }),
+      });
+
+      const result = await refreshSession();
+      expect(result).toBe(true);
+    });
+
+    it('returns false when refresh fails', async () => {
+      vi.spyOn(usersClient, 'POST').mockResolvedValueOnce({
+        data: undefined,
+        error: undefined,
+        response: new Response(null, { status: 401 }),
+      });
+
+      const result = await refreshSession();
+      expect(result).toBe(false);
+    });
+
+    it('returns false when POST throws an exception', async () => {
+      vi.spyOn(usersClient, 'POST').mockRejectedValueOnce(new Error('Network error'));
+
+      const result = await refreshSession();
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('logoutUser', () => {
+    it('calls POST /v1/auth/logout and clears user', async () => {
+      const postSpy = vi.spyOn(usersClient, 'POST').mockResolvedValueOnce({
+        data: undefined,
+        error: undefined,
+        response: new Response(null, { status: 204 }),
+      });
+      const clearUserSpy = vi.spyOn(sessionStore, 'clearUser');
+
+      await logoutUser();
+
+      expect(postSpy).toHaveBeenCalledWith('/v1/auth/logout');
+      expect(clearUserSpy).toHaveBeenCalled();
+    });
+
+    it('clears user even if POST /v1/auth/logout throws', async () => {
+      vi.spyOn(usersClient, 'POST').mockRejectedValueOnce(new Error('Network error'));
+      const clearUserSpy = vi.spyOn(sessionStore, 'clearUser');
+
+      await logoutUser();
+
+      expect(clearUserSpy).toHaveBeenCalled();
     });
   });
 });

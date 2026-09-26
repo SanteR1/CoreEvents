@@ -132,6 +132,20 @@ describe('EditEventPage', () => {
   });
 
   describe('action function', () => {
+    beforeEach(() => {
+      setToken(createMockJwt());
+    });
+
+    it('redirects unauthenticated user to /login?returnUrl=...', async () => {
+      clearToken();
+      const args = createActionArgs('ev-edit-1', { title: 'New' });
+      const res = await action(args);
+      expect(res).toBeInstanceOf(Response);
+      const response = res as Response;
+      expect(response.status).toBe(302);
+      expect(response.headers.get('Location')).toContain('/login?returnUrl=');
+    });
+
     it('returns error when eventId is missing from params', async () => {
       const args = createActionArgs(undefined, { title: 'New' });
       const res = await action(args);

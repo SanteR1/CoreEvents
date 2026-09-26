@@ -41,8 +41,8 @@ public class RefreshToken
             Id = Guid.NewGuid(),
             UserId = userId,
             TokenHash = tokenHash,
-            CreatedAt = DateTime.UtcNow,
-            ExpiresAt = DateTime.UtcNow.Add(lifetime)
+            CreatedAt = utcNow,
+            ExpiresAt = utcNow.Add(lifetime)
         };
     }
 

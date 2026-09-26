@@ -16,7 +16,7 @@ internal class RedisCacheService(
     private readonly IDatabase _db = connectionMultiplexer.GetDatabase();
     private readonly EventCacheOptions _cacheOptions = options.Value;
 
-    public async Task<T?> GetAsync<T>(string key, CancellationToken cancellation = default)
+    public async Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -44,7 +44,7 @@ internal class RedisCacheService(
         }
     }
 
-    public async Task SetAsync<T>(string key, T value, CancellationToken ct = default)
+    public async Task SetAsync<T>(string key, T value, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -62,7 +62,7 @@ internal class RedisCacheService(
         }
     }
 
-    public async Task DeleteAsync(string key, CancellationToken ct = default)
+    public async Task DeleteAsync(string key, CancellationToken cancellationToken = default)
     {
         try
         {

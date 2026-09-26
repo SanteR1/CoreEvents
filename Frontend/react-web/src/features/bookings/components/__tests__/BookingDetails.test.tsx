@@ -4,11 +4,12 @@ import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { BookingDetails } from '../BookingDetails';
 import { checkA11y } from '@/shared/lib/test/axe';
+import { setUser, clearUser } from '@/shared/lib/auth';
 import type { BookingResponse } from '@/features/bookings/api/bookingsApi';
 
 function renderBookingDetails(
   props: React.ComponentProps<typeof BookingDetails>,
-  action: () => null = () => null,
+  action: () => unknown = () => null,
 ) {
   const router = createMemoryRouter(
     [
@@ -36,6 +37,7 @@ describe('BookingDetails.tsx', () => {
   const baseBooking: BookingResponse = {
     id: 'booking-123',
     eventId: 'event-456',
+    userId: 'user_123',
     status: 'Confirmed',
     createdAt: new Date('2026-06-15T10:30:00Z'),
     processedAt: new Date('2026-06-15T10:35:00Z'),
@@ -43,10 +45,12 @@ describe('BookingDetails.tsx', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    setUser({ id: 'user_123', userName: 'testuser', role: 'User' });
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+    clearUser();
   });
 
   describe('Status Badges', () => {
@@ -167,6 +171,60 @@ describe('BookingDetails.tsx', () => {
       await user.click(cancelBtn);
 
       expect(confirmSpy).toHaveBeenCalledWith('Вы действительно хотите отменить это бронирование?');
+    });
+
+    it('displays cancel button when user is admin even if not booking owner', () => {
+      setUser({ id: 'admin_user', userName: 'admin', role: 'Admin' });
+      renderBookingDetails({
+        booking: { ...baseBooking, userId: 'other_user', status: 'Pending' },
+      });
+      expect(screen.getByRole('button', { name: /отменить бронирование/i })).toBeInTheDocument();
+    });
+
+    it('hides cancel button when user is neither booking owner nor admin', () => {
+      setUser({ id: 'stranger_user', userName: 'stranger', role: 'User' });
+      renderBookingDetails({
+        booking: { ...baseBooking, userId: 'other_user', status: 'Pending' },
+      });
+      expect(
+        screen.queryByRole('button', { name: /отменить бронирование/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('hides cancel button when user is unauthenticated', () => {
+      clearUser();
+      renderBookingDetails({
+        booking: { ...baseBooking, status: 'Pending' },
+      });
+      expect(
+        screen.queryByRole('button', { name: /отменить бронирование/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('displays cancel button for legacy booking without userId when authenticated', () => {
+      setUser({ id: 'user_123', userName: 'testuser', role: 'User' });
+      renderBookingDetails({
+        booking: { ...baseBooking, userId: undefined, status: 'Pending' },
+      });
+      expect(screen.getByRole('button', { name: /отменить бронирование/i })).toBeInTheDocument();
+    });
+
+    it('shows submitting indicator when cancellation is in flight', async () => {
+      const user = userEvent.setup();
+      vi.spyOn(window, 'confirm').mockReturnValue(true);
+      let resolveAction!: (v: unknown) => void;
+      const actionPromise = new Promise((resolve) => {
+        resolveAction = resolve;
+      });
+
+      renderBookingDetails({ booking: { ...baseBooking, status: 'Pending' } }, () => actionPromise);
+
+      const cancelBtn = screen.getByRole('button', { name: /отменить бронирование/i });
+      await user.click(cancelBtn);
+
+      expect(screen.getByRole('button', { name: /отмена бронирования/i })).toBeDisabled();
+
+      resolveAction(null);
     });
   });
 

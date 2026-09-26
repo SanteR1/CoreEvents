@@ -10,11 +10,11 @@ internal sealed class FaultInjectingUserRepository(
     FaultInjectionState state,
     UsersDbContext dbContext) : IUserRepository
 {
-    public async Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<User?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
-        await CheckForTimeoutsAsync(cancellationToken);
+        await CheckForTimeoutsAsync(ct);
 
-        return await inner.GetByIdAsync(id, cancellationToken);
+        return await inner.GetByIdAsync(id, ct);
     }
 
     public async Task<User?> GetByUserNameAsync(string userName, CancellationToken ct = default)
@@ -30,33 +30,7 @@ internal sealed class FaultInjectingUserRepository(
 
         dbContext.ChangeTracker.DetectChanges();
 
-        List<User> modifiedBookings = dbContext.ChangeTracker.Entries<User>()
-                                               .Where(e => e.State == EntityState.Modified)
-                                               .Select(e => e.Entity)
-                                               .ToList();
-
         bool shouldSimulateFailure = false;
-
-        //foreach (var booking in modifiedBookings)
-        //{
-        //    // Пропускаем проверку, если это успешный откат (Reject)
-        //    if (booking.Status == BookingStatus.Rejected)
-        //        continue;
-
-        //    // Проверка 1: Падение по EventId
-        //    if (booking.EventId == state.TargetEventIdForFailures)
-        //    {
-        //        shouldSimulateFailure = true;
-        //        break;
-        //    }
-
-        //    // Проверка 2: Падение по конкретному BookingId
-        //    if (state.ShouldFailForBooking(booking.Id))
-        //    {
-        //        shouldSimulateFailure = true;
-        //        break;
-        //    }
-        //}
 
         if (shouldSimulateFailure)
         {
@@ -79,9 +53,9 @@ internal sealed class FaultInjectingUserRepository(
         return await inner.SaveChangesAsync(ct);
     }
 
-    public void Add(User booking)
+    public void Add(User entity)
     {
-        inner.Add(booking);
+        inner.Add(entity);
     }
 
     // Вспомогательный метод для имитации зависания БД

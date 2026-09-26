@@ -14,9 +14,9 @@
     "preview": "vite preview",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "gen:users": "openapi-typescript http://host.docker.internal:5003/swagger/v1/swagger.json -o src/shared/api/generated/users.d.ts",
-    "gen:events": "openapi-typescript http://host.docker.internal:5004/swagger/v1/swagger.json -o src/shared/api/generated/events.d.ts",
-    "gen:bookings": "openapi-typescript http://host.docker.internal:5005/swagger/v1/swagger.json -o src/shared/api/generated/bookings.d.ts",
+    "gen:users": "openapi-typescript http://host.docker.internal:5000/openapi/users/v1.json -o src/shared/api/generated/users.d.ts",
+    "gen:events": "openapi-typescript http://host.docker.internal:5000/openapi/events/v1.json -o src/shared/api/generated/events.d.ts",
+    "gen:bookings": "openapi-typescript http://host.docker.internal:5000/openapi/bookings/v1.json -o src/shared/api/generated/bookings.d.ts",
     "gen:all": "npm run gen:users && npm run gen:events && npm run gen:bookings"
   },
   "dependencies": {

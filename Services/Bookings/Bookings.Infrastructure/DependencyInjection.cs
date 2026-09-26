@@ -160,24 +160,26 @@ public static class DependencyInjection
             {
                 if (result.Error.Code == ErrorCode.TopicAlreadyExists)
                 {
+#pragma warning disable S6667 // TopicAlreadyExists is expected when topics were previously created
                     logger.LogInformation("Топик '{Topic}' уже существует. Пропускаем.", result.Topic);
+#pragma warning restore S6667
                 }
                 else
                 {
-                    logger.LogError("Ошибка при создании топика '{Topic}': {Error}", result.Topic, result.Error.Reason);
-                    throw;
+                    logger.LogError(e, "Ошибка при создании топика '{Topic}': {Error}", result.Topic, result.Error.Reason);
+                    throw new InvalidOperationException($"Ошибка при создании топика '{result.Topic}': {result.Error.Reason}", e);
                 }
             }
         }
         catch (KafkaException ex) when (ex.Error.Code == ErrorCode.Local_TimedOut)
         {
-            logger.LogCritical("Не удалось связаться с Kafka по таймауту при создании топиков.");
-            throw;
+            logger.LogCritical(ex, "Не удалось связаться с Kafka по таймауту при создании топиков.");
+            throw new InvalidOperationException("Не удалось связаться с Kafka по таймауту при создании топиков.", ex);
         }
         catch (Exception ex)
         {
             logger.LogCritical(ex, "Критическая ошибка при инициализации Kafka. Приложение будет остановлено.");
-            throw;
+            throw new InvalidOperationException("Критическая ошибка при инициализации Kafka.", ex);
         }
     }
 }

@@ -3,6 +3,7 @@ import { getAllEvents } from '@/features/events/api/eventsApi';
 import { EventFilters } from '@/features/events/components/EventFilters';
 import { EventCard } from '@/features/events/components/EventCard';
 import { EventPagination } from '@/features/events/components/EventPagination';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const url = new URL(request.url);
@@ -51,6 +52,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
 export const HomePage = () => {
   const { result, filters } = useLoaderData<typeof loader>();
+  const { isAdmin } = useAuth();
 
   const isSuccess = result.success;
   const events = isSuccess ? (result.event.items.event ?? []) : [];
@@ -78,12 +80,14 @@ export const HomePage = () => {
           >
             🔥 Топ событий
           </Link>
-          <Link
-            to="/events/create"
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-700"
-          >
-            + Создать событие
-          </Link>
+          {isAdmin && (
+            <Link
+              to="/events/create"
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-700"
+            >
+              + Создать событие
+            </Link>
+          )}
         </div>
       </div>
 

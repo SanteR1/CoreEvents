@@ -13,9 +13,9 @@ public record ConfirmBookingCommand(Guid EventId, Guid BookingId) : ICommand<Uni
 internal class ConfirmBookingHandler(IBookingRepository repository, ILogger<ConfirmBookingHandler> logger)
     : IRequestHandler<ConfirmBookingCommand, Unit>
 {
-    public async Task<Unit> Handle(ConfirmBookingCommand request, CancellationToken ct)
+    public async Task<Unit> Handle(ConfirmBookingCommand request, CancellationToken cancellationToken)
     {
-        var booking = await repository.GetByIdAsync(request.BookingId, ct);
+        var booking = await repository.GetByIdAsync(request.BookingId, cancellationToken);
         if (booking == null)
         {
             logger.LogWarning("Booking with ID {BookingId} not found for Confirm. Message ignored.",
@@ -27,7 +27,7 @@ internal class ConfirmBookingHandler(IBookingRepository repository, ILogger<Conf
 
         repository.Update(booking);
 
-        await repository.SaveChangesAsync(ct);
+        await repository.SaveChangesAsync(cancellationToken);
 
         return Unit.Value;
     }

@@ -12,9 +12,9 @@ public record CancelBookingByUserCommand(Guid BookingId, Guid UserId, RoleName U
 
 internal class CancelBookingHandler(IBookingRepository repository, IOutboxService outboxService) : IRequestHandler<CancelBookingByUserCommand, Guid>
 {
-    public async Task<Guid> Handle(CancelBookingByUserCommand request, CancellationToken ct)
+    public async Task<Guid> Handle(CancelBookingByUserCommand request, CancellationToken cancellationToken)
     {
-        var booking = await repository.GetByIdAsync(request.BookingId, ct);
+        var booking = await repository.GetByIdAsync(request.BookingId, cancellationToken);
         if (booking == null) throw new BookingNotFoundException(request.BookingId);
 
         var isAdmin = request.UserRole == RoleName.Admin;
@@ -39,7 +39,7 @@ internal class CancelBookingHandler(IBookingRepository repository, IOutboxServic
             },
             partitionKey: booking.EventId.ToString());
 
-        await repository.SaveChangesAsync(ct);
+        await repository.SaveChangesAsync(cancellationToken);
 
         return booking.Id;
     }

@@ -34,7 +34,7 @@ internal static class RedisExtensions
         };
 
         // Проверяем узлы ДО подключения
-        if (redisOptions.EndPoints == null || !redisOptions.EndPoints.Any())
+        if (redisOptions.EndPoints == null || redisOptions.EndPoints.Length == 0)
         {
             throw new ValidationException("Необходимо указать хотя бы один узел Redis.");
         }

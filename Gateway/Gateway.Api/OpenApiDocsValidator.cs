@@ -17,10 +17,10 @@ public sealed class OpenApiDocsValidator : BackgroundService
         _logger = logger;
     }
 
-    protected override async Task ExecuteAsync(CancellationToken ct)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         // Небольшая задержка перед первой попыткой для холодного старта зависимостей
-        await Task.Delay(TimeSpan.FromSeconds(3), ct);
+        await Task.Delay(TimeSpan.FromSeconds(3), stoppingToken);
 
         using var client = _httpClientFactory.CreateClient("openapi-validator");
         foreach (var doc in _docs.Value)
@@ -31,7 +31,7 @@ public sealed class OpenApiDocsValidator : BackgroundService
             {
                 try
                 {
-                    using var response = await client.GetAsync(doc.Url, ct);
+                    using var response = await client.GetAsync(doc.Url, stoppingToken);
                     if (response.IsSuccessStatusCode)
                     {
                         isSuccess = true;
@@ -41,17 +41,17 @@ public sealed class OpenApiDocsValidator : BackgroundService
                     {
                         _logger.LogDebug("Попытка {Attempt} для {Key} вернула статус {Status}, повтор через 2с",
                         attempt, doc.Key, (int)response.StatusCode);
-                        await Task.Delay(TimeSpan.FromSeconds(2), ct);
+                        await Task.Delay(TimeSpan.FromSeconds(2), stoppingToken);
                     }
                 }
-                catch (Exception ex) when (attempt < 5 && !ct.IsCancellationRequested)
+                catch (Exception ex) when (attempt < 5 && !stoppingToken.IsCancellationRequested)
                 {
                     _logger.LogDebug(ex, "Попытка {Attempt} для {Key} не удалась, повтор через 2с", attempt, doc.Key);
-                    await Task.Delay(TimeSpan.FromSeconds(2), ct);
+                    await Task.Delay(TimeSpan.FromSeconds(2), stoppingToken);
                 }
             }
 
-            if (!isSuccess && !ct.IsCancellationRequested)
+            if (!isSuccess && !stoppingToken.IsCancellationRequested)
             {
                 _logger.LogWarning("OpenApiDocs: Спецификация [{Key}] недоступна по адресу {Url} после 5 попыток", doc.Key, doc.Url);
             }

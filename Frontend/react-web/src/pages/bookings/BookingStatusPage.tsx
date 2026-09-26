@@ -14,7 +14,7 @@ import { requireAuthLoader } from '@/shared/lib/auth';
 const CANCELLING_PREFIX = 'cancelling_booking_';
 
 export async function loader(args: LoaderFunctionArgs) {
-  const authRedirect = requireAuthLoader(args);
+  const authRedirect = await requireAuthLoader(args);
   if (authRedirect) {
     return authRedirect;
   }
@@ -66,7 +66,7 @@ export async function loader(args: LoaderFunctionArgs) {
 }
 
 export async function action(args: ActionFunctionArgs) {
-  const authRedirect = requireAuthLoader(args);
+  const authRedirect = await requireAuthLoader(args);
   if (authRedirect) {
     return authRedirect;
   }

@@ -11,7 +11,7 @@ namespace Bookings.Api.Controllers;
 
 [ApiController]
 [ApiVersion(1.0)]
-[Route("v{version:apiVersion}/[controller]")]
+[Route("v{version:apiVersion}/bookings")]
 public class BookingsController : ControllerBase
 {
     private readonly IUserContext _userContext;
@@ -82,12 +82,6 @@ public class BookingsController : ControllerBase
             userRole.GetValueOrDefault()
             );
         await _mediator.Send(command, ct);
-        //var cancelBooking = await _mediator.Send(command, ct);
-        //return AcceptedAtRoute(
-        //    "GetBookingStatus",
-        //    new { id = cancelBooking },
-        //    cancelBooking
-        //);
         return NoContent();
     }
 }

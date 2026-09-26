@@ -10,21 +10,10 @@ import {
   deleteEventById,
 } from '../eventsApi';
 import { eventsClient } from '@/shared/api';
-import { setToken, clearToken } from '@/shared/lib/auth';
-
-function createMockJwt(): string {
-  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-  const payload = btoa(
-    JSON.stringify({ sub: 'user_123', exp: Math.floor(Date.now() / 1000) + 3600 }),
-  );
-  return `${header}.${payload}.signature`;
-}
 
 describe('eventsApi Service', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    localStorage.clear();
-    clearToken();
   });
 
   describe('DTO mappers', () => {
@@ -108,7 +97,7 @@ describe('eventsApi Service', () => {
 
       const response = new Response(JSON.stringify(mockDto), {
         status: 201,
-        headers: { Location: '/Events/event_1' },
+        headers: { Location: '/v1/events/event_1' },
       });
 
       const postSpy = vi.spyOn(eventsClient, 'POST').mockResolvedValueOnce({
@@ -119,9 +108,8 @@ describe('eventsApi Service', () => {
 
       const result = await createEvent(validDomainEvent);
 
-      expect(postSpy).toHaveBeenCalledWith('/Events', {
+      expect(postSpy).toHaveBeenCalledWith('/v1/events', {
         body: mapEventCreateToDto(validDomainEvent),
-        headers: {},
       });
 
       expect(result).toEqual({
@@ -136,14 +124,11 @@ describe('eventsApi Service', () => {
           availableSeats: 500,
         },
         httpStatus: 201,
-        statusUrl: '/Events/event_1',
+        statusUrl: '/v1/events/event_1',
       });
     });
 
-    it('attaches Authorization header when token is present and handles missing Location header', async () => {
-      const jwt = createMockJwt();
-      setToken(jwt);
-
+    it('handles missing Location header on creation', async () => {
       const mockDto = {
         id: 'event_2',
         title: 'Событие 2',
@@ -162,9 +147,8 @@ describe('eventsApi Service', () => {
 
       const result = await createEvent(validDomainEvent);
 
-      expect(postSpy).toHaveBeenCalledWith('/Events', {
+      expect(postSpy).toHaveBeenCalledWith('/v1/events', {
         body: mapEventCreateToDto(validDomainEvent),
-        headers: { Authorization: `Bearer ${jwt}` },
       });
 
       expect(result.success).toBe(true);
@@ -185,7 +169,7 @@ describe('eventsApi Service', () => {
         data: problem,
         error: undefined,
         response: new Response(JSON.stringify(problem), { status: 400 }),
-      });
+      } as unknown as never);
 
       const result = await createEvent(validDomainEvent);
 
@@ -209,7 +193,7 @@ describe('eventsApi Service', () => {
         data: problem,
         error: undefined,
         response: new Response(JSON.stringify(problem), { status: 422 }),
-      });
+      } as unknown as never);
 
       const result = await createEvent(validDomainEvent);
 
@@ -251,10 +235,9 @@ describe('eventsApi Service', () => {
 
       const result = await updateEventById('event_1', validUpdate);
 
-      expect(putSpy).toHaveBeenCalledWith('/Events/{id}', {
+      expect(putSpy).toHaveBeenCalledWith('/v1/events/{id}', {
         body: mapEventUpdateToDto(validUpdate),
         params: { path: { id: 'event_1' } },
-        headers: {},
       });
       expect(result).toEqual({
         success: true,
@@ -262,22 +245,22 @@ describe('eventsApi Service', () => {
       });
     });
 
-    it('attaches Authorization header when token is present', async () => {
-      const jwt = createMockJwt();
-      setToken(jwt);
-
+    it('updates event with 204 status response', async () => {
       const putSpy = vi.spyOn(eventsClient, 'PUT').mockResolvedValueOnce({
         data: undefined,
         error: undefined,
         response: new Response(null, { status: 204 }),
       });
 
-      await updateEventById('event_1', validUpdate);
+      const result = await updateEventById('event_1', validUpdate);
 
-      expect(putSpy).toHaveBeenCalledWith('/Events/{id}', {
+      expect(putSpy).toHaveBeenCalledWith('/v1/events/{id}', {
         body: mapEventUpdateToDto(validUpdate),
         params: { path: { id: 'event_1' } },
-        headers: { Authorization: `Bearer ${jwt}` },
+      });
+      expect(result).toEqual({
+        success: true,
+        httpStatus: 204,
       });
     });
 
@@ -292,7 +275,7 @@ describe('eventsApi Service', () => {
         data: problem,
         error: undefined,
         response: new Response(JSON.stringify(problem), { status: 404 }),
-      } as unknown as Awaited<ReturnType<typeof eventsClient.PUT>>);
+      });
 
       const result = await updateEventById('unknown_event', validUpdate);
 
@@ -316,7 +299,7 @@ describe('eventsApi Service', () => {
         data: problem,
         error: undefined,
         response: new Response(JSON.stringify(problem), { status: 400 }),
-      } as unknown as Awaited<ReturnType<typeof eventsClient.PUT>>);
+      });
 
       const result = await updateEventById('event_1', validUpdate);
 
@@ -391,7 +374,7 @@ describe('eventsApi Service', () => {
         data: mockDto,
         error: undefined,
         response: new Response(JSON.stringify(mockDto), { status: 200 }),
-      });
+      } as unknown as never);
 
       const result = await getEventById('event_empty');
 
@@ -407,21 +390,25 @@ describe('eventsApi Service', () => {
       }
     });
 
-    it('attaches token in Authorization header when present', async () => {
-      const jwt = createMockJwt();
-      setToken(jwt);
-
+    it('calls GET /v1/events/{id} with correct path param', async () => {
       const getSpy = vi.spyOn(eventsClient, 'GET').mockResolvedValueOnce({
-        data: { id: 'event_1' },
+        data: {
+          id: 'event_1',
+          title: 'E1',
+          description: null,
+          startAt: '2026-09-25T10:00:00.000Z',
+          endAt: '2026-09-25T12:00:00.000Z',
+          totalSeats: 10,
+          availableSeats: 10,
+        },
         error: undefined,
         response: new Response(JSON.stringify({ id: 'event_1' }), { status: 200 }),
       });
 
       await getEventById('event_1');
 
-      expect(getSpy).toHaveBeenCalledWith('/Events/{id}', {
+      expect(getSpy).toHaveBeenCalledWith('/v1/events/{id}', {
         params: { path: { id: 'event_1' } },
-        headers: { Authorization: `Bearer ${jwt}` },
       });
     });
 
@@ -436,7 +423,7 @@ describe('eventsApi Service', () => {
         data: problem,
         error: undefined,
         response: new Response(JSON.stringify(problem), { status: 404 }),
-      });
+      } as unknown as never);
 
       const result = await getEventById('unknown');
 
@@ -460,7 +447,7 @@ describe('eventsApi Service', () => {
         data: problem,
         error: undefined,
         response: new Response(JSON.stringify(problem), { status: 400 }),
-      });
+      } as unknown as never);
 
       const result = await getEventById('bad_uuid');
 
@@ -551,7 +538,7 @@ describe('eventsApi Service', () => {
         data: problem,
         error: undefined,
         response: new Response(JSON.stringify(problem), { status: 500 }),
-      });
+      } as unknown as never);
 
       const result = await getTopEvents();
 
@@ -609,7 +596,7 @@ describe('eventsApi Service', () => {
 
       const result = await getAllEvents('Музыка', '2026-10-01', '2026-10-10', 2, 10);
 
-      expect(getSpy).toHaveBeenCalledWith('/Events', {
+      expect(getSpy).toHaveBeenCalledWith('/v1/events', {
         params: {
           query: {
             Title: 'Музыка',
@@ -689,7 +676,7 @@ describe('eventsApi Service', () => {
         data: problem,
         error: undefined,
         response: new Response(JSON.stringify(problem), { status: 400 }),
-      });
+      } as unknown as never);
 
       const result = await getAllEvents(undefined, undefined, undefined, -1, 10);
 
@@ -713,7 +700,7 @@ describe('eventsApi Service', () => {
         data: problem,
         error: undefined,
         response: new Response(JSON.stringify(problem), { status: 400 }),
-      });
+      } as unknown as never);
 
       const result = await getAllEvents(undefined, undefined, undefined, 0, 10);
 
@@ -727,7 +714,7 @@ describe('eventsApi Service', () => {
         data: undefined,
         error: { message: 'Server down' },
         response: new Response(null, { status: 503 }),
-      });
+      } as unknown as never);
 
       const result = await getAllEvents();
 
@@ -746,9 +733,8 @@ describe('eventsApi Service', () => {
 
       const result = await deleteEventById('event_del_1');
 
-      expect(deleteSpy).toHaveBeenCalledWith('/Events/{id}', {
+      expect(deleteSpy).toHaveBeenCalledWith('/v1/events/{id}', {
         params: { path: { id: 'event_del_1' } },
-        headers: {},
       });
       expect(result).toEqual({
         success: true,
@@ -756,21 +742,21 @@ describe('eventsApi Service', () => {
       });
     });
 
-    it('attaches Authorization header when token is present', async () => {
-      const jwt = createMockJwt();
-      setToken(jwt);
-
+    it('deletes event and handles ok response with status 200', async () => {
       const deleteSpy = vi.spyOn(eventsClient, 'DELETE').mockResolvedValueOnce({
         data: undefined,
         error: undefined,
-        response: new Response(null, { status: 204 }),
+        response: new Response(null, { status: 200 }),
       });
 
-      await deleteEventById('event_del_1');
+      const result = await deleteEventById('event_del_1');
 
-      expect(deleteSpy).toHaveBeenCalledWith('/Events/{id}', {
+      expect(deleteSpy).toHaveBeenCalledWith('/v1/events/{id}', {
         params: { path: { id: 'event_del_1' } },
-        headers: { Authorization: `Bearer ${jwt}` },
+      });
+      expect(result).toEqual({
+        success: true,
+        httpStatus: 200,
       });
     });
 
@@ -785,7 +771,7 @@ describe('eventsApi Service', () => {
         data: problem,
         error: undefined,
         response: new Response(JSON.stringify(problem), { status: 403 }),
-      } as unknown as Awaited<ReturnType<typeof eventsClient.DELETE>>);
+      });
 
       const result = await deleteEventById('event_forbidden');
 
@@ -809,7 +795,7 @@ describe('eventsApi Service', () => {
         data: problem,
         error: undefined,
         response: new Response(JSON.stringify(problem), { status: 409 }),
-      } as unknown as Awaited<ReturnType<typeof eventsClient.DELETE>>);
+      });
 
       const result = await deleteEventById('event_booked');
 

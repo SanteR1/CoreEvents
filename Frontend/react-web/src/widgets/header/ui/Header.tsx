@@ -1,15 +1,16 @@
 import { NavLink, Link, useNavigation, useNavigate } from 'react-router';
-import { clearToken, useIsAuthenticated } from '@/shared/lib/auth';
+import { useAuth } from '@/features/auth/hooks/useAuth';
+import { logoutUser } from '@/features/auth/api/authApi';
 import { ThemeToggle } from '@/shared/ui/theme/ThemeToggle';
 
 export const Header = () => {
   const navigation = useNavigation();
   const navigate = useNavigate();
   const isLoading = navigation.state === 'loading';
-  const isAuthenticated = useIsAuthenticated();
+  const { isAuthenticated, isAdmin } = useAuth();
 
-  const handleLogout = () => {
-    clearToken();
+  const handleLogout = async () => {
+    await logoutUser();
     void navigate('/login');
   };
 
@@ -29,8 +30,8 @@ export const Header = () => {
           Топовые события
         </NavLink>
 
-        {/* 2. Приватные ссылки */}
-        {isAuthenticated && (
+        {/* 2. Административные ссылки */}
+        {isAdmin && (
           <NavLink to="/events/create" className={navLinkClass}>
             Создать событие
           </NavLink>
@@ -46,7 +47,7 @@ export const Header = () => {
           {isAuthenticated ? (
             <button
               type="button"
-              onClick={handleLogout}
+              onClick={() => void handleLogout()}
               className="text-sm font-medium text-red-600 transition-colors hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
             >
               Выйти

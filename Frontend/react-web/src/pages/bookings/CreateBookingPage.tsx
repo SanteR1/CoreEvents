@@ -15,7 +15,7 @@ import {
 
 // 1. LOADER: загружает актуальное количество мест перед показом страницы
 export async function loader(args: LoaderFunctionArgs) {
-  const authRedirect = requireAuthLoader(args);
+  const authRedirect = await requireAuthLoader(args);
   if (authRedirect) {
     return authRedirect;
   }
@@ -52,6 +52,11 @@ export async function loader(args: LoaderFunctionArgs) {
 
 // 2. Action функция роутера
 export async function action({ request }: ActionFunctionArgs) {
+  const authRedirect = await requireAuthLoader({ request });
+  if (authRedirect) {
+    return authRedirect;
+  }
+
   const formData = await request.formData();
   const rawEventId = formData.get('eventId');
   const eventId = typeof rawEventId === 'string' ? rawEventId : '';
