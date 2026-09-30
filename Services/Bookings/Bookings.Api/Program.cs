@@ -1,5 +1,6 @@
 using Bookings.Api.Extensions;
 using Bookings.Api.Middlewares;
+using Bookings.Infrastructure.Extensions;
 using Scalar.AspNetCore;
 using Serilog;
 using Serilog.Events;
@@ -16,7 +17,6 @@ try
     Log.Information("Starting Bookings.Api service");
 
     var builder = WebApplication.CreateBuilder(args);
-
 
     builder.AddApplicationLogging();
     builder.Services.AddApplicationTelemetry(builder.Configuration);
@@ -45,7 +45,6 @@ try
 
     await app.ApplyMigrationsAsync();
     await app.Services.InitializeKafkaTopicsAsync();
-
 
     app.UseForwardedHeaders();
 

@@ -9,7 +9,7 @@ namespace Gateway.Api.Extensions;
 
 public static partial class OpenTelemetryExtensions
 {
-    [GeneratedRegex(@"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")]
+    [GeneratedRegex(@"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}", RegexOptions.None, matchTimeoutMilliseconds: 200)]
     private static partial Regex GuidRegex();
 
     public static IServiceCollection AddGatewayTelemetry(this IServiceCollection services, IConfiguration configuration)
@@ -23,9 +23,9 @@ public static partial class OpenTelemetryExtensions
                     options.Filter = httpContext =>
                     {
                         var path = httpContext.Request.Path;
-                        return !path.StartsWithSegments("/metrics")
-                            && !path.StartsWithSegments("/swagger")
-                            && !path.StartsWithSegments("/docs");
+                        return !path.StartsWithSegments("/metrics", StringComparison.OrdinalIgnoreCase)
+                            && !path.StartsWithSegments("/swagger", StringComparison.OrdinalIgnoreCase)
+                            && !path.StartsWithSegments("/docs", StringComparison.OrdinalIgnoreCase);
                     };
                     options.EnrichWithHttpResponse = (activity, response) =>
                     {

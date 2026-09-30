@@ -24,7 +24,6 @@ public record EventCacheDto(
         entity.RowVersion
     );
 
-    public static List<EventCacheDto> FromEntity(List<Event> entity) => new(
-        entity.Select(FromEntity).ToList()
-    );
+    public static IReadOnlyList<EventCacheDto> FromEntity(IEnumerable<Event> entity) =>
+        entity.Select(FromEntity).ToList();
 }

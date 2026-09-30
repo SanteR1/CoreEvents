@@ -9,7 +9,7 @@ public class RateLimitingTests
     public async Task AuthRoute_WhenPermitLimitExceeded_Returns429TooManyRequests()
     {
         // Arrange: устанавливаем лимит 3 запроса для быстрого тестирования
-        var overrides = new Dictionary<string, string?>
+        var overrides = new Dictionary<string, string?>(StringComparer.Ordinal)
         {
             ["RateLimiting:Auth:PermitLimit"] = "3",
             ["RateLimiting:Auth:WindowSeconds"] = "60",
@@ -35,7 +35,7 @@ public class RateLimitingTests
     public async Task NonAuthRoute_DoesNotUseAuthRateLimitPolicy()
     {
         // Arrange: устанавливаем лимит 2 для auth
-        var overrides = new Dictionary<string, string?>
+        var overrides = new Dictionary<string, string?>(StringComparer.Ordinal)
         {
             ["RateLimiting:Auth:PermitLimit"] = "2",
             ["RateLimiting:Auth:WindowSeconds"] = "60",

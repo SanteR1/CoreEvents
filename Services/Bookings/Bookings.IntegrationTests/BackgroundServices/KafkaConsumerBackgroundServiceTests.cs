@@ -81,7 +81,7 @@ public class KafkaConsumerBackgroundServiceTests(IntegrationTestFactory factory)
         isProcessed.Should().BeTrue("Consumer должен был вычитать сообщение и сохранить его в InboxMessages в рамках транзакции");
         inboxMessage.Should().NotBeNull();
 
-        inboxMessage!.CorrelationId.Should().Be(correlationId);
+        inboxMessage.CorrelationId.Should().Be(correlationId);
         inboxMessage.CausationId.Should().Be(causationId);
         inboxMessage.MessageType.Should().Be("EventBookingValidationCompleted");
         inboxMessage.Topic.Should().Be(KafkaTopics.EventConfirmed);

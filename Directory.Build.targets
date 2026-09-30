@@ -1,0 +1,10 @@
+<Project>
+
+  <!-- Специфические правила для сервисов (ASP.NET Core и чистая архитектура) -->
+  <!-- Внутри сервисов отсутствует SynchronizationContext, поэтому ConfigureAwait(false) не требуется. -->
+  <!-- Для переиспользуемых библиотек вне Services (например, Shared/*) правило MA0004 остается активным. -->
+  <PropertyGroup Condition="'$(UsingMicrosoftNETSdkWeb)' == 'true' or $(MSBuildProjectDirectory.Contains('Services'))">
+    <NoWarn>$(NoWarn);MA0004</NoWarn>
+  </PropertyGroup>
+
+</Project>

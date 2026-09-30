@@ -1,8 +1,8 @@
 using System.Security.Cryptography;
 using System.Text;
 using AwesomeAssertions;
-using Moq;
 using Microsoft.Extensions.Options;
+using Moq;
 using Users.Application.Configuration;
 using Users.Application.DTOs;
 using Users.Application.Exceptions;
@@ -10,7 +10,6 @@ using Users.Application.Interfaces.Identity;
 using Users.Application.Interfaces.Repositories;
 using Users.Application.Services;
 using Users.Domain.Entities;
-using Users.Domain.Enums;
 
 namespace Users.Tests.Application.Services;
 

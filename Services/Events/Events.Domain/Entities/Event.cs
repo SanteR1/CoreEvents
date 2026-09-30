@@ -98,7 +98,7 @@ public sealed class Event
 
     private static void ThrowIfNotValid(string? title, DateTime? startAt, DateTime? endAt, int? totalSeats)
     {
-        var errors = new Dictionary<string, string[]>();
+        var errors = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
 
         void AddError(string key, string message)
         {

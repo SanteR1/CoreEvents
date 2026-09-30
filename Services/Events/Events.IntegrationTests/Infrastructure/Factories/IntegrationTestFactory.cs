@@ -96,7 +96,7 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLife
 
         builder.ConfigureAppConfiguration((context, configBuilder) =>
         {
-            var testConfig = new Dictionary<string, string?>
+            var testConfig = new Dictionary<string, string?>(StringComparer.Ordinal)
             {
                 {"Kafka:BootstrapServers", _kafkaContainer.GetBootstrapAddress()},
                 {"Redis:EndPoints",_redisContainer.GetConnectionString()},

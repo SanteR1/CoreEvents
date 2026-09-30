@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
-using Users.Application.Interfaces.Identity;
 using Konscious.Security.Cryptography;
+using Users.Application.Interfaces.Identity;
 
 namespace Users.Infrastructure.Identity;
 
@@ -28,7 +28,6 @@ public class Argon2idPasswordHasher : IPasswordHasher
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(password);
         ArgumentException.ThrowIfNullOrWhiteSpace(hash);
-
 
         // Обратная совместимость со старым SHA-256 хешами
         if (!hash.StartsWith("$argon2id$", StringComparison.Ordinal))
@@ -64,7 +63,10 @@ public class Argon2idPasswordHasher : IPasswordHasher
     {
         using var argon2 = new Argon2id(Encoding.UTF8.GetBytes(password))
         {
-            Salt = salt, DegreeOfParallelism = DegreeOfParallelism, Iterations = Iterations, MemorySize = MemorySize
+            Salt = salt,
+            DegreeOfParallelism = DegreeOfParallelism,
+            Iterations = Iterations,
+            MemorySize = MemorySize
         };
 
         return argon2.GetBytes(HashSize);

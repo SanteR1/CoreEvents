@@ -92,10 +92,10 @@ internal sealed class EventService : IEventService
         return EventResponseDto.FromEntity(eventEntity);
     }
 
-    public async Task<List<EventResponseDto>> GetTopEventsBySalesPercentageAsync(CancellationToken ct = default)
+    public async Task<IReadOnlyList<EventResponseDto>> GetTopEventsBySalesPercentageAsync(CancellationToken ct = default)
     {
         const int top = 10;
-        var existKey = await _cache.GetAsync<List<EventCacheDto>>(CacheKeys.Top10Events, ct);
+        var existKey = await _cache.GetAsync<IReadOnlyList<EventCacheDto>>(CacheKeys.Top10Events, ct);
 
         if (existKey != null)
             return EventResponseDto.FromEntity(existKey);
@@ -104,7 +104,7 @@ internal sealed class EventService : IEventService
 
         if (eventEntity.Count > 0)
         {
-            await _cache.SetAsync<List<EventCacheDto>>(CacheKeys.Top10Events, EventCacheDto.FromEntity(eventEntity), ct);
+            await _cache.SetAsync<IReadOnlyList<EventCacheDto>>(CacheKeys.Top10Events, EventCacheDto.FromEntity(eventEntity), ct);
         }
 
         return EventResponseDto.FromEntity(eventEntity);

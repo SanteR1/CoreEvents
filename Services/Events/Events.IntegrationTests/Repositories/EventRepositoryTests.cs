@@ -42,8 +42,8 @@ public class EventRepositoryTests(ApiOnlyIntegrationTestFactory factory) : ApiOn
         {
             // Arrange
             var eventId = Guid.NewGuid();
-            var startAt = DateTime.UtcNow.AddDays(2).ToString("yyyy-MM-dd HH:mm:ssZ");
-            var endAt = DateTime.UtcNow.AddDays(1).ToString("yyyy-MM-dd HH:mm:ssZ");
+            var startAt = DateTime.UtcNow.AddDays(2).ToString("yyyy-MM-dd HH:mm:ssZ", System.Globalization.CultureInfo.InvariantCulture);
+            var endAt = DateTime.UtcNow.AddDays(1).ToString("yyyy-MM-dd HH:mm:ssZ", System.Globalization.CultureInfo.InvariantCulture);
             int totalSeats = 10;
             int availableSeats = 10;
 

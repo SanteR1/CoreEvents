@@ -2,6 +2,9 @@ namespace Events.Application.Abstractions;
 
 public interface IOutboxService
 {
+    /// <summary>
+    /// Метод просто подготавливает сообщение к отправке (добавляет в DbSet)
+    /// </summary>
     /// <param name="integrationEvent">Событие/результат для публикации.</param>
     /// <param name="partitionKey">
     /// Ключ партиционирования Kafka. Выбирается вызывающей стороной осознанно:

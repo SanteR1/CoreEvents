@@ -16,7 +16,7 @@ public sealed class InfrastructureExceptionAnalyzer : IExceptionAnalyzer
         if (rootCause is NpgsqlException { IsTransient: true })
             return true;
 
-        if (rootCause is PostgresException pgEx && (pgEx.SqlState == "53300" || pgEx.SqlState == "08006"))
+        if (rootCause is PostgresException pgEx && (string.Equals(pgEx.SqlState, "53300", StringComparison.Ordinal) || string.Equals(pgEx.SqlState, "08006", StringComparison.Ordinal)))
             return true;
 
         // 2. Ошибки Kafka (При публикации сообщений)

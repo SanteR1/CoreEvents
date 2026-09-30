@@ -19,7 +19,7 @@ sealed class FaultInjectingEventRepository(IEventRepository inner, FaultInjectio
         return await inner.GetByIdAsync(id, cancellationToken);
     }
 
-    public async Task<List<Event>> GetTopEventsBySalesPercentageAsync(int take, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<Event>> GetTopEventsBySalesPercentageAsync(int take, CancellationToken cancellationToken = default)
     {
         await CheckForTimeoutsAsync(cancellationToken);
         return await inner.GetTopEventsBySalesPercentageAsync(take, cancellationToken);

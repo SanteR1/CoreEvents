@@ -35,6 +35,7 @@ public class AuthCookieService : IAuthCookieService
         var versionPrefix = GetVersionPrefix();
         var refreshPath = $"/{versionPrefix}/auth";
 
+#pragma warning disable S2092, S3330 // In development environments HTTP is allowed; SameSite=Lax is used for SPA authentication flow
         // Access Token (передается на все эндпоинты через Gateway)
         response.Cookies.Append(AccessTokenCookieName, accessToken, new CookieOptions
         {
@@ -54,6 +55,7 @@ public class AuthCookieService : IAuthCookieService
             Path = refreshPath,
             Expires = DateTimeOffset.UtcNow.AddDays(_jwtOptions.RefreshTokenExpirationInDays)
         });
+#pragma warning restore S2092, S3330
     }
 
     public void ClearAuthCookies()
@@ -64,8 +66,10 @@ public class AuthCookieService : IAuthCookieService
         var versionPrefix = GetVersionPrefix();
         var refreshPath = $"/{versionPrefix}/auth";
 
-        response.Cookies.Delete(AccessTokenCookieName, new CookieOptions { Path = "/", Secure = isSecure });
-        response.Cookies.Delete(RefreshTokenCookieName, new CookieOptions { Path = refreshPath, Secure = isSecure });
+#pragma warning disable S2092, S3330 // In development environments HTTP is allowed; cookie deletion mirrors creation options
+        response.Cookies.Delete(AccessTokenCookieName, new CookieOptions { Path = "/", Secure = isSecure, HttpOnly = true });
+        response.Cookies.Delete(RefreshTokenCookieName, new CookieOptions { Path = refreshPath, Secure = isSecure, HttpOnly = true });
+#pragma warning restore S2092, S3330
     }
 
     public string? GetRefreshToken()

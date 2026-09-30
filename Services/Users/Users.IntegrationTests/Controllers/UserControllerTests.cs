@@ -168,7 +168,7 @@ public class UserControllerTests(ApiOnlyIntegrationTestFactory factory) : ApiOnl
         {
             foreach (var cookie in cookies)
             {
-                if (cookie.StartsWith("access_token="))
+                if (cookie.StartsWith("access_token=", StringComparison.Ordinal))
                 {
                     var parts = cookie.Split(';')[0].Split('=');
                     if (parts.Length >= 2)

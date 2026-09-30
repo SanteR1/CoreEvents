@@ -15,7 +15,7 @@ public class JwtTokenProvider(IOptions<JwtOptions> options) : ITokenProvider
     {
         ArgumentNullException.ThrowIfNull(payload);
 
-        var claims = new Dictionary<string, object>
+        var claims = new Dictionary<string, object>(StringComparer.Ordinal)
         {
             [JwtRegisteredClaimNames.Sub] = payload.UserId.ToString(),
             ["role"] = payload.Role.ToString(),

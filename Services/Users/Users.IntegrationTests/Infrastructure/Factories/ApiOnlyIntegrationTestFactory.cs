@@ -16,7 +16,7 @@ public class ApiOnlyIntegrationTestFactory : IntegrationTestFactory
 
         builder.ConfigureAppConfiguration((context, configBuilder) =>
         {
-            Dictionary<string, string?> testConfig = new() { { "Kafka:InitKafkaTopics", "false" } };
+            Dictionary<string, string?> testConfig = new(StringComparer.Ordinal) { { "Kafka:InitKafkaTopics", "false" } };
             configBuilder.AddInMemoryCollection(testConfig);
         });
 

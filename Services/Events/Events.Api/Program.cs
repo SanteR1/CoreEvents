@@ -1,4 +1,5 @@
 using Events.Api.Extensions;
+using Events.Infrastructure.Extensions;
 using Scalar.AspNetCore;
 using Serilog;
 using Serilog.Events;
@@ -40,7 +41,6 @@ try
 
     await app.ApplyMigrationsAsync();
     await app.Services.InitializeKafkaTopicsAsync();
-
 
     app.UseForwardedHeaders();
 

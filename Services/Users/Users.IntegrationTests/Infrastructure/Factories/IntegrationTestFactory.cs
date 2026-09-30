@@ -94,7 +94,7 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLife
 
         builder.ConfigureAppConfiguration((context, configBuilder) =>
         {
-            Dictionary<string, string?> testConfig = new()
+            Dictionary<string, string?> testConfig = new(StringComparer.Ordinal)
             {
                 // Задаем фиксированный фейковый JWT-секрет только для тестов
                 { "Jwt:SecretKey", "test_environment_secret_key_minimum_32_characters_long_12345" },

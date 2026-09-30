@@ -34,7 +34,7 @@ public class CookieToBearerTransformProviderTests
 
         // Assert
         proxyRequest.Headers.Authorization.Should().NotBeNull();
-        proxyRequest.Headers.Authorization!.Scheme.Should().Be("Bearer");
+        proxyRequest.Headers.Authorization.Scheme.Should().Be("Bearer");
         proxyRequest.Headers.Authorization.Parameter.Should().Be("test-jwt-token");
     }
 
@@ -65,7 +65,7 @@ public class CookieToBearerTransformProviderTests
 
         // Assert
         proxyRequest.Headers.Authorization.Should().NotBeNull();
-        proxyRequest.Headers.Authorization!.Parameter.Should().Be("existing-token");
+        proxyRequest.Headers.Authorization.Parameter.Should().Be("existing-token");
     }
 
     [Fact]

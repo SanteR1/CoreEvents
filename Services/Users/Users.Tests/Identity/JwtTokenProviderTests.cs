@@ -68,9 +68,9 @@ public class JwtTokenProviderTests
         JsonWebToken jwtToken = handler.ReadJsonWebToken(token);
 
         jwtToken.Subject.Should().Be(payload.UserId.ToString());
-        jwtToken.Claims.FirstOrDefault(c => c.Type == "role")?.Value.Should().Be(payload.Role.ToString());
+        jwtToken.Claims.FirstOrDefault(c => string.Equals(c.Type, "role", StringComparison.Ordinal))?.Value.Should().Be(payload.Role.ToString());
 
-        jwtToken.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Email)?.Value.Should().Be(payload.Email);
+        jwtToken.Claims.FirstOrDefault(c => string.Equals(c.Type, JwtRegisteredClaimNames.Email, StringComparison.Ordinal))?.Value.Should().Be(payload.Email);
 
         jwtToken.Issuer.Should().Be(_testOptions.Issuer);
         jwtToken.Audiences.Should().Contain(_testOptions.Audience);

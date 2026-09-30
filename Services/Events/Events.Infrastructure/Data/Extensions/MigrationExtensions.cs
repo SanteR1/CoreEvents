@@ -30,7 +30,7 @@ public static class MigrationExtensions
                 await databaseCreator.CreateAsync();
             }
         }
-        catch (PostgresException ex) when (ex.SqlState == "42P04")
+        catch (PostgresException ex) when (string.Equals(ex.SqlState, "42P04", StringComparison.Ordinal))
         {
             // Игнорируем ошибку 42P04 (duplicate_database). 
             // Это значит, что другой под/контейнер уже успел создать базу на долю секунды раньше.

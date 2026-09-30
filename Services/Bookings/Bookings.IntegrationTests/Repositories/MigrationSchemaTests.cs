@@ -132,7 +132,7 @@ public class MigrationSchemaTests(ApiOnlyIntegrationTestFactory factory, ITestOu
                         TableName: tableName,
                         ColumnName: columnName,
                         IsNullable: prop.IsNullable,
-                        DataType: prop.GetColumnType().ToLower(),
+                        DataType: prop.GetColumnType().ToLowerInvariant(),
                         DefaultValue: rawDefaultValue
                     ));
                 }
@@ -214,9 +214,8 @@ public class MigrationSchemaTests(ApiOnlyIntegrationTestFactory factory, ITestOu
 
             foreach (var efCol in efColumns)
             {
-                var dbCol = dbColumns.SingleOrDefault(c =>
-                    c.TableName == efCol.TableName &&
-                    c.ColumnName == efCol.ColumnName);
+                var dbCol = dbColumns.SingleOrDefault(c => string.Equals(c.TableName, efCol.TableName, StringComparison.Ordinal) &&
+string.Equals(c.ColumnName, efCol.ColumnName, StringComparison.Ordinal));
 
                 dbCol.Should().NotBeNull($"[Ошибка схемы] Колонка '{efCol.ColumnName}' не найдена в таблице '{efCol.TableName}' в БД.");
                 dbCol.IsNullable.Should().Be(efCol.IsNullable, $"[Ошибка схемы] Таблица: '{efCol.TableName}', Колонка: '{efCol.ColumnName}'." +
@@ -235,18 +234,16 @@ public class MigrationSchemaTests(ApiOnlyIntegrationTestFactory factory, ITestOu
             // Проверка .IsUnique()
             foreach (var efUnique in efUniques)
             {
-                var existsInDb = dbUniques.Any(u =>
-                    u.TableName == efUnique.TableName &&
-                    u.ColumnName == efUnique.ColumnName);
+                var existsInDb = dbUniques.Any(u => string.Equals(u.TableName, efUnique.TableName, StringComparison.Ordinal) &&
+string.Equals(u.ColumnName, efUnique.ColumnName, StringComparison.Ordinal));
                 existsInDb.Should().BeTrue($"Unique constraint missing in DB for {efUnique.TableName}.{efUnique.ColumnName}");
             }
 
             // Проверка .HasCheckConstraint()
             foreach (var efCheck in efChecks)
             {
-                var existsInDb = dbChecks.Any(c =>
-                    c.TableName == efCheck.TableName &&
-                    NormalizeSql(c.CheckClause).Contains(NormalizeSql(efCheck.CheckClause)));
+                var existsInDb = dbChecks.Any(c => string.Equals(c.TableName, efCheck.TableName, StringComparison.Ordinal) &&
+                    NormalizeSql(c.CheckClause).Contains(NormalizeSql(efCheck.CheckClause), StringComparison.Ordinal));
                 existsInDb.Should()
                     .BeTrue(
                         $"Check constraint: {NormalizeSql(efCheck.CheckClause)} missing in DB for table: {efCheck.TableName}");
@@ -260,6 +257,6 @@ public class MigrationSchemaTests(ApiOnlyIntegrationTestFactory factory, ITestOu
                 .Replace(" ", "")
                 .Replace("\"", "")
                 .Replace("'", "")
-                .ToLower();
+                .ToLowerInvariant();
     }
 }

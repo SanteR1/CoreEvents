@@ -43,10 +43,9 @@ public record EventResponseDto(
         entity.AvailableSeats
     );
 
-    public static List<EventResponseDto> FromEntity(List<Event> entity) => new(
-        entity.Select(FromEntity).ToList()
-        );
-    public static List<EventResponseDto> FromEntity(List<EventCacheDto> entity) => new(
-        entity.Select(FromEntity).ToList()
-    );
+    public static IReadOnlyList<EventResponseDto> FromEntity(IEnumerable<Event> entity) =>
+        entity.Select(FromEntity).ToList();
+
+    public static IReadOnlyList<EventResponseDto> FromEntity(IEnumerable<EventCacheDto> entity) =>
+        entity.Select(FromEntity).ToList();
 }

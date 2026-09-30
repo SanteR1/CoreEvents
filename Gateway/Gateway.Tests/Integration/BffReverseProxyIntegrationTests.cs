@@ -30,7 +30,7 @@ public class BffReverseProxyIntegrationTests
             var downstreamUrl = downstream.Urls.First();
 
             // 2. Настраиваем Gateway на адрес поднятого тестового downstream
-            var overrides = new Dictionary<string, string?>
+            var overrides = new Dictionary<string, string?>(StringComparer.Ordinal)
             {
                 ["ReverseProxy:Clusters:events-cluster:Destinations:destination1:Address"] = downstreamUrl
             };
@@ -76,7 +76,7 @@ public class BffReverseProxyIntegrationTests
         {
             var downstreamUrl = downstream.Urls.First();
 
-            var overrides = new Dictionary<string, string?>
+            var overrides = new Dictionary<string, string?>(StringComparer.Ordinal)
             {
                 ["ReverseProxy:Clusters:events-cluster:Destinations:destination1:Address"] = downstreamUrl
             };

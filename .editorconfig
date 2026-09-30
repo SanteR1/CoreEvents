@@ -1,3 +1,6 @@
+# Указываем корень конфигурации
+root = true
+
 # Форматирование для всех файлов
 [*]
 end_of_line = lf
@@ -131,6 +134,10 @@ dotnet_remove_unnecessary_suppression_exclusions = none
 # Предпочтения для новых строк
 dotnet_style_allow_multiple_blank_lines_experimental = true
 dotnet_style_allow_statement_immediately_after_block_experimental = true
+
+# Roslynator: отключение устаревшего правила RCS1036 и использование RCS0063
+dotnet_diagnostic.RCS1036.severity = none
+dotnet_diagnostic.RCS0063.severity = suggestion
 
 #### Рекомендации по написанию кода C# ####
 
@@ -371,3 +378,50 @@ resharper_convert_if_to_or_pattern_highlighting = suggestion
 # ==========================================
 
 resharper_csharp_type_member_layout = <TypeMemberLayout><Region Name="Static Members"><Pattern><Match><And><Kind Is="FieldOrProperty"/><Static/></And></Match><Sort><Access Order="Public Internal Protected Private"/><Readonly/></Sort></Pattern></Region><Region Name="Static Methods"><Pattern><Match><And><Kind Is="Method"/><Static/></And></Match><Sort><Access Order="Public Internal Protected Private"/></Sort></Pattern></Region><Region Name="Fields"><Pattern><Match><And><Kind Is="Field"/><Not><Static/></Not></And></Match><Sort><Readonly/><Access Order="Private Protected Internal Public"/></Sort></Pattern></Region><Region Name="Constructors"><Pattern><Match><Kind Is="Constructor"/></Match><Sort><Static/><Access Order="Public Internal Protected Private"/></Sort></Pattern></Region><Region Name="Delegates and Events"><Pattern><Match><Or><Kind Is="Delegate"/><Kind Is="Event"/></Or></Match><Sort><Access Order="Public Internal Protected Private"/></Sort></Pattern></Region><Region Name="Properties"><Pattern><Match><And><Kind Is="Property"/><Not><Static/></Not></And></Match><Sort><Access Order="Public Internal Protected Private"/></Sort></Pattern></Region><Region Name="Interface Implementations"><Pattern><Match><And><Kind Is="Method"/><InterfaceMember/></And></Match></Pattern></Region><Region Name="Public Methods"><Pattern><Match><And><Kind Is="Method"/><Access Is="Public"/><Not><Static/></Not><Not><InterfaceMember/></Not></And></Match></Pattern></Region><Region Name="Internal &amp; Protected Methods"><Pattern><Match><And><Kind Is="Method"/><Or><Access Is="Internal"/><Access Is="Protected"/><Access Is="ProtectedInternal"/></Or><Not><Static/></Not><Not><InterfaceMember/></Not></And></Match></Pattern></Region><Region Name="Private Methods"><Pattern><Match><And><Kind Is="Method"/><Access Is="Private"/><Not><Static/></Not><Not><InterfaceMember/></Not></And></Match></Pattern></Region><Region Name="Nested Types"><Pattern><Match><Kind Is="NestedType"/></Match><Sort><Access Order="Public Internal Protected Private"/></Sort></Pattern></Region></TypeMemberLayout>
+
+# ==========================================
+# Сервисы и Clean Architecture (ASP.NET Core)
+# ==========================================
+
+# В слоях сервисов отсутствует SynchronizationContext, поэтому ConfigureAwait(false) не требуется
+[Services/**.cs]
+dotnet_diagnostic.MA0004.severity = none
+
+# Отключаем требование совпадения имени файла для фич/команд
+[**/*Command.cs]
+dotnet_diagnostic.MA0048.severity = none
+
+# Или для всей папки Features/Commands
+[**/Commands/**.cs]
+dotnet_diagnostic.MA0048.severity = none
+
+[**/Migrations/**.cs]
+dotnet_diagnostic.MA0048.severity = none
+dotnet_diagnostic.MA0051.severity = none
+
+[**/Configurations/**.cs]
+dotnet_diagnostic.MA0051.severity = none
+
+# Разрешаем несколько типов (Query + Handler) в файлах CQRS-запросов аналогично командам
+[*Query.cs]
+dotnet_diagnostic.MA0048.severity = none
+
+[**/*Query.cs]
+dotnet_diagnostic.MA0048.severity = none
+
+[**/Queries/**.cs]
+dotnet_diagnostic.MA0048.severity = none
+
+# Разрешаем несколько типов в одном файле для проектов с тестами
+[**/**Tests**/**.cs]
+dotnet_diagnostic.MA0048.severity = none
+
+# Отключаем MA0051 только для тестовых файлов и проектов
+dotnet_diagnostic.MA0051.severity = none
+
+# Разрешаем канонический класс DependencyInjection в пространстве имен Microsoft.Extensions.DependencyInjection
+[*DependencyInjection.cs]
+dotnet_diagnostic.MA0049.severity = none
+
+[**/DependencyInjection.cs]
+dotnet_diagnostic.MA0049.severity = none

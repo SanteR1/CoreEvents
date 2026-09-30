@@ -13,7 +13,7 @@ public class ValidationException : BadRequestException
     public ValidationException(string propertyName, string errorMessage)
         : base($"Validation failed for {propertyName}: {errorMessage}")
     {
-        ValidationErrors = new Dictionary<string, string[]>
+        ValidationErrors = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
         {
             { propertyName, [errorMessage] }
         };

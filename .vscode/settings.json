@@ -1,5 +1,5 @@
 {
   "antigravity.enableTelemetry": false,
-  "files.autoSave": "afterDelay",
-  "files.autoSaveDelay": 500
+  "files.insertFinalNewline": true,
+  "files.trimFinalNewlines": true
 }

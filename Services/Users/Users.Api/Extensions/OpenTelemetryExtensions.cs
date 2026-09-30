@@ -8,7 +8,7 @@ namespace Users.Api.Extensions;
 
 public static partial class OpenTelemetryExtensions
 {
-    [GeneratedRegex(@"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")]
+    [GeneratedRegex(@"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}", RegexOptions.None, matchTimeoutMilliseconds: 200)]
     private static partial Regex GuidRegex();
 
     public static IServiceCollection AddApplicationTelemetry(this IServiceCollection service, IConfiguration configuration)
@@ -23,7 +23,7 @@ public static partial class OpenTelemetryExtensions
                                            {
 
                                                var path = httpContext.Request.Path;
-                                               return !path.StartsWithSegments("/metrics");
+                                               return !path.StartsWithSegments("/metrics", StringComparison.OrdinalIgnoreCase);
                                            };
                                            options.EnrichWithHttpResponse = (activity, response) =>
                                            {

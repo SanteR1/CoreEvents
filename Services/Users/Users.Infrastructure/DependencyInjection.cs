@@ -68,7 +68,7 @@ public static class DependencyInjection
         return services;
     }
 
-    private static IServiceCollection AddDataBase(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
+    private static void AddDataBase(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
         var connectionString = configuration.GetConnectionString("DefaultConnection")
                                ?? throw new InvalidOperationException("Connection string 'Default' not found.");
@@ -83,6 +83,5 @@ public static class DependencyInjection
                     .EnableDetailedErrors();
             }
         });
-        return services;
     }
 }

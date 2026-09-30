@@ -48,7 +48,7 @@ public class PasswordHasherTests
     {
         // Arrange
         string userPassword = "Password!123";
-        
+
         // Act
         Action act = () => _hasher.Verify(userPassword, "");
 

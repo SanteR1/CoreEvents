@@ -95,7 +95,6 @@ internal sealed class OutboxBackgroundWorker : BackgroundService
                 message.LastError = $"Внутренняя ошибка: {ex.Message}";
                 if (message.RetryCount >= _maxRetryCount)
                 {
-                    // TODO здесь можно перевести в некий "dead" статус — отдельное поле IsDead / MovedToDlq
                     _logger.LogCritical(ex, "Outbox сообщение {Id} превысило лимит попыток, требует ручного вмешательства", message.Id);
                     message.IsDeadLettered = true;
                 }

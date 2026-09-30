@@ -40,7 +40,7 @@ public class AuthCookieServiceTests
         StringValues setCookies = httpContext.Response.Headers.SetCookie;
         setCookies.Should().HaveCount(2);
 
-        string? accessTokenHeader = setCookies.FirstOrDefault(c => c != null && c.StartsWith("access_token="));
+        string? accessTokenHeader = setCookies.FirstOrDefault(c => c != null && c.StartsWith("access_token=", StringComparison.Ordinal));
         accessTokenHeader.Should().NotBeNull();
         accessTokenHeader.Should().Contain("access_token=test-access-token");
         accessTokenHeader.Should().Contain("path=/");
@@ -48,7 +48,7 @@ public class AuthCookieServiceTests
         accessTokenHeader.Should().Contain("samesite=lax");
         accessTokenHeader.Should().NotContain("secure");
 
-        string? refreshTokenHeader = setCookies.FirstOrDefault(c => c != null && c.StartsWith("refresh_token="));
+        string? refreshTokenHeader = setCookies.FirstOrDefault(c => c != null && c.StartsWith("refresh_token=", StringComparison.Ordinal));
         refreshTokenHeader.Should().NotBeNull();
         refreshTokenHeader.Should().Contain("refresh_token=test-refresh-token");
         refreshTokenHeader.Should().Contain("path=/v1/auth");
@@ -73,11 +73,11 @@ public class AuthCookieServiceTests
         StringValues setCookies = httpContext.Response.Headers.SetCookie;
         setCookies.Should().HaveCount(2);
 
-        string? accessTokenHeader = setCookies.FirstOrDefault(c => c != null && c.StartsWith("access_token="));
+        string? accessTokenHeader = setCookies.FirstOrDefault(c => c != null && c.StartsWith("access_token=", StringComparison.Ordinal));
         accessTokenHeader.Should().NotBeNull();
         accessTokenHeader.Should().Contain("secure");
 
-        string? refreshTokenHeader = setCookies.FirstOrDefault(c => c != null && c.StartsWith("refresh_token="));
+        string? refreshTokenHeader = setCookies.FirstOrDefault(c => c != null && c.StartsWith("refresh_token=", StringComparison.Ordinal));
         refreshTokenHeader.Should().NotBeNull();
         refreshTokenHeader.Should().Contain("secure");
     }
@@ -98,11 +98,11 @@ public class AuthCookieServiceTests
         StringValues setCookies = httpContext.Response.Headers.SetCookie;
         setCookies.Should().HaveCount(2);
 
-        string? accessTokenHeader = setCookies.FirstOrDefault(c => c != null && c.StartsWith("access_token="));
+        string? accessTokenHeader = setCookies.FirstOrDefault(c => c != null && c.StartsWith("access_token=", StringComparison.Ordinal));
         accessTokenHeader.Should().NotBeNull();
         accessTokenHeader.Should().Contain("secure");
 
-        string? refreshTokenHeader = setCookies.FirstOrDefault(c => c != null && c.StartsWith("refresh_token="));
+        string? refreshTokenHeader = setCookies.FirstOrDefault(c => c != null && c.StartsWith("refresh_token=", StringComparison.Ordinal));
         refreshTokenHeader.Should().NotBeNull();
         refreshTokenHeader.Should().Contain("secure");
     }
@@ -124,7 +124,7 @@ public class AuthCookieServiceTests
 
         // Assert
         StringValues setCookies = httpContext.Response.Headers.SetCookie;
-        string? refreshTokenHeader = setCookies.FirstOrDefault(c => c != null && c.StartsWith("refresh_token="));
+        string? refreshTokenHeader = setCookies.FirstOrDefault(c => c != null && c.StartsWith("refresh_token=", StringComparison.Ordinal));
 
         refreshTokenHeader.Should().NotBeNull();
         refreshTokenHeader.Should().Contain("path=/v2/auth");
@@ -180,12 +180,12 @@ public class AuthCookieServiceTests
         StringValues setCookies = httpContext.Response.Headers.SetCookie;
         setCookies.Should().HaveCount(2);
 
-        string? accessCookie = setCookies.FirstOrDefault(c => c != null && c.StartsWith("access_token="));
+        string? accessCookie = setCookies.FirstOrDefault(c => c != null && c.StartsWith("access_token=", StringComparison.Ordinal));
         accessCookie.Should().NotBeNull();
         accessCookie.Should().Contain("path=/");
         accessCookie.Should().Contain("expires=Thu, 01 Jan 1970 00:00:00 GMT");
 
-        string? refreshCookie = setCookies.FirstOrDefault(c => c != null && c.StartsWith("refresh_token="));
+        string? refreshCookie = setCookies.FirstOrDefault(c => c != null && c.StartsWith("refresh_token=", StringComparison.Ordinal));
         refreshCookie.Should().NotBeNull();
         refreshCookie.Should().Contain("path=/v1/auth");
         refreshCookie.Should().Contain("expires=Thu, 01 Jan 1970 00:00:00 GMT");
@@ -210,11 +210,11 @@ public class AuthCookieServiceTests
         StringValues setCookies = httpContext.Response.Headers.SetCookie;
         setCookies.Should().HaveCount(2);
 
-        string? accessCookie = setCookies.FirstOrDefault(c => c != null && c.StartsWith("access_token="));
+        string? accessCookie = setCookies.FirstOrDefault(c => c != null && c.StartsWith("access_token=", StringComparison.Ordinal));
         accessCookie.Should().NotBeNull();
         accessCookie.Should().Contain("secure");
 
-        string? refreshCookie = setCookies.FirstOrDefault(c => c != null && c.StartsWith("refresh_token="));
+        string? refreshCookie = setCookies.FirstOrDefault(c => c != null && c.StartsWith("refresh_token=", StringComparison.Ordinal));
         refreshCookie.Should().NotBeNull();
         refreshCookie.Should().Contain("secure");
     }
@@ -251,10 +251,10 @@ public class AuthCookieServiceTests
 
         // Assert
         StringValues setCookies = httpContext.Response.Headers.SetCookie;
-        string? accessCookie = setCookies.FirstOrDefault(c => c != null && c.StartsWith("access_token="));
+        string? accessCookie = setCookies.FirstOrDefault(c => c != null && c.StartsWith("access_token=", StringComparison.Ordinal));
         accessCookie.Should().NotBeNull();
 
-        string? refreshCookie = setCookies.FirstOrDefault(c => c != null && c.StartsWith("refresh_token="));
+        string? refreshCookie = setCookies.FirstOrDefault(c => c != null && c.StartsWith("refresh_token=", StringComparison.Ordinal));
         refreshCookie.Should().NotBeNull();
     }
 }

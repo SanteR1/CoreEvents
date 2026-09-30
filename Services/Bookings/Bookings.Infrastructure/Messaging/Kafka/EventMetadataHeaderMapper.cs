@@ -11,7 +11,7 @@ internal static class EventMetadataHeaderMapper
 {
     public static Dictionary<string, string> ToHeaderDictionary(EventMetadata metadata)
     {
-        var dict = new Dictionary<string, string>
+        var dict = new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["messageId"] = metadata.MessageId.ToString(),
             ["correlationId"] = metadata.CorrelationId.ToString(),
@@ -42,7 +42,8 @@ internal static class EventMetadataHeaderMapper
     {
         var dict = headers.ToDictionary(
             h => h.Key,
-            h => Encoding.UTF8.GetString(h.GetValueBytes()));
+            h => Encoding.UTF8.GetString(h.GetValueBytes()),
+            StringComparer.Ordinal);
         return JsonSerializer.Serialize(dict, IntegrationEventJsonOptions.Default);
     }
 

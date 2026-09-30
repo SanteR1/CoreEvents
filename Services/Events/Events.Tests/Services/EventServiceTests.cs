@@ -834,7 +834,7 @@ public class EventServiceTests
         var key = CacheKeys.Top10Events;
 
         // Setup
-        _cacheService.Setup(cache => cache.GetAsync<List<EventCacheDto>>(key, It.IsAny<CancellationToken>()))
+        _cacheService.Setup(cache => cache.GetAsync<IReadOnlyList<EventCacheDto>>(key, It.IsAny<CancellationToken>()))
                      .ReturnsAsync(existingEvents);
 
         // Act
@@ -846,7 +846,7 @@ public class EventServiceTests
         result.Should().BeEquivalentTo(EventResponseDto.FromEntity(existingEvents));
 
         _eventRepositoryMock.Verify(repo => repo.GetTopEventsBySalesPercentageAsync(10, It.IsAny<CancellationToken>()), Times.Never);
-        _cacheService.Verify(repo => repo.GetAsync<List<EventCacheDto>>(key, It.IsAny<CancellationToken>()), Times.Once);
+        _cacheService.Verify(repo => repo.GetAsync<IReadOnlyList<EventCacheDto>>(key, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -890,8 +890,8 @@ public class EventServiceTests
         var key = CacheKeys.Top10Events;
 
         // Setup
-        _cacheService.Setup(cache => cache.GetAsync<List<EventCacheDto>>(key, It.IsAny<CancellationToken>()))
-                     .ReturnsAsync((List<EventCacheDto>?)null);
+        _cacheService.Setup(cache => cache.GetAsync<IReadOnlyList<EventCacheDto>>(key, It.IsAny<CancellationToken>()))
+                     .ReturnsAsync((IReadOnlyList<EventCacheDto>?)null);
         _eventRepositoryMock
             .Setup(repo => repo.GetTopEventsBySalesPercentageAsync(10, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingEvents);
@@ -906,7 +906,7 @@ public class EventServiceTests
 
 
         _eventRepositoryMock.Verify(repo => repo.GetTopEventsBySalesPercentageAsync(10, It.IsAny<CancellationToken>()), Times.Once);
-        _cacheService.Verify(cache => cache.SetAsync<List<EventCacheDto>>(key, existingEventsCacheDto, It.IsAny<CancellationToken>()), Times.Once);
+        _cacheService.Verify(cache => cache.SetAsync<IReadOnlyList<EventCacheDto>>(key, existingEventsCacheDto, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     #endregion

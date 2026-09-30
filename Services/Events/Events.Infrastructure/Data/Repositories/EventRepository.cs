@@ -29,9 +29,9 @@ internal sealed class EventRepository : IEventRepository
             else
             {
                 var titleLower = eventFilter.Title.ToLowerInvariant();
-#pragma warning disable CA1862, CA1304, CA1311, RCS1155 // EF Core expression tree does not translate StringComparison overloads
+#pragma warning disable CA1862, CA1304, CA1311, RCS1155, MA0011 // EF Core expression tree does not translate StringComparison overloads
                 entity = entity.Where(e => e.Title.ToLower().Contains(titleLower));
-#pragma warning restore CA1862, CA1304, CA1311, RCS1155
+#pragma warning restore CA1862, CA1304, CA1311, RCS1155, MA0011
             }
         }
 
@@ -80,7 +80,7 @@ internal sealed class EventRepository : IEventRepository
         return await _context.Events.FindAsync([id], ct);
     }
 
-    public async Task<List<Event>> GetTopEventsBySalesPercentageAsync(int take, CancellationToken ct = default)
+    public async Task<IReadOnlyList<Event>> GetTopEventsBySalesPercentageAsync(int take, CancellationToken ct = default)
     {
         return await _context.Events
                              .OrderByDescending(x => (double)(x.TotalSeats - x.AvailableSeats) / x.TotalSeats)

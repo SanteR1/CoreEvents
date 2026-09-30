@@ -83,7 +83,7 @@ public class UserRepositoryTests(ApiOnlyIntegrationTestFactory factory) : ApiOnl
 
         // Assert
         result.Should().NotBeNull();
-        result!.Id.Should().Be(id);
+        result.Id.Should().Be(id);
     }
 
     [Fact]
