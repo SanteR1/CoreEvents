@@ -56,5 +56,33 @@ internal sealed class EventConfiguration : IEntityTypeConfiguration<Event>
         builder.Property(x => x.TotalSeats)
             .HasColumnName("total_seats")
             .IsRequired();
+
+        builder.Property(x => x.Price)
+            .HasColumnName("price")
+            .HasPrecision(18, 2)
+            .HasDefaultValue(0.00m)
+            .IsRequired();
+
+        builder.Property(x => x.Currency)
+            .HasColumnName("currency")
+            .HasMaxLength(3)
+            .HasDefaultValue("KZT")
+            .IsRequired();
+
+        builder.Property(x => x.PriceVersion)
+            .HasColumnName("price_version")
+            .HasDefaultValue(1L)
+            .IsRequired();
+
+        builder.Property(x => x.IsActive)
+            .HasColumnName("is_active")
+            .HasDefaultValue(true)
+            .HasSentinel(false)
+            .IsRequired();
+
+        builder.Property(x => x.Version)
+            .HasColumnName("version")
+            .HasDefaultValue(1L)
+            .IsRequired();
     }
 }

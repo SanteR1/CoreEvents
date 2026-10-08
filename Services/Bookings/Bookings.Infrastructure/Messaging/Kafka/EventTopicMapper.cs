@@ -7,9 +7,13 @@ internal sealed class EventTopicMapper : IEventTopicMapper
 {
     private readonly Dictionary<Type, string> _topicMap = new()
     {
-        { typeof(BookingCancellationRequested), KafkaTopics.BookingConfirmed },
-        { typeof(BookingCreated), KafkaTopics.BookingConfirmed },
-        { typeof(BookingConfirmed), KafkaTopics.BookingConfirmed }
+        { typeof(BookingReservationRequested), KafkaTopics.BookingTopic },
+        { typeof(BookingReservationReleaseRequested), KafkaTopics.BookingTopic },
+        { typeof(BookingConfirmed), KafkaTopics.BookingTopic },
+        { typeof(BookingRejected), KafkaTopics.BookingTopic },
+        { typeof(BookingCancellationRequested), KafkaTopics.BookingTopic },
+        { typeof(BookingCancelled), KafkaTopics.BookingTopic },
+        { typeof(BookingCreated), KafkaTopics.BookingTopic }
     };
 
     public string GetTopicFor<T>()

@@ -32,6 +32,14 @@ namespace Events.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("available_seats");
 
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasDefaultValue("KZT")
+                        .HasColumnName("currency");
+
                     b.Property<string>("Description")
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)")
@@ -40,6 +48,25 @@ namespace Events.Infrastructure.Migrations
                     b.Property<DateTime>("EndAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("end_at");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_active");
+
+                    b.Property<decimal>("Price")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasDefaultValue(0.00m)
+                        .HasColumnName("price");
+
+                    b.Property<long>("PriceVersion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(1L)
+                        .HasColumnName("price_version");
 
                     b.Property<uint>("RowVersion")
                         .IsConcurrencyToken()
@@ -61,6 +88,12 @@ namespace Events.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("total_seats");
 
+                    b.Property<long>("Version")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(1L)
+                        .HasColumnName("version");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Title");
@@ -74,6 +107,112 @@ namespace Events.Infrastructure.Migrations
                     b.ToTable("events", null, t =>
                         {
                             t.HasCheckConstraint("CK_events_dates", "\"start_at\" < \"end_at\"");
+                        });
+                });
+
+            modelBuilder.Entity("Events.Domain.Entities.SeatReservation", b =>
+                {
+                    b.Property<Guid>("BookingId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("booking_id");
+
+                    b.Property<Guid>("CausationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("causation_id");
+
+                    b.Property<Guid>("CorrelationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("correlation_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasColumnName("currency");
+
+                    b.Property<decimal>("DiscountAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("discount_amount");
+
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("event_id");
+
+                    b.Property<DateTimeOffset?>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<long>("PriceVersion")
+                        .HasColumnType("bigint")
+                        .HasColumnName("price_version");
+
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("rejection_reason");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<int>("Seats")
+                        .HasColumnType("integer")
+                        .HasColumnName("seats");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("status");
+
+                    b.Property<decimal>("TotalPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("total_price");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("unit_price");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("BookingId");
+
+                    b.HasIndex("CorrelationId")
+                        .HasDatabaseName("ix_seat_reservations_correlation_id");
+
+                    b.HasIndex("ExpiresAt")
+                        .HasDatabaseName("ix_seat_reservations_expires_at")
+                        .HasFilter("\"status\" = 'Reserved'");
+
+                    b.HasIndex("EventId", "Status")
+                        .HasDatabaseName("ix_seat_reservations_event_status");
+
+                    b.ToTable("event_seat_reservations", null, t =>
+                        {
+                            t.HasCheckConstraint("chk_reservations_discount_non_negative", "\"discount_amount\" >= 0");
+
+                            t.HasCheckConstraint("chk_reservations_price_math", "\"total_price\" = (\"seats\" * \"unit_price\") - \"discount_amount\"");
+
+                            t.HasCheckConstraint("chk_reservations_rejected_has_reason", "\"status\" != 'Rejected' OR \"rejection_reason\" IS NOT NULL");
+
+                            t.HasCheckConstraint("chk_reservations_reserved_has_expiration", "\"status\" != 'Reserved' OR \"expires_at\" IS NOT NULL");
+
+                            t.HasCheckConstraint("chk_reservations_seats_positive", "\"seats\" > 0");
+
+                            t.HasCheckConstraint("chk_reservations_total_price_non_negative", "\"total_price\" >= 0");
+
+                            t.HasCheckConstraint("chk_reservations_unit_price_non_negative", "\"unit_price\" >= 0");
                         });
                 });
 
