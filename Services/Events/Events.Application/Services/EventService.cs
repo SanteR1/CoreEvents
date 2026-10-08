@@ -1,3 +1,5 @@
+using CoreEvents.Shared.Contracts.Events;
+using Events.Application.Abstractions;
 using Events.Application.Abstractions.Caching;
 using Events.Application.Abstractions.Repositories;
 using Events.Application.DTOs;
@@ -10,10 +12,16 @@ internal sealed class EventService : IEventService
 {
     private readonly IEventRepository _eventRepository;
     private readonly ICacheService _cache;
-    public EventService(IEventRepository eventRepository, ICacheService cache)
+    private readonly IOutboxService _outboxService;
+
+    public EventService(
+        IEventRepository eventRepository,
+        ICacheService cache,
+        IOutboxService outboxService)
     {
         _eventRepository = eventRepository;
         _cache = cache;
+        _outboxService = outboxService;
     }
 
     public async Task<PaginatedResult<EventResponseDto>> GetAllEventsAsync(EventFilter dtoFilter, CancellationToken ct = default)
@@ -117,13 +125,34 @@ internal sealed class EventService : IEventService
             startAt: createDto.StartAt!.Value,
             endAt: createDto.EndAt!.Value,
             totalSeats: createDto.TotalSeats!.Value,
-            description: createDto.Description);
+            description: createDto.Description,
+            price: createDto.Price,
+            currency: createDto.Currency);
 
         _eventRepository.Add(entity);
+
+        _outboxService.Publish(
+            new EventCreated
+            {
+                EventId = entity.Id,
+                Title = entity.Title,
+                StartAt = entity.StartAt,
+                EndAt = entity.EndAt,
+                UnitPrice = entity.Price,
+                Currency = entity.Currency,
+                PriceVersion = entity.PriceVersion,
+                TotalSeats = entity.TotalSeats,
+                IsActive = entity.IsActive,
+                Version = entity.Version,
+                CreatedAt = DateTimeOffset.UtcNow
+            },
+            partitionKey: entity.Id.ToString());
+
         await _eventRepository.SaveChangesAsync(ct);
 
         return EventResponseDto.FromEntity(entity);
     }
+
     public async Task<EventResponseDto> UpdateEventAsync(Guid id, EventUpdateDto updateDto, CancellationToken ct = default)
     {
         var existing = await _eventRepository.GetByIdAsync(id, ct);
@@ -133,8 +162,27 @@ internal sealed class EventService : IEventService
             updateDto.Title,
             updateDto.StartAt,
             updateDto.EndAt,
-            updateDto.Description
-            );
+            updateDto.Description,
+            updateDto.Price,
+            updateDto.Currency);
+
+        _outboxService.Publish(
+            new EventUpdated
+            {
+                EventId = existing.Id,
+                Title = existing.Title,
+                Description = existing.Description,
+                StartAt = existing.StartAt,
+                EndAt = existing.EndAt,
+                UnitPrice = existing.Price,
+                Currency = existing.Currency,
+                PriceVersion = existing.PriceVersion,
+                TotalSeats = existing.TotalSeats,
+                IsActive = existing.IsActive,
+                Version = existing.Version,
+                UpdatedAt = DateTimeOffset.UtcNow
+            },
+            partitionKey: existing.Id.ToString());
 
         await _eventRepository.SaveChangesAsync(ct);
 
@@ -148,7 +196,18 @@ internal sealed class EventService : IEventService
         var existing = await _eventRepository.GetByIdAsync(id, ct);
         if (existing == null) throw new EventNotFoundException(id);
 
-        _eventRepository.Delete(existing);
+        existing.Cancel();
+
+        _outboxService.Publish(
+            new EventCancelled
+            {
+                EventId = existing.Id,
+                Reason = "Cancelled by organizer",
+                Version = existing.Version,
+                CancelledAt = DateTimeOffset.UtcNow
+            },
+            partitionKey: existing.Id.ToString());
+
         await _eventRepository.SaveChangesAsync(ct);
 
         await _cache.DeleteAsync(CacheKeys.Event(id), ct);
