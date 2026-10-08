@@ -176,6 +176,8 @@ public class MigrationSchemaTests(ApiOnlyIntegrationTestFactory factory, ITestOu
                     CASE 
                         WHEN character_maximum_length IS NOT NULL 
                             THEN data_type || '(' || character_maximum_length || ')'
+                        WHEN numeric_precision IS NOT NULL AND numeric_scale IS NOT NULL 
+                            THEN data_type || '(' || numeric_precision || ',' || numeric_scale || ')'
                         ELSE data_type 
                     END AS DataType, 
                     
@@ -252,7 +254,10 @@ string.Equals(u.ColumnName, efUnique.ColumnName, StringComparison.Ordinal));
         return;
         // Вспомогательный метод для нормализации SQL-строк при сравнении Check-ограничений
         static string NormalizeSql(string sql) =>
-            sql.Replace("(", "")
+            sql.Replace("::numeric", "")
+                .Replace("::text", "")
+                .Replace("<>", "!=")
+                .Replace("(", "")
                 .Replace(")", "")
                 .Replace(" ", "")
                 .Replace("\"", "")

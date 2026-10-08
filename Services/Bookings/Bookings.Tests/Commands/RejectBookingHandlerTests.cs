@@ -1,4 +1,5 @@
 using AwesomeAssertions;
+using Bookings.Application.Abstractions;
 using Bookings.Application.Abstractions.Repositories;
 using Bookings.Application.Commands;
 using Bookings.Domain.Entities;
@@ -13,15 +14,17 @@ namespace Bookings.Tests.Commands;
 public class RejectBookingHandlerTests
 {
     private readonly Mock<IBookingRepository> _repositoryMock;
+    private readonly Mock<IOutboxService> _outboxServiceMock;
     private readonly Mock<ILogger<RejectBookingHandler>> _loggerMock;
     private readonly RejectBookingHandler _handler;
 
     public RejectBookingHandlerTests()
     {
         _repositoryMock = new Mock<IBookingRepository>();
+        _outboxServiceMock = new Mock<IOutboxService>();
         _loggerMock = new Mock<ILogger<RejectBookingHandler>>();
 
-        _handler = new RejectBookingHandler(_repositoryMock.Object, _loggerMock.Object);
+        _handler = new RejectBookingHandler(_repositoryMock.Object, _outboxServiceMock.Object, _loggerMock.Object);
     }
 
     [Fact]
@@ -52,13 +55,14 @@ public class RejectBookingHandlerTests
 
         _repositoryMock.Verify(r => r.Update(It.IsAny<Booking>()), Times.Never);
         _repositoryMock.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _outboxServiceMock.Verify(o => o.Publish(It.IsAny<BookingRejected>(), It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
-    public async Task Handle_Should_RejectBookingAndUpdateRepository_When_BookingIsFound()
+    public async Task Handle_Should_RejectBookingAndPublishToOutbox_When_BookingIsFound()
     {
         // Arrange
-        var reason = (ValidationFailureReason)1;
+        var reason = ValidationFailureReason.SeatsNotAvailable;
         var command = new RejectBookingCommand(Guid.NewGuid(), reason);
 
         var booking = Booking.Create(Guid.NewGuid(), Guid.NewGuid());
@@ -74,18 +78,17 @@ public class RejectBookingHandlerTests
         result.Should().Be(Unit.Value);
 
         booking.Status.Should().Be(BookingStatus.Rejected);
+        booking.RejectionReason.Should().Be(reason.ToString());
 
         _repositoryMock.Verify(r => r.Update(booking), Times.Once);
-
         _repositoryMock.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
 
-        _loggerMock.Verify(
-            logger => logger.Log(
-                It.IsAny<LogLevel>(),
-                It.IsAny<EventId>(),
-                It.IsAny<It.IsAnyType>(),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Never);
+        _outboxServiceMock.Verify(o => o.Publish(
+            It.Is<BookingRejected>(e =>
+                e.BookingId == booking.Id &&
+                e.EventId == booking.EventId &&
+                e.Reason == reason),
+            booking.EventId.ToString()),
+            Times.Once);
     }
 }

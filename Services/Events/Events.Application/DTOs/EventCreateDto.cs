@@ -19,4 +19,13 @@ public record EventCreateDto(
     decimal Price = 0.00m,
     [MaxLength(3, ErrorMessage = "Код валюты должен состоять максимум из 3 символов")]
     string Currency = "KZT"
-);
+) : IValidatableObject
+{
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (Price < 0)
+        {
+            yield return new ValidationResult("Цена не может быть отрицательной", [nameof(Price)]);
+        }
+    }
+}
