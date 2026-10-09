@@ -24,9 +24,8 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLife
                                                         .Build();
     private readonly KafkaContainer _kafkaContainer = new KafkaBuilder("confluentinc/cp-kafka:7.9.0")
                                                       .Build();
-    private readonly RedisContainer _redisContainer = new RedisBuilder("redis:8.10")
+    private readonly RedisContainer _redisContainer = new RedisBuilder("redis:8.10-alpine")
                                                       .Build();
-
 
     private Respawner? _respawner;
     private string? _connectionString;

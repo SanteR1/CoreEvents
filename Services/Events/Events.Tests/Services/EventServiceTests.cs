@@ -17,12 +17,14 @@ public class EventServiceTests
     private readonly Mock<IEventRepository> _eventRepositoryMock;
     private readonly EventService _eventService;
     private readonly Mock<ICacheService> _cacheService;
+    private readonly Mock<Events.Application.Abstractions.IOutboxService> _outboxServiceMock;
 
     public EventServiceTests()
     {
         _eventRepositoryMock = new Mock<IEventRepository>();
         _cacheService = new Mock<ICacheService>();
-        _eventService = new EventService(_eventRepositoryMock.Object, _cacheService.Object);
+        _outboxServiceMock = new Mock<Events.Application.Abstractions.IOutboxService>();
+        _eventService = new EventService(_eventRepositoryMock.Object, _cacheService.Object, _outboxServiceMock.Object);
     }
 
     #region CreateEventAsync Tests
@@ -260,8 +262,11 @@ public class EventServiceTests
         var result = await _eventService.DeleteEventAsync(existEvent.Id, TestContext.Current.CancellationToken);
 
         result.Should().BeTrue();
+        existEvent.IsActive.Should().BeFalse();
         _eventRepositoryMock.Verify(repo => repo.GetByIdAsync(existEvent.Id, It.IsAny<CancellationToken>()), Times.Once);
-        _eventRepositoryMock.Verify(repo => repo.Delete(existEvent), Times.Once);
+        _outboxServiceMock.Verify(o => o.Publish(
+            It.Is<CoreEvents.Shared.Contracts.Events.EventCancelled>(e => e.EventId == existEvent.Id),
+            existEvent.Id.ToString()), Times.Once);
         _eventRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -280,8 +285,11 @@ public class EventServiceTests
         var result = await _eventService.DeleteEventAsync(existEvent.Id, TestContext.Current.CancellationToken);
 
         result.Should().BeTrue();
+        existEvent.IsActive.Should().BeFalse();
         _eventRepositoryMock.Verify(repo => repo.GetByIdAsync(existEvent.Id, It.IsAny<CancellationToken>()), Times.Once);
-        _eventRepositoryMock.Verify(repo => repo.Delete(existEvent), Times.Once);
+        _outboxServiceMock.Verify(o => o.Publish(
+            It.Is<CoreEvents.Shared.Contracts.Events.EventCancelled>(e => e.EventId == existEvent.Id),
+            existEvent.Id.ToString()), Times.Once);
         _eventRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         _cacheService.Verify(cache => cache.DeleteAsync($"event:{existEvent.Id}", It.IsAny<CancellationToken>()), Times.Once);
     }

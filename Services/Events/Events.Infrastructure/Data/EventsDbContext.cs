@@ -9,6 +9,7 @@ internal sealed class EventsDbContext : DbContext
     public EventsDbContext(DbContextOptions<EventsDbContext> options) : base(options) { }
 
     public DbSet<Event> Events => Set<Event>();
+    public DbSet<SeatReservation> SeatReservations => Set<SeatReservation>();
     public DbSet<InboxMessage> InboxMessages => Set<InboxMessage>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 

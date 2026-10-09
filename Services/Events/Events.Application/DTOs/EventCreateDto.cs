@@ -14,5 +14,18 @@ public record EventCreateDto(
     [Range(1, int.MaxValue, ErrorMessage = "Количество мест должно быть больше нуля")]
     int? TotalSeats,
     [MaxLength(2000, ErrorMessage = "Максимальная длина 2000 символов")]
-    string? Description = null
-);
+    string? Description = null,
+    [Range(0, 100_000_000, ErrorMessage = "Цена не может быть отрицательной")]
+    decimal Price = 0.00m,
+    [MaxLength(3, ErrorMessage = "Код валюты должен состоять максимум из 3 символов")]
+    string Currency = "KZT"
+) : IValidatableObject
+{
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (Price < 0)
+        {
+            yield return new ValidationResult("Цена не может быть отрицательной", [nameof(Price)]);
+        }
+    }
+}

@@ -13,6 +13,18 @@ internal sealed class BookingRequestDispatcher(IMediator mediator) : IIntegratio
     {
         switch (eventType)
         {
+            case nameof(BookingReservationRequested):
+                {
+                    var e = Deserialize<BookingReservationRequested>(payload);
+                    await mediator.Send(new BookingReservationRequestCommand(e.BookingId, e.EventId, e.UserId, e.Seats), ct);
+                    break;
+                }
+            case nameof(BookingReservationReleaseRequested):
+                {
+                    var e = Deserialize<BookingReservationReleaseRequested>(payload);
+                    await mediator.Send(new BookingReservationReleaseRequestCommand(e.BookingId, e.EventId, e.Seats, e.Reason), ct);
+                    break;
+                }
             case nameof(BookingConfirmed):
                 {
                     var e = Deserialize<BookingConfirmed>(payload);

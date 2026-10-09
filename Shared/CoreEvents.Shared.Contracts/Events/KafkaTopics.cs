@@ -3,16 +3,20 @@ namespace CoreEvents.Shared.Contracts.Events;
 public static class KafkaTopics
 {
     // Публикует Booking-сервис, слушает Event-сервис
-    public const string BookingConfirmed = "booking-topic";
-    public const string BookingConfirmedDlt = $"{BookingConfirmed}.dlt";
+    public const string BookingTopic = "booking-topic";
+    public const string BookingTopicDlt = $"{BookingTopic}.dlt";
+    public const string BookingConfirmed = BookingTopic;
+    public const string BookingConfirmedDlt = BookingTopicDlt;
 
     // Публикует Event-сервис, слушает Booking-сервис
-    public const string EventConfirmed = "event-topic";
-    public const string EventConfirmedDlt = $"{EventConfirmed}.dlt";
+    public const string EventTopic = "event-topic";
+    public const string EventTopicDlt = $"{EventTopic}.dlt";
+    public const string EventConfirmed = EventTopic;
+    public const string EventConfirmedDlt = EventTopicDlt;
 
     public static readonly IReadOnlyList<string> Booking = [
-        BookingConfirmed,
-        BookingConfirmedDlt
+        BookingTopic,
+        BookingTopicDlt
     ];
 
     public static readonly IReadOnlyList<string> Event = [

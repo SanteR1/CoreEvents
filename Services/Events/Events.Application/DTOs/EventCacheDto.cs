@@ -10,6 +10,11 @@ public record EventCacheDto(
     DateTime EndAt,
     int TotalSeats,
     int AvailableSeats,
+    decimal Price,
+    string Currency,
+    bool IsActive,
+    long Version,
+    long PriceVersion,
     uint RowVersion
 )
 {
@@ -21,6 +26,11 @@ public record EventCacheDto(
         entity.EndAt,
         entity.TotalSeats,
         entity.AvailableSeats,
+        entity.Price,
+        entity.Currency,
+        entity.IsActive,
+        entity.Version,
+        entity.PriceVersion,
         entity.RowVersion
     );
 

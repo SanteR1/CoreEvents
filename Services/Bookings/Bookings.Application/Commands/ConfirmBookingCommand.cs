@@ -2,6 +2,7 @@ using Bookings.Application.Abstractions.Messaging;
 using Bookings.Application.Abstractions.Repositories;
 using Bookings.Application.Abstractions.Resilience.Attributes;
 using Bookings.Application.Abstractions.Resilience.Constants;
+using Bookings.Domain.Enums;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -23,11 +24,12 @@ internal class ConfirmBookingHandler(IBookingRepository repository, ILogger<Conf
             return Unit.Value;
         }
 
-        booking.Confirm();
-
-        repository.Update(booking);
-
-        await repository.SaveChangesAsync(cancellationToken);
+        if (booking.Status == BookingStatus.Pending)
+        {
+            booking.Confirm();
+            repository.Update(booking);
+            await repository.SaveChangesAsync(cancellationToken);
+        }
 
         return Unit.Value;
     }

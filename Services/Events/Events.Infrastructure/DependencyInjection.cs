@@ -78,6 +78,7 @@ public static class DependencyInjection
         services.AddRedis(configuration);
         services.AddDataBase(configuration, environment);
         services.AddScoped<IEventRepository, EventRepository>();
+        services.AddScoped<ISeatReservationRepository, SeatReservationRepository>();
         services.AddSingleton<IMessageProducer, MessageProducer>();
         services.AddScoped<IIntegrationEventDispatcher, BookingRequestDispatcher>();
         services.AddSingleton<IExceptionAnalyzer, InfrastructureExceptionAnalyzer>();

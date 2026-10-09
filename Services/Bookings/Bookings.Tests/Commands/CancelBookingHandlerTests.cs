@@ -4,6 +4,7 @@ using Bookings.Application.Abstractions.Repositories;
 using Bookings.Application.Commands;
 using Bookings.Application.Exceptions;
 using Bookings.Domain.Entities;
+using Bookings.Domain.Enums;
 using Bookings.Domain.Exceptions;
 using CoreEvents.Shared.Contracts.Events;
 using CoreEvents.Shared.Contracts.Identity.Enums;
@@ -42,7 +43,7 @@ public class CancelBookingHandlerTests
         await act.Should().ThrowAsync<BookingNotFoundException>()
                  .WithMessage($"*{command.BookingId}*");
 
-        _outboxServiceMock.Verify(o => o.Publish(It.IsAny<BookingCancellationRequested>(), It.IsAny<string>()), Times.Never);
+        _outboxServiceMock.Verify(o => o.Publish(It.IsAny<BookingReservationReleaseRequested>(), It.IsAny<string>()), Times.Never);
         _repositoryMock.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -55,8 +56,8 @@ public class CancelBookingHandlerTests
         var eventId = Guid.NewGuid();
 
         var command = new CancelBookingByUserCommand(Guid.NewGuid(), hackerId, RoleName.User);
-
         var booking = Booking.Create(eventId, ownerId);
+        booking.Confirm();
 
         _repositoryMock
             .Setup(r => r.GetByIdAsync(command.BookingId, It.IsAny<CancellationToken>()))
@@ -68,12 +69,33 @@ public class CancelBookingHandlerTests
         // Assert
         await act.Should().ThrowAsync<NotBookingOwnerException>();
 
-        _outboxServiceMock.Verify(o => o.Publish(It.IsAny<BookingCancellationRequested>(), It.IsAny<string>()), Times.Never);
+        _outboxServiceMock.Verify(o => o.Publish(It.IsAny<BookingReservationReleaseRequested>(), It.IsAny<string>()), Times.Never);
         _repositoryMock.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
-    public async Task Handle_Should_PublishEventWithUserCancelledReason_When_CancelledByOwner()
+    public async Task Handle_Should_ThrowConflictException_When_BookingIsPending()
+    {
+        // Arrange
+        var ownerId = Guid.NewGuid();
+        var command = new CancelBookingByUserCommand(Guid.NewGuid(), ownerId, RoleName.User);
+        var booking = Booking.Create(Guid.NewGuid(), ownerId); // Pending
+
+        _repositoryMock
+            .Setup(r => r.GetByIdAsync(command.BookingId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(booking);
+
+        // Act
+        var act = async () => await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        await act.Should().ThrowAsync<BookingCancellationConflictException>();
+
+        _outboxServiceMock.Verify(o => o.Publish(It.IsAny<BookingReservationReleaseRequested>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_Should_TransitionToCancellationPendingAndPublishReleaseRequested_When_CancelledByOwner()
     {
         // Arrange
         var ownerId = Guid.NewGuid();
@@ -82,6 +104,7 @@ public class CancelBookingHandlerTests
 
         var command = new CancelBookingByUserCommand(Guid.NewGuid(), ownerId, RoleName.User);
         var booking = Booking.Create(eventId, ownerId, seats);
+        booking.Confirm();
 
         _repositoryMock
             .Setup(r => r.GetByIdAsync(command.BookingId, It.IsAny<CancellationToken>()))
@@ -91,23 +114,25 @@ public class CancelBookingHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        result.Should().Be(booking.Id);
+        result.Id.Should().Be(booking.Id);
+        result.Status.Should().Be(BookingStatus.CancellationPending);
+        booking.Status.Should().Be(BookingStatus.CancellationPending);
 
         _outboxServiceMock.Verify(o => o.Publish(
-            It.Is<BookingCancellationRequested>(e =>
+            It.Is<BookingReservationReleaseRequested>(e =>
                 e.BookingId == booking.Id &&
                 e.EventId == booking.EventId &&
-                e.UserId == booking.UserId &&
-                e.Reason == CancellationReason.UserCancelled &&
-                e.CancelledAt <= DateTimeOffset.UtcNow),
+                e.Seats == booking.Seats &&
+                e.Reason == CancellationReason.UserCancelled),
             booking.EventId.ToString()),
             Times.Once);
 
+        _repositoryMock.Verify(r => r.Update(booking), Times.Once);
         _repositoryMock.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
-    public async Task Handle_Should_PublishEventWithAdminCancelledReason_When_CancelledByAdmin()
+    public async Task Handle_Should_TransitionToCancellationPendingAndPublishReleaseRequested_When_CancelledByAdmin()
     {
         // Arrange
         var ownerId = Guid.NewGuid();
@@ -115,8 +140,8 @@ public class CancelBookingHandlerTests
         var eventId = Guid.NewGuid();
 
         var command = new CancelBookingByUserCommand(Guid.NewGuid(), adminId, RoleName.Admin);
-
         var booking = Booking.Create(eventId, ownerId);
+        booking.Confirm();
 
         _repositoryMock
             .Setup(r => r.GetByIdAsync(command.BookingId, It.IsAny<CancellationToken>()))
@@ -126,17 +151,20 @@ public class CancelBookingHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        result.Should().Be(booking.Id);
+        result.Id.Should().Be(booking.Id);
+        result.Status.Should().Be(BookingStatus.CancellationPending);
+        booking.Status.Should().Be(BookingStatus.CancellationPending);
 
         _outboxServiceMock.Verify(o => o.Publish(
-            It.Is<BookingCancellationRequested>(e =>
+            It.Is<BookingReservationReleaseRequested>(e =>
                 e.BookingId == booking.Id &&
                 e.EventId == booking.EventId &&
-                e.UserId == booking.UserId &&
+                e.Seats == booking.Seats &&
                 e.Reason == CancellationReason.AdminCancelled),
             booking.EventId.ToString()),
             Times.Once);
 
+        _repositoryMock.Verify(r => r.Update(booking), Times.Once);
         _repositoryMock.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 }
