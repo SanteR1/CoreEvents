@@ -2,7 +2,7 @@ name: Backend CI/CD (.NET)
 
 on:
   push:
-    branches: [main, master, dev]
+    branches: [main, master]
     paths:
       - "Gateway/**"
       - "Services/**"
