@@ -37,4 +37,3 @@ describe('formatPrice', () => {
     expect(formattedEur.replace(/\s/g, ' ')).toBe('1 200 EUR');
   });
 });
-

@@ -371,6 +371,15 @@ describe('eventsApi Service', () => {
       expect(result.success).toBe(false);
       expect(result.httpStatus).toBe(404);
     });
+
+    it('handles exception in getEventById', async () => {
+      vi.spyOn(eventsClient, 'GET').mockRejectedValueOnce(new Error('Fetch failed'));
+
+      const result = await getEventById('event_err');
+
+      expect(result.success).toBe(false);
+      expect(result.httpStatus).toBe(0);
+    });
   });
 
   describe('getTopEvents', () => {
@@ -416,6 +425,29 @@ describe('eventsApi Service', () => {
         ],
         httpStatus: 200,
       });
+    });
+
+    it('handles error response in getTopEvents', async () => {
+      const problem = { title: 'Internal Error', status: 500 };
+      vi.spyOn(eventsClient, 'GET').mockResolvedValueOnce({
+        data: problem,
+        error: undefined,
+        response: new Response(JSON.stringify(problem), { status: 500 }),
+      } as unknown as never);
+
+      const result = await getTopEvents();
+
+      expect(result.success).toBe(false);
+      expect(result.httpStatus).toBe(500);
+    });
+
+    it('handles exception in getTopEvents', async () => {
+      vi.spyOn(eventsClient, 'GET').mockRejectedValueOnce(new Error('Network failure'));
+
+      const result = await getTopEvents();
+
+      expect(result.success).toBe(false);
+      expect(result.httpStatus).toBe(0);
     });
   });
 
@@ -483,6 +515,29 @@ describe('eventsApi Service', () => {
         expect(result.event.items.event?.[0].isActive).toBe(true);
       }
     });
+
+    it('handles problem details error response in getAllEvents', async () => {
+      const problem = { title: 'Bad Request', status: 400, detail: 'Invalid parameters' };
+      vi.spyOn(eventsClient, 'GET').mockResolvedValueOnce({
+        data: problem,
+        error: undefined,
+        response: new Response(JSON.stringify(problem), { status: 400 }),
+      } as unknown as never);
+
+      const result = await getAllEvents();
+
+      expect(result.success).toBe(false);
+      expect(result.httpStatus).toBe(400);
+    });
+
+    it('handles exception in getAllEvents', async () => {
+      vi.spyOn(eventsClient, 'GET').mockRejectedValueOnce(new Error('Network error'));
+
+      const result = await getAllEvents();
+
+      expect(result.success).toBe(false);
+      expect(result.httpStatus).toBe(0);
+    });
   });
 
   describe('deleteEventById', () => {
@@ -502,6 +557,29 @@ describe('eventsApi Service', () => {
         success: true,
         httpStatus: 204,
       });
+    });
+
+    it('handles error response in deleteEventById', async () => {
+      const problem = { title: 'Not Found', status: 404 };
+      vi.spyOn(eventsClient, 'DELETE').mockResolvedValueOnce({
+        data: problem,
+        error: undefined,
+        response: new Response(JSON.stringify(problem), { status: 404 }),
+      });
+
+      const result = await deleteEventById('not_found');
+
+      expect(result.success).toBe(false);
+      expect(result.httpStatus).toBe(404);
+    });
+
+    it('handles exception in deleteEventById', async () => {
+      vi.spyOn(eventsClient, 'DELETE').mockRejectedValueOnce(new Error('Delete error'));
+
+      const result = await deleteEventById('err_id');
+
+      expect(result.success).toBe(false);
+      expect(result.httpStatus).toBe(0);
     });
   });
 
@@ -537,6 +615,15 @@ describe('eventsApi Service', () => {
 
       expect(result.success).toBe(false);
       expect(result.httpStatus).toBe(403);
+    });
+
+    it('handles exception on cancelEventById', async () => {
+      vi.spyOn(eventsClient, 'POST').mockRejectedValueOnce(new Error('Cancel failed'));
+
+      const result = await cancelEventById('event_err');
+
+      expect(result.success).toBe(false);
+      expect(result.httpStatus).toBe(0);
     });
   });
 
@@ -590,6 +677,20 @@ describe('eventsApi Service', () => {
           },
         ],
       });
+    });
+
+    it('handles problem details error response on getEventReservations', async () => {
+      const problem = { title: 'Not Found', status: 404 };
+      vi.spyOn(eventsClient, 'GET').mockResolvedValueOnce({
+        data: problem,
+        error: undefined,
+        response: new Response(JSON.stringify(problem), { status: 404 }),
+      } as unknown as never);
+
+      const result = await getEventReservations('not_found');
+
+      expect(result.success).toBe(false);
+      expect(result.httpStatus).toBe(404);
     });
 
     it('handles error on getEventReservations', async () => {

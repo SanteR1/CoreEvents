@@ -22,6 +22,9 @@ describe('EventCard', () => {
     endAt: new Date('2026-10-15T18:00:00Z'),
     totalSeats: 100,
     availableSeats: 50,
+    price: 1500,
+    currency: 'KZT',
+    isActive: true,
   };
 
   describe('Seat Availability Statuses & Boundaries', () => {
@@ -124,6 +127,26 @@ describe('EventCard', () => {
 
       const fallbacks = screen.getAllByText('Дата не указана');
       expect(fallbacks).toHaveLength(2);
+    });
+  });
+
+  describe('Price and Status Display', () => {
+    it('renders formatted price for KZT currency', () => {
+      renderEventCard(baseEvent);
+      expect(screen.getByText('1 500 ₸')).toBeInTheDocument();
+    });
+
+    it('renders "Бесплатно" when price is 0', () => {
+      renderEventCard({ ...baseEvent, price: 0 });
+      expect(screen.getByText('Бесплатно')).toBeInTheDocument();
+    });
+
+    it('renders "Событие отменено" badge and disabled button when isActive is false', () => {
+      renderEventCard({ ...baseEvent, isActive: false });
+      expect(screen.getByText('Событие отменено')).toBeInTheDocument();
+      const cancelBtn = screen.getByRole('button', { name: 'Отменено' });
+      expect(cancelBtn).toBeDisabled();
+      expect(screen.queryByRole('link', { name: 'Забронировать' })).not.toBeInTheDocument();
     });
   });
 

@@ -3,14 +3,21 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { loader, action, GetEventByIdPage } from '../GetEventById';
-import { getEventById, deleteEventById } from '@/features/events/api/eventsApi';
+import {
+  getEventById,
+  deleteEventById,
+  cancelEventById,
+  getEventReservations,
+} from '@/features/events/api/eventsApi';
 import { setUser, clearUser } from '@/shared/lib/auth';
 import { checkA11y } from '@/shared/lib/test/axe';
-import type { EventResponse } from '@/features/events/api/eventsApi';
+import type { EventResponse, SeatReservationResponse } from '@/features/events/api/eventsApi';
 
 vi.mock('@/features/events/api/eventsApi', () => ({
   getEventById: vi.fn(),
   deleteEventById: vi.fn(),
+  cancelEventById: vi.fn(),
+  getEventReservations: vi.fn(),
 }));
 
 type LoaderArgs = Parameters<typeof loader>[0];
@@ -51,6 +58,9 @@ describe('GetEventById', () => {
     endAt: new Date('2026-10-15T13:00:00Z'),
     totalSeats: 50,
     availableSeats: 25,
+    price: 1500,
+    currency: 'KZT',
+    isActive: true,
   };
 
   beforeEach(() => {
@@ -144,7 +154,7 @@ describe('GetEventById', () => {
       expect(await res.text()).toBe('Не удалось загрузить событие');
     });
 
-    it('returns event data on successful API response', async () => {
+    it('returns event data on successful API response for regular user', async () => {
       vi.mocked(getEventById).mockResolvedValueOnce({
         success: true,
         httpStatus: 200,
@@ -152,7 +162,41 @@ describe('GetEventById', () => {
       });
 
       const res = await loader(createLoaderArgs('ev-test-1'));
-      expect(res).toEqual({ event: mockEvent });
+      expect(res).toEqual({ event: mockEvent, reservations: [] });
+    });
+
+    it('fetches reservations when user is Admin', async () => {
+      setUser({ id: 'a1', userName: 'Admin', role: 'Admin' });
+      vi.mocked(getEventById).mockResolvedValueOnce({
+        success: true,
+        httpStatus: 200,
+        event: mockEvent,
+      });
+      const mockReservations: SeatReservationResponse[] = [
+        {
+          bookingId: 'b-1',
+          eventId: 'ev-test-1',
+          seats: 2,
+          unitPrice: 1500,
+          totalPrice: 3000,
+          currency: 'KZT',
+          discountAmount: 0,
+          priceVersion: 1,
+          status: 'Confirmed',
+          rejectionReason: null,
+          createdAt: new Date('2026-10-01T12:00:00Z'),
+          expiresAt: null,
+        },
+      ];
+      vi.mocked(getEventReservations).mockResolvedValueOnce({
+        success: true,
+        httpStatus: 200,
+        reservations: mockReservations,
+      });
+
+      const res = await loader(createLoaderArgs('ev-test-1'));
+      expect(res).toEqual({ event: mockEvent, reservations: mockReservations });
+      expect(getEventReservations).toHaveBeenCalledWith('ev-test-1');
     });
   });
 
@@ -195,7 +239,33 @@ describe('GetEventById', () => {
       });
     });
 
-    it('returns null when intent is not "delete"', async () => {
+    it('calls cancelEventById and returns success message on successful cancel', async () => {
+      setUser({ id: 'a1', userName: 'Admin', role: 'Admin' });
+      vi.mocked(cancelEventById).mockResolvedValueOnce({
+        success: true,
+        httpStatus: 204,
+      });
+
+      const args = createActionArgs('ev-test-1', { intent: 'cancel' });
+      const res = await action(args);
+      expect(res).toEqual({ success: true, message: 'Событие успешно отменено' });
+      expect(cancelEventById).toHaveBeenCalledWith('ev-test-1');
+    });
+
+    it('calls cancelEventById and returns error when API cancel fails', async () => {
+      setUser({ id: 'a1', userName: 'Admin', role: 'Admin' });
+      vi.mocked(cancelEventById).mockResolvedValueOnce({
+        success: false,
+        httpStatus: 400,
+        error: { message: 'Не удалось отменить событие' },
+      });
+
+      const args = createActionArgs('ev-test-1', { intent: 'cancel' });
+      const res = await action(args);
+      expect(res).toEqual({ error: { message: 'Не удалось отменить событие' } });
+    });
+
+    it('returns null when intent is not "delete" or "cancel"', async () => {
       setUser({ id: 'a1', userName: 'Admin', role: 'Admin' });
       const args = createActionArgs('ev-test-1', { intent: 'unknown' });
 
@@ -238,6 +308,37 @@ describe('GetEventById', () => {
       expect(response.status).toBe(302);
       expect(response.headers.get('Location')).toBe('/');
     });
+
+    it('calls cancelEventById and returns success on intent="cancel"', async () => {
+      setUser({ id: 'a1', userName: 'Admin', role: 'Admin' });
+      vi.mocked(cancelEventById).mockResolvedValueOnce({
+        success: true,
+        httpStatus: 200,
+      });
+
+      const args = createActionArgs('ev-test-1', { intent: 'cancel' });
+      const res = await action(args);
+
+      expect(cancelEventById).toHaveBeenCalledWith('ev-test-1');
+      expect(res).toEqual({ success: true, message: 'Событие успешно отменено' });
+    });
+
+    it('calls cancelEventById and returns error when cancellation fails', async () => {
+      setUser({ id: 'a1', userName: 'Admin', role: 'Admin' });
+      vi.mocked(cancelEventById).mockResolvedValueOnce({
+        success: false,
+        httpStatus: 400,
+        error: { message: 'Событие уже отменено' },
+      });
+
+      const args = createActionArgs('ev-test-1', { intent: 'cancel' });
+      const res = await action(args);
+
+      expect(cancelEventById).toHaveBeenCalledWith('ev-test-1');
+      expect(res).toMatchObject({
+        error: { message: 'Событие уже отменено' },
+      });
+    });
   });
 
   describe('Component Rendering & Interactions', () => {
@@ -254,13 +355,17 @@ describe('GetEventById', () => {
       expect(screen.queryByRole('button', { name: /удалить/i })).not.toBeInTheDocument();
     });
 
-    function renderGetEventByIdPage(event = mockEvent, actionData: unknown = null) {
+    function renderGetEventByIdPage(
+      event = mockEvent,
+      actionData: unknown = null,
+      reservations: SeatReservationResponse[] = [],
+    ) {
       const router = createMemoryRouter(
         [
           {
             path: '/events/:id',
             element: <GetEventByIdPage />,
-            loader: () => ({ event }),
+            loader: () => ({ event, reservations }),
             action: () => actionData,
             HydrateFallback: () => null,
           },
@@ -354,6 +459,87 @@ describe('GetEventById', () => {
       );
       // Remained on page, heading still present
       expect(screen.getByRole('heading', { name: mockEvent.title })).toBeInTheDocument();
+    });
+
+    it('cancels event cancellation when user clicks Cancel in window.confirm', async () => {
+      const user = userEvent.setup();
+      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+
+      renderGetEventByIdPage();
+
+      const cancelBtn = await screen.findByRole('button', { name: /отменить событие/i });
+      await user.click(cancelBtn);
+
+      expect(confirmSpy).toHaveBeenCalledWith(
+        'Вы уверены, что хотите отменить это событие? Все существующие бронирования будут аннулированы.',
+      );
+      expect(screen.getByRole('heading', { name: mockEvent.title })).toBeInTheDocument();
+    });
+
+    it('confirms event cancellation and submits form when user clicks OK in window.confirm', async () => {
+      const user = userEvent.setup();
+      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+      renderGetEventByIdPage();
+
+      const cancelBtn = await screen.findByRole('button', { name: /отменить событие/i });
+      await user.click(cancelBtn);
+
+      expect(confirmSpy).toHaveBeenCalled();
+    });
+
+    it('displays success banner when actionData contains success and message', async () => {
+      const user = userEvent.setup();
+      vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+      renderGetEventByIdPage(mockEvent, {
+        success: true,
+        message: 'Событие успешно отменено',
+      });
+
+      const cancelBtn = await screen.findByRole('button', { name: /отменить событие/i });
+      await user.click(cancelBtn);
+
+      expect(await screen.findByText('Событие успешно отменено')).toBeInTheDocument();
+    });
+
+    it('displays formatted price on event page', async () => {
+      renderGetEventByIdPage({ ...mockEvent, price: 2500, currency: 'KZT' });
+      expect(await screen.findByText('2 500 ₸')).toBeInTheDocument();
+    });
+
+    it('renders cancelled status banner and disables booking when event is not active', async () => {
+      renderGetEventByIdPage({ ...mockEvent, isActive: false });
+      expect(await screen.findAllByText('Событие отменено')).toHaveLength(2);
+      const disabledBtn = screen.getByRole('button', {
+        name: 'Событие отменено',
+      });
+      expect(disabledBtn).toBeDisabled();
+    });
+
+    it('renders reservations table for Admin when reservations are present', async () => {
+      const mockReservations: SeatReservationResponse[] = [
+        {
+          bookingId: 'b-99',
+          eventId: 'ev-test-1',
+          seats: 4,
+          unitPrice: 1500,
+          totalPrice: 6000,
+          currency: 'KZT',
+          discountAmount: 0,
+          priceVersion: 1,
+          status: 'Confirmed',
+          rejectionReason: null,
+          createdAt: new Date('2026-10-01T12:00:00Z'),
+          expiresAt: null,
+        },
+      ];
+      renderGetEventByIdPage(mockEvent, null, mockReservations);
+
+      expect(await screen.findByRole('heading', { name: /резервации мест/i })).toBeInTheDocument();
+      expect(screen.getByText('b-99...')).toBeInTheDocument();
+      expect(screen.getByText('Confirmed')).toBeInTheDocument();
+      expect(screen.getByText('4')).toBeInTheDocument();
     });
 
     it('satisfies WCAG accessibility rules', async () => {

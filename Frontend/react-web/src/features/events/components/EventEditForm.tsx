@@ -106,6 +106,56 @@ export const EventEditForm = ({ event, error, isSubmitting }: EventEditFormProps
         </div>
       </div>
 
+      {/* Цена и валюта */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <label htmlFor="price" className="mb-1 block text-sm font-medium text-(--text-h)">
+            Цена билета (0 = бесплатно)
+          </label>
+          <input
+            id="price"
+            type="number"
+            name="price"
+            min="0"
+            step="any"
+            defaultValue={event.price}
+            className={`w-full rounded-lg border bg-(--code-bg) px-3.5 py-2 text-sm text-(--text-h) transition-colors outline-none focus:ring-1 ${
+              error?.fieldErrors?.price
+                ? 'border-red-500 focus:border-red-500 focus:ring-red-500 dark:border-red-500/50'
+                : 'border-(--border) focus:border-(--accent) focus:ring-(--accent)'
+            }`}
+          />
+          {error?.fieldErrors?.price && (
+            <p className="mt-1 text-xs text-red-500 dark:text-red-400">
+              {error.fieldErrors.price.join(' ')}
+            </p>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor="currency" className="mb-1 block text-sm font-medium text-(--text-h)">
+            Валюта
+          </label>
+          <input
+            id="currency"
+            type="text"
+            name="currency"
+            maxLength={3}
+            defaultValue={event.currency}
+            className={`w-full rounded-lg border bg-(--code-bg) px-3.5 py-2 text-sm text-(--text-h) uppercase transition-colors outline-none focus:ring-1 ${
+              error?.fieldErrors?.currency
+                ? 'border-red-500 focus:border-red-500 focus:ring-red-500 dark:border-red-500/50'
+                : 'border-(--border) focus:border-(--accent) focus:ring-(--accent)'
+            }`}
+          />
+          {error?.fieldErrors?.currency && (
+            <p className="mt-1 text-xs text-red-500 dark:text-red-400">
+              {error.fieldErrors.currency.join(' ')}
+            </p>
+          )}
+        </div>
+      </div>
+
       {/* Описание */}
       <div>
         <label htmlFor="description" className="mb-1 block text-sm font-medium text-(--text-h)">

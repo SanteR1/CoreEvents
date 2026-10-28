@@ -418,5 +418,20 @@ describe('bookingsApi Service', () => {
       expect(result.success).toBe(false);
       expect(result.httpStatus).toBe(0);
     });
+
+    it('handles problem details error response from server', async () => {
+      const problem = { title: 'Bad Request', status: 400, detail: 'Invalid filter' };
+      vi.spyOn(bookingsClient, 'GET').mockResolvedValueOnce({
+        data: problem,
+        error: undefined,
+        response: new Response(JSON.stringify(problem), { status: 400 }),
+      } as unknown as never);
+
+      const result = await getMyBookings({ page: -1 });
+
+      expect(result.success).toBe(false);
+      expect(result.httpStatus).toBe(400);
+      expect(result.error?.message).toBe('Invalid filter');
+    });
   });
 });

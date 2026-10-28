@@ -11,6 +11,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const title = url.searchParams.get('title')?.trim() ?? undefined;
   const rawFrom = url.searchParams.get('from')?.trim() ?? undefined;
   const rawTo = url.searchParams.get('to')?.trim() ?? undefined;
+  const rawMinPrice = url.searchParams.get('minPrice')?.trim() ?? undefined;
+  const rawMaxPrice = url.searchParams.get('maxPrice')?.trim() ?? undefined;
 
   const pageParam = parseInt(url.searchParams.get('page') ?? '1', 10);
   const page = isNaN(pageParam) || pageParam < 1 ? 1 : pageParam;
@@ -36,7 +38,13 @@ export async function loader({ request }: LoaderFunctionArgs) {
     }
   }
 
-  const result = await getAllEvents(title, from, to, page, pageSize);
+  const parsedMin = rawMinPrice ? parseFloat(rawMinPrice) : undefined;
+  const minPrice = parsedMin !== undefined && !isNaN(parsedMin) ? parsedMin : undefined;
+
+  const parsedMax = rawMaxPrice ? parseFloat(rawMaxPrice) : undefined;
+  const maxPrice = parsedMax !== undefined && !isNaN(parsedMax) ? parsedMax : undefined;
+
+  const result = await getAllEvents(title, from, to, page, pageSize, minPrice, maxPrice);
 
   return {
     result,
@@ -44,6 +52,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
       title: title ?? '',
       from: rawFrom ?? '',
       to: rawTo ?? '',
+      minPrice: rawMinPrice ?? '',
+      maxPrice: rawMaxPrice ?? '',
       page,
       pageSize,
     },
@@ -96,12 +106,17 @@ export const HomePage = () => {
         initialTitle={filters.title}
         initialFrom={filters.from}
         initialTo={filters.to}
+        initialMinPrice={filters.minPrice}
+        initialMaxPrice={filters.maxPrice}
         pageSize={filters.pageSize}
       />
 
       {/* Ошибка загрузки */}
       {!isSuccess && (
-        <div className="rounded-xl border border-red-200 bg-red-50/70 p-6 text-center text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-300">
+        <div
+          role="alert"
+          className="rounded-xl border border-red-200 bg-red-50/70 p-6 text-center text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-300"
+        >
           <h3 className="text-base font-bold">Не удалось загрузить события</h3>
           <p className="mt-1 text-sm">
             {result.error.message ?? 'Пожалуйста, проверьте подключение и повторите попытку.'}
@@ -136,7 +151,11 @@ export const HomePage = () => {
                 По заданным критериям ничего не найдено. Попробуйте изменить параметры поиска или
                 сбросить фильтры.
               </p>
-              {(filters.title || filters.from || filters.to) && (
+              {(filters.title ||
+                filters.from ||
+                filters.to ||
+                filters.minPrice ||
+                filters.maxPrice) && (
                 <Link
                   to="/"
                   className="mt-4 inline-block rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700"

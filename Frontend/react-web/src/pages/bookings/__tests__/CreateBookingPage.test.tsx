@@ -66,6 +66,9 @@ describe('CreateBookingPage', () => {
     endAt: new Date('2026-07-20T22:00:00Z'),
     totalSeats: 50,
     availableSeats: 10,
+    price: 1500,
+    currency: 'KZT',
+    isActive: true,
   };
 
   beforeEach(() => {
@@ -216,11 +219,11 @@ describe('CreateBookingPage', () => {
       expect(result).toEqual({
         error: { message: 'Все места уже забронированы' },
       });
-      expect(createBooking).toHaveBeenCalledWith('ev-1', '3');
+      expect(createBooking).toHaveBeenCalledWith('ev-1', 3);
     });
 
-    it('defaults seats to "1" if not provided', async () => {
-      vi.mocked(createBooking).mockResolvedValueOnce({
+    it('defaults seats to 1 if not provided or negative/invalid', async () => {
+      vi.mocked(createBooking).mockResolvedValue({
         success: false,
         httpStatus: 400,
         error: { message: 'Ошибка' },
@@ -228,8 +231,15 @@ describe('CreateBookingPage', () => {
 
       const args = createActionArgs({ eventId: 'ev-1' });
       await action(args);
+      expect(createBooking).toHaveBeenCalledWith('ev-1', 1);
 
-      expect(createBooking).toHaveBeenCalledWith('ev-1', '1');
+      const argsNegative = createActionArgs({ eventId: 'ev-1', seats: '-5' });
+      await action(argsNegative);
+      expect(createBooking).toHaveBeenCalledWith('ev-1', 1);
+
+      const argsInvalid = createActionArgs({ eventId: 'ev-1', seats: 'not-a-number' });
+      await action(argsInvalid);
+      expect(createBooking).toHaveBeenCalledWith('ev-1', 1);
     });
 
     it('redirects to /bookings/:id when booking.id is returned', async () => {
@@ -339,9 +349,37 @@ describe('CreateBookingPage', () => {
       expect(
         await screen.findByRole('heading', { name: /бронирование билетов/i }),
       ).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Вечер джаза' })).toBeInTheDocument();
+      expect(screen.getByText('Живая музыка')).toBeInTheDocument();
+      expect(screen.getAllByText('1 500 ₸').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByRole('spinbutton', { name: /^количество мест$/i })).toHaveValue(1);
 
       await expect(checkA11y(container)).resolves.toEqual([]);
+    });
+
+    it('renders fallback when event startAt is missing or null', async () => {
+      setToken(createMockJwt());
+      const eventWithoutStartAt = {
+        ...mockEvent,
+        startAt: null as unknown as Date,
+      };
+
+      const router = createMemoryRouter(
+        [
+          {
+            path: '/bookings/create/:eventId',
+            element: <CreateBookingPage />,
+            loader: () => ({ event: eventWithoutStartAt }),
+            action: () => null,
+            HydrateFallback: () => null,
+          },
+        ],
+        { initialEntries: ['/bookings/create/ev-1'] },
+      );
+
+      render(<RouterProvider router={router} />);
+
+      expect(await screen.findByText('—')).toBeInTheDocument();
     });
   });
 });

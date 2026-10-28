@@ -239,7 +239,7 @@ describe('EventPagination', () => {
       expect(size24).toHaveAttribute('href', '/?pageSize=24');
     });
 
-    it('preserves search filters (title, from, to) in pagination and size links', () => {
+    it('preserves search filters (title, from, to, minPrice, maxPrice) in pagination and size links', () => {
       renderPagination({
         ...baseProps,
         currentPage: 1,
@@ -249,6 +249,8 @@ describe('EventPagination', () => {
           title: 'React Meetup',
           from: '2026-10-01',
           to: '2026-10-05',
+          minPrice: '1000',
+          maxPrice: '5000',
         },
       });
 
@@ -258,11 +260,15 @@ describe('EventPagination', () => {
       expect(href).toContain('title=React+Meetup');
       expect(href).toContain('from=2026-10-01');
       expect(href).toContain('to=2026-10-05');
+      expect(href).toContain('minPrice=1000');
+      expect(href).toContain('maxPrice=5000');
 
       const size12Link = screen.getByRole('link', { name: '12' });
       const sizeHref = size12Link.getAttribute('href');
       expect(sizeHref).toContain('pageSize=12');
       expect(sizeHref).toContain('title=React+Meetup');
+      expect(sizeHref).toContain('minPrice=1000');
+      expect(sizeHref).toContain('maxPrice=5000');
       // page 1 should be omitted from query
       expect(sizeHref).not.toContain('page=');
     });

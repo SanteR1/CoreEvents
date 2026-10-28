@@ -3,6 +3,7 @@ import { createBooking } from '@/features/bookings/api/bookingsApi';
 import { BookingCreateForm } from '@/features/bookings/components/BookingCreateForm';
 import { getEventById } from '@/features/events/api/eventsApi';
 import { toFormError } from '@/shared/api/errors';
+import { formatPrice } from '@/shared/lib/format/price';
 
 import {
   useLoaderData,
@@ -62,7 +63,8 @@ export async function action({ request }: ActionFunctionArgs) {
   const eventId = typeof rawEventId === 'string' ? rawEventId : '';
 
   const rawSeats = formData.get('seats');
-  const seats = typeof rawSeats === 'string' ? rawSeats : '1';
+  const seatsParsed = typeof rawSeats === 'string' ? parseInt(rawSeats, 10) : 1;
+  const seats = isNaN(seatsParsed) || seatsParsed < 1 ? 1 : seatsParsed;
 
   if (!eventId) {
     return { error: toFormError('Идентификатор события не найден') };
@@ -71,7 +73,7 @@ export async function action({ request }: ActionFunctionArgs) {
   try {
     const res = await createBooking(eventId, seats);
 
-    // 1. Ошибка от API или сети (res.error уже содержит текст)
+    // 1. Ошибка от API или сети
     if (!res.success) {
       return {
         error: res.error,
@@ -89,12 +91,10 @@ export async function action({ request }: ActionFunctionArgs) {
     // 3. Успешный редирект
     return redirect(`/bookings/${bookingId}`);
   } catch (err) {
-    // ВАЖНО для React Router: если выброшен Response (например, redirect), не перехватываем его
     if (err instanceof Response) {
       throw err;
     }
 
-    // Неожиданная критическая ошибка JS в рантайме
     return {
       error: toFormError(err, {
         defaultMessage: 'Не удалось оформить бронирование. Пожалуйста, попробуйте позже.',
@@ -106,21 +106,44 @@ export async function action({ request }: ActionFunctionArgs) {
 export const CreateBookingPage = () => {
   const { event } = useLoaderData<typeof loader>();
 
-  // Сюда прилетит ошибка из action
-  // Указываем, что данные могут быть undefined (при первой загрузке)
-  // или объектом с ошибкой (после неудачного сабмита)
   const actionResult = useActionData<typeof action>();
 
   const navigation = useNavigation();
   const isSubmitting = navigation.state === 'submitting';
 
   return (
-    <div className="mx-auto max-w-xl px-4 py-10">
+    <div className="mx-auto max-w-xl px-4 py-10 text-left">
       <h1 className="mb-6 text-2xl font-bold text-(--text-h)">Бронирование билетов</h1>
+
+      {/* Карточка выбранного события */}
+      <div className="mb-6 space-y-2 rounded-2xl border border-(--border) bg-(--bg) p-5 shadow-sm">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-lg font-bold text-(--text-h)">{event.title}</h2>
+          <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">
+            {formatPrice(event.price, event.currency)}
+          </span>
+        </div>
+        {event.description && (
+          <p className="line-clamp-2 text-xs leading-relaxed text-(--text)">{event.description}</p>
+        )}
+        <div className="flex flex-wrap items-center gap-4 pt-1 text-xs text-(--text)">
+          <div>
+            <span className="font-medium text-(--text-h)">Начало: </span>
+            {event.startAt ? new Date(event.startAt).toLocaleString('ru-RU') : '—'}
+          </div>
+          <div>
+            <span className="font-medium text-(--text-h)">Доступно мест: </span>
+            <span className="font-semibold text-(--text-h)">{event.availableSeats}</span> из{' '}
+            {event.totalSeats}
+          </div>
+        </div>
+      </div>
 
       <BookingCreateForm
         eventId={event.id}
         availableSeats={event.availableSeats}
+        unitPrice={event.price}
+        currency={event.currency}
         isSubmitting={isSubmitting}
         error={actionResult?.error}
       />

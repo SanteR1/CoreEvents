@@ -11,7 +11,7 @@ export const EventRequestForm = ({ error, isSubmitting }: EventRequestFormProps)
   return (
     <Form
       method="post"
-      className="space-y-4 rounded-xl border border-(--border) bg-(--bg) p-6 shadow-sm"
+      className="space-y-4 rounded-xl border border-(--border) bg-(--bg) p-6 text-left shadow-sm"
     >
       {/* 1. Общее сообщение об ошибке (сеть, 500, общий сбой) */}
       {error?.message && (
@@ -37,7 +37,6 @@ export const EventRequestForm = ({ error, isSubmitting }: EventRequestFormProps)
               : 'border-(--border) focus:border-(--accent) focus:ring-(--accent)'
           }`}
         />
-        {/* Текст ошибки под title */}
         {error?.fieldErrors?.title && (
           <p className="mt-1 text-sm text-red-500 dark:text-red-400">
             {error.fieldErrors.title.join(' ')}
@@ -57,11 +56,10 @@ export const EventRequestForm = ({ error, isSubmitting }: EventRequestFormProps)
             required
             className={`dark:scheme:dark w-full rounded-lg border bg-(--code-bg) px-3 py-2 text-(--text-h) transition-colors outline-none focus:ring-1 [&::-webkit-calendar-picker-indicator]:cursor-pointer ${
               error?.fieldErrors?.startAt
-                ? 'border-red-500 focus:border-red-500 focus:ring-red-500 dark:border-red-500/50' // Стили при ошибке
-                : 'border-(--border) focus:border-(--accent) focus:ring-(--accent)' // Обычные стили
+                ? 'border-red-500 focus:border-red-500 focus:ring-red-500 dark:border-red-500/50'
+                : 'border-(--border) focus:border-(--accent) focus:ring-(--accent)'
             }`}
           />
-          {/* Блок с текстом ошибки под полем */}
           {error?.fieldErrors?.startAt && (
             <p className="mt-1 text-sm text-red-500 dark:text-red-400">
               {error.fieldErrors.startAt.join(' ')}
@@ -80,11 +78,10 @@ export const EventRequestForm = ({ error, isSubmitting }: EventRequestFormProps)
             required
             className={`dark:scheme:dark w-full rounded-lg border bg-(--code-bg) px-3 py-2 text-(--text-h) transition-colors outline-none focus:ring-1 [&::-webkit-calendar-picker-indicator]:cursor-pointer ${
               error?.fieldErrors?.endAt
-                ? 'border-red-500 focus:border-red-500 focus:ring-red-500 dark:border-red-500/50' // Стили при ошибке
-                : 'border-(--border) focus:border-(--accent) focus:ring-(--accent)' // Обычные стили
+                ? 'border-red-500 focus:border-red-500 focus:ring-red-500 dark:border-red-500/50'
+                : 'border-(--border) focus:border-(--accent) focus:ring-(--accent)'
             }`}
           />
-          {/* Блок с текстом ошибки под полем */}
           {error?.fieldErrors?.endAt && (
             <p className="mt-1 text-sm text-red-500 dark:text-red-400">
               {error.fieldErrors.endAt.join(' ')}
@@ -93,30 +90,78 @@ export const EventRequestForm = ({ error, isSubmitting }: EventRequestFormProps)
         </div>
       </div>
 
-      {/* Поле Количество мест */}
-      <div>
-        <label htmlFor="totalSeats" className="mb-1 block text-sm font-medium text-(--text-h)">
-          Количество мест
-        </label>
-        <input
-          id="totalSeats"
-          type="number"
-          name="totalSeats"
-          min="1"
-          defaultValue={50}
-          required
-          className={`w-full rounded-lg border border-(--border) bg-(--code-bg) px-3 py-2 text-(--text-h) transition-colors outline-none focus:border-(--accent) focus:ring-1 focus:ring-(--accent) ${
-            error?.fieldErrors?.totalSeats
-              ? 'border-red-500 focus:border-red-500 focus:ring-red-500 dark:border-red-500/50' // Стили при ошибке
-              : 'border-(--border) focus:border-(--accent) focus:ring-(--accent)' // Обычные стили
-          }`}
-        />
-        {/* Текст ошибки под totalSeats */}
-        {error?.fieldErrors?.totalSeats && (
-          <p className="mt-1 text-sm text-red-500 dark:text-red-400">
-            {error.fieldErrors.totalSeats.join(' ')}
-          </p>
-        )}
+      {/* Места, цена и валюта */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div>
+          <label htmlFor="totalSeats" className="mb-1 block text-sm font-medium text-(--text-h)">
+            Количество мест
+          </label>
+          <input
+            id="totalSeats"
+            type="number"
+            name="totalSeats"
+            min="1"
+            defaultValue={50}
+            required
+            className={`w-full rounded-lg border border-(--border) bg-(--code-bg) px-3 py-2 text-(--text-h) transition-colors outline-none focus:border-(--accent) focus:ring-1 focus:ring-(--accent) ${
+              error?.fieldErrors?.totalSeats
+                ? 'border-red-500 focus:border-red-500 focus:ring-red-500 dark:border-red-500/50'
+                : 'border-(--border) focus:border-(--accent) focus:ring-(--accent)'
+            }`}
+          />
+          {error?.fieldErrors?.totalSeats && (
+            <p className="mt-1 text-sm text-red-500 dark:text-red-400">
+              {error.fieldErrors.totalSeats.join(' ')}
+            </p>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor="price" className="mb-1 block text-sm font-medium text-(--text-h)">
+            Цена билета (0 = бесплатно)
+          </label>
+          <input
+            id="price"
+            type="number"
+            name="price"
+            min="0"
+            step="any"
+            defaultValue={0}
+            className={`w-full rounded-lg border border-(--border) bg-(--code-bg) px-3 py-2 text-(--text-h) transition-colors outline-none focus:border-(--accent) focus:ring-1 focus:ring-(--accent) ${
+              error?.fieldErrors?.price
+                ? 'border-red-500 focus:border-red-500 focus:ring-red-500 dark:border-red-500/50'
+                : 'border-(--border) focus:border-(--accent) focus:ring-(--accent)'
+            }`}
+          />
+          {error?.fieldErrors?.price && (
+            <p className="mt-1 text-sm text-red-500 dark:text-red-400">
+              {error.fieldErrors.price.join(' ')}
+            </p>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor="currency" className="mb-1 block text-sm font-medium text-(--text-h)">
+            Валюта
+          </label>
+          <input
+            id="currency"
+            type="text"
+            name="currency"
+            maxLength={3}
+            defaultValue="KZT"
+            className={`w-full rounded-lg border border-(--border) bg-(--code-bg) px-3 py-2 text-(--text-h) uppercase transition-colors outline-none focus:border-(--accent) focus:ring-1 focus:ring-(--accent) ${
+              error?.fieldErrors?.currency
+                ? 'border-red-500 focus:border-red-500 focus:ring-red-500 dark:border-red-500/50'
+                : 'border-(--border) focus:border-(--accent) focus:ring-(--accent)'
+            }`}
+          />
+          {error?.fieldErrors?.currency && (
+            <p className="mt-1 text-sm text-red-500 dark:text-red-400">
+              {error.fieldErrors.currency.join(' ')}
+            </p>
+          )}
+        </div>
       </div>
 
       <div>
@@ -134,7 +179,6 @@ export const EventRequestForm = ({ error, isSubmitting }: EventRequestFormProps)
               : 'border-(--border) focus:border-(--accent) focus:ring-(--accent)'
           }`}
         />
-        {/* Текст ошибки под description */}
         {error?.fieldErrors?.description && (
           <p className="mt-1 text-sm text-red-500 dark:text-red-400">
             {error.fieldErrors.description.join(' ')}

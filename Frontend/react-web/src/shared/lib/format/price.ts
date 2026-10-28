@@ -10,4 +10,3 @@ export function formatPrice(price: number, currency = 'KZT'): string {
 
   return `${formatted} ${currency}`;
 }
-

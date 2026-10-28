@@ -10,6 +10,9 @@ import { getBookingById, deleteBookingById } from '@/features/bookings/api/booki
 import { BookingDetails } from '@/features/bookings/components/BookingDetails';
 import { toFormError } from '@/shared/api/errors';
 import { requireAuthLoader } from '@/shared/lib/auth';
+import type { BookingSchema } from '@/shared/api';
+
+type CancellationReason = BookingSchema<'CancellationReason'>;
 
 const CANCELLING_PREFIX = 'cancelling_booking_';
 
@@ -29,7 +32,6 @@ export async function loader(args: LoaderFunctionArgs) {
   }
 
   try {
-    // Передаем signal из роутера для корректной отмены при уходе со страницы
     const res = await getBookingById(bookingId, { signal: args.request.signal });
 
     if (!res.success || !res.booking) {
@@ -80,7 +82,13 @@ export async function action(args: ActionFunctionArgs) {
   const intent = formData.get('intent');
 
   if (intent === 'cancel') {
-    const res = await deleteBookingById(bookingId);
+    const rawReason = formData.get('reason');
+    const reason: CancellationReason =
+      typeof rawReason === 'string' && rawReason
+        ? (rawReason as CancellationReason)
+        : 'UserCancelled';
+
+    const res = await deleteBookingById(bookingId, reason);
     if (!res.success) {
       return { error: res.error };
     }
@@ -100,14 +108,12 @@ export const GetBookingPage = () => {
     revalidatorRef.current = revalidator;
   });
 
-  const isPendingStatus = booking.status === 'Pending';
+  const isPendingStatus = booking.status === 'Pending' || booking.status === 'CancellationPending';
 
-  // Состояние процесса отмены, синхронизированное с sessionStorage для сохранения при F5
   const [cancellingId, setCancellingId] = useState<string | null>(() => {
     return sessionStorage.getItem(`${CANCELLING_PREFIX}${booking.id}`) ? booking.id : null;
   });
 
-  // Корректировка состояния при рендере (рекомендованный паттерн React 19)
   if (actionData?.success && cancellingId !== booking.id && booking.status !== 'Cancelled') {
     setCancellingId(booking.id);
   }
@@ -115,7 +121,6 @@ export const GetBookingPage = () => {
     setCancellingId(null);
   }
 
-  // Синхронизация внешнего хранилища sessionStorage
   useEffect(() => {
     if (cancellingId === booking.id && booking.status !== 'Cancelled') {
       sessionStorage.setItem(`${CANCELLING_PREFIX}${booking.id}`, 'true');
@@ -125,15 +130,14 @@ export const GetBookingPage = () => {
   }, [cancellingId, booking.id, booking.status, actionData?.error]);
 
   const isCancellingInProgress =
-    (cancellingId === booking.id || Boolean(actionData?.success)) &&
+    (cancellingId === booking.id ||
+      Boolean(actionData?.success) ||
+      booking.status === 'CancellationPending') &&
     booking.status !== 'Cancelled' &&
     !actionData?.error;
 
-  // Запускаем опрос, если бронь либо создается (Pending), либо в процессе отмены
   const shouldPoll = isPendingStatus || isCancellingInProgress;
 
-  // Надежный рекурсивный поллинг через setTimeout с useRef для revalidator,
-  // что исключает сброс таймеров при смене revalidator.state (idle <-> loading)
   useEffect(() => {
     if (!shouldPoll) {
       return;
@@ -146,7 +150,7 @@ export const GetBookingPage = () => {
       try {
         await revalidatorRef.current.revalidate();
       } catch {
-        // Фоновые сетевые сбои игнорируются, следующий опрос продолжится
+        // Фоновые сетевые сбои игнорируются
       } finally {
         if (isMounted) {
           timerId = setTimeout(poll, 2000);
