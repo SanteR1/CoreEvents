@@ -1,6 +1,7 @@
 namespace CoreEvents.Shared.Contracts.Events;
 
-public record EventCreated
+[EventName("event.created.v1")]
+public record EventCreated : IIntegrationEvent
 {
     public required Guid EventId { get; init; }
     public required string Title { get; init; }

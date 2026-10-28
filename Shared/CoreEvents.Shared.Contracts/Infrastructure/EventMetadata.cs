@@ -1,4 +1,4 @@
-namespace CoreEvents.Shared.Contracts.Events;
+namespace CoreEvents.Shared.Contracts.Infrastructure;
 
 public sealed record EventMetadata
 {
@@ -8,3 +8,4 @@ public sealed record EventMetadata
     public required DateTimeOffset CreatedAt { get; init; }
     public required string EventType { get; init; }
 }
+

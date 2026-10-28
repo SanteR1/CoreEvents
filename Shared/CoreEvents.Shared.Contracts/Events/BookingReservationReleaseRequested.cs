@@ -1,6 +1,7 @@
 namespace CoreEvents.Shared.Contracts.Events;
 
-public record BookingReservationReleaseRequested
+[EventName("booking.reservation-release-requested.v1")]
+public record BookingReservationReleaseRequested : IIntegrationEvent
 {
     public required Guid BookingId { get; init; }
     public required Guid EventId { get; init; }

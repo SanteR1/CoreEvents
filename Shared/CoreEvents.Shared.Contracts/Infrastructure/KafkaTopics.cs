@@ -1,4 +1,4 @@
-namespace CoreEvents.Shared.Contracts.Events;
+namespace CoreEvents.Shared.Contracts.Infrastructure;
 
 public static class KafkaTopics
 {
@@ -23,5 +23,5 @@ public static class KafkaTopics
         EventConfirmed,
         EventConfirmedDlt
     ];
-
 }
+
