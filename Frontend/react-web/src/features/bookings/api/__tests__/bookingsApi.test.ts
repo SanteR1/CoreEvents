@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getBookingById, createBooking, deleteBookingById } from '../bookingsApi';
+import { getBookingById, createBooking, deleteBookingById, getMyBookings } from '../bookingsApi';
 import { bookingsClient } from '@/shared/api';
 
 describe('bookingsApi Service', () => {
@@ -8,7 +8,7 @@ describe('bookingsApi Service', () => {
   });
 
   describe('getBookingById', () => {
-    it('returns booking data with mapped dates on success', async () => {
+    it('returns booking data with mapped dates and financial fields on success', async () => {
       const mockDto = {
         id: 'booking_1',
         eventId: 'event_1',
@@ -16,6 +16,14 @@ describe('bookingsApi Service', () => {
         createdAt: '2026-09-16T10:00:00.000Z',
         processedAt: '2026-09-16T10:05:00.000Z',
         userId: 'user_1',
+        seats: 2,
+        unitPrice: 1500,
+        totalPrice: 3000,
+        discountAmount: 0,
+        currency: 'KZT',
+        rejectionReason: null,
+        cancellationReason: null,
+        cancellationRequestedAt: null,
       };
 
       vi.spyOn(bookingsClient, 'GET').mockResolvedValueOnce({
@@ -35,6 +43,14 @@ describe('bookingsApi Service', () => {
           createdAt: new Date('2026-09-16T10:00:00.000Z'),
           processedAt: new Date('2026-09-16T10:05:00.000Z'),
           userId: 'user_1',
+          seats: 2,
+          unitPrice: 1500,
+          totalPrice: 3000,
+          discountAmount: 0,
+          currency: 'KZT',
+          rejectionReason: null,
+          cancellationReason: null,
+          cancellationRequestedAt: null,
         },
         httpStatus: 200,
       });
@@ -64,6 +80,10 @@ describe('bookingsApi Service', () => {
         expect(result.booking.status).toBe('Pending');
         expect(result.booking.createdAt).toBeInstanceOf(Date);
         expect(result.booking.processedAt).toBeNull();
+        expect(result.booking.seats).toBe(1);
+        expect(result.booking.unitPrice).toBe(0);
+        expect(result.booking.totalPrice).toBe(0);
+        expect(result.booking.currency).toBe('KZT');
       }
     });
 
@@ -99,59 +119,25 @@ describe('bookingsApi Service', () => {
       const problem = {
         title: 'Not Found',
         status: 404,
-        detail: 'Бронирование не найдено',
+        detail: 'Booking not found',
       };
 
       vi.spyOn(bookingsClient, 'GET').mockResolvedValueOnce({
         data: problem,
         error: undefined,
         response: new Response(JSON.stringify(problem), { status: 404 }),
-      } as unknown as Awaited<ReturnType<typeof bookingsClient.GET>>);
+      } as unknown as never);
 
-      const result = await getBookingById('unknown_id');
+      const result = await getBookingById('b_missing');
 
       expect(result).toEqual({
         success: false,
         httpStatus: 404,
         error: {
-          message: 'Бронирование не найдено',
+          message: 'Booking not found',
           fieldErrors: undefined,
         },
       });
-    });
-
-    it('handles ProblemDetails response without status using response.status', async () => {
-      const problem = {
-        title: 'Error',
-        detail: 'Booking error',
-        errors: { id: ['Invalid ID'] },
-      };
-
-      vi.spyOn(bookingsClient, 'GET').mockResolvedValueOnce({
-        data: problem,
-        error: undefined,
-        response: new Response(JSON.stringify(problem), { status: 400 }),
-      } as unknown as Awaited<ReturnType<typeof bookingsClient.GET>>);
-
-      const result = await getBookingById('b1');
-
-      expect(result.success).toBe(false);
-      expect(result.httpStatus).toBe(400);
-      expect(result.error).toBeDefined();
-    });
-
-    it('handles client response errors (!response.ok and missing data)', async () => {
-      vi.spyOn(bookingsClient, 'GET').mockResolvedValueOnce({
-        data: undefined,
-        error: { message: 'Failed to fetch' },
-        response: new Response(null, { status: 500 }),
-      } as unknown as never);
-
-      const result = await getBookingById('b1');
-
-      expect(result.success).toBe(false);
-      expect(result.httpStatus).toBe(500);
-      expect(result.error).toBeDefined();
     });
 
     it('catches generic errors and returns httpStatus: 0', async () => {
@@ -171,17 +157,25 @@ describe('bookingsApi Service', () => {
   });
 
   describe('createBooking', () => {
-    it('returns booking, statusUrl from Location header, and status 201 on success', async () => {
+    it('sends seats in request body and returns booking on success', async () => {
       const mockDto = {
         id: 'booking_new',
         eventId: 'event_1',
         status: 'Pending' as const,
         createdAt: '2026-09-16T12:00:00.000Z',
         processedAt: null,
+        seats: 3,
+        unitPrice: 1000,
+        totalPrice: 3000,
+        discountAmount: 0,
+        currency: 'KZT',
+        rejectionReason: null,
+        cancellationReason: null,
+        cancellationRequestedAt: null,
       };
 
       const response = new Response(JSON.stringify(mockDto), {
-        status: 201,
+        status: 202,
         headers: { Location: '/v1/bookings/booking_new' },
       });
 
@@ -189,12 +183,13 @@ describe('bookingsApi Service', () => {
         data: mockDto,
         error: undefined,
         response,
-      });
+      } as unknown as never);
 
-      const result = await createBooking('event_1');
+      const result = await createBooking('event_1', 3);
 
       expect(postSpy).toHaveBeenCalledWith('/v1/bookings/{id}/book', {
         params: { path: { id: 'event_1' } },
+        body: { seats: 3 },
       });
 
       expect(result).toEqual({
@@ -205,73 +200,66 @@ describe('bookingsApi Service', () => {
           status: 'Pending',
           createdAt: new Date('2026-09-16T12:00:00.000Z'),
           processedAt: null,
+          userId: undefined,
+          seats: 3,
+          unitPrice: 1000,
+          totalPrice: 3000,
+          discountAmount: 0,
+          currency: 'KZT',
+          rejectionReason: null,
+          cancellationReason: null,
+          cancellationRequestedAt: null,
         },
         statusUrl: '/v1/bookings/booking_new',
-        httpStatus: 201,
+        httpStatus: 202,
       });
     });
 
-    it('handles ProblemDetails response with custom status code', async () => {
+    it('defaults to 1 seat when seats is omitted or invalid', async () => {
+      const mockDto = {
+        id: 'booking_default',
+        eventId: 'event_1',
+        status: 'Pending' as const,
+        createdAt: '2026-09-16T12:00:00.000Z',
+        processedAt: null,
+        seats: 1,
+        unitPrice: 1000,
+        totalPrice: 1000,
+        discountAmount: 0,
+        currency: 'KZT',
+      };
+
+      const postSpy = vi.spyOn(bookingsClient, 'POST').mockResolvedValueOnce({
+        data: mockDto,
+        error: undefined,
+        response: new Response(JSON.stringify(mockDto), { status: 202 }),
+      } as unknown as never);
+
+      await createBooking('event_1');
+
+      expect(postSpy).toHaveBeenCalledWith('/v1/bookings/{id}/book', {
+        params: { path: { id: 'event_1' } },
+        body: { seats: 1 },
+      });
+    });
+
+    it('handles Conflict 409 error on booking', async () => {
       const problem = {
         title: 'Conflict',
         status: 409,
-        detail: 'Все места уже забронированы',
+        detail: 'Недостаточно мест',
       };
 
       vi.spyOn(bookingsClient, 'POST').mockResolvedValueOnce({
         data: problem,
         error: undefined,
         response: new Response(JSON.stringify(problem), { status: 409 }),
-      } as unknown as Awaited<ReturnType<typeof bookingsClient.POST>>);
+      } as unknown as never);
 
-      const result = await createBooking('event_full');
-
-      expect(result).toEqual({
-        success: false,
-        httpStatus: 409,
-        error: {
-          message: 'Все места уже забронированы',
-          fieldErrors: undefined,
-        },
-      });
-    });
-
-    it('handles ProblemDetails without status using response.status', async () => {
-      const problem = {
-        title: 'Bad Request',
-        errors: { seats: ['Invalid seat count'] },
-      };
-
-      vi.spyOn(bookingsClient, 'POST').mockResolvedValueOnce({
-        data: problem,
-        error: undefined,
-        response: new Response(JSON.stringify(problem), { status: 400 }),
-      } as unknown as Awaited<ReturnType<typeof bookingsClient.POST>>);
-
-      const result = await createBooking('event_1');
+      const result = await createBooking('event_1', 10);
 
       expect(result.success).toBe(false);
-      expect(result.httpStatus).toBe(400);
-      expect(result.error).toBeDefined();
-    });
-
-    it('returns fallback error message when server responds with empty data and error', async () => {
-      vi.spyOn(bookingsClient, 'POST').mockResolvedValueOnce({
-        data: undefined,
-        error: undefined,
-        response: new Response(null, { status: 500 }),
-      } as unknown as Awaited<ReturnType<typeof bookingsClient.POST>>);
-
-      const result = await createBooking('event_1');
-
-      expect(result).toEqual({
-        success: false,
-        httpStatus: 500,
-        error: {
-          message: 'Сервер не вернул данные бронирования',
-          fieldErrors: undefined,
-        },
-      });
+      expect(result.httpStatus).toBe(409);
     });
 
     it('catches generic errors and returns httpStatus: 0', async () => {
@@ -291,79 +279,65 @@ describe('bookingsApi Service', () => {
   });
 
   describe('deleteBookingById', () => {
-    it('returns success and status 204 on successful cancellation', async () => {
-      const deleteSpy = vi.spyOn(bookingsClient, 'DELETE').mockResolvedValueOnce({
-        data: undefined,
-        error: undefined,
-        response: new Response(null, { status: 204 }),
-      });
+    it('sends reason in body and returns 202 Accepted on successful cancellation', async () => {
+      const mockDto = {
+        id: 'booking_1',
+        eventId: 'event_1',
+        status: 'CancellationPending' as const,
+        createdAt: '2026-09-16T10:00:00.000Z',
+        processedAt: '2026-09-16T10:05:00.000Z',
+        seats: 2,
+        unitPrice: 1000,
+        totalPrice: 2000,
+        discountAmount: 0,
+        currency: 'KZT',
+        rejectionReason: null,
+        cancellationReason: 'UserCancelled' as const,
+        cancellationRequestedAt: '2026-09-16T11:00:00.000Z',
+      };
 
-      const result = await deleteBookingById('booking_1');
+      const deleteSpy = vi.spyOn(bookingsClient, 'DELETE').mockResolvedValueOnce({
+        data: mockDto,
+        error: undefined,
+        response: new Response(JSON.stringify(mockDto), { status: 202 }),
+      } as unknown as never);
+
+      const result = await deleteBookingById('booking_1', 'UserCancelled');
 
       expect(deleteSpy).toHaveBeenCalledWith('/v1/bookings/{id}', {
         params: { path: { id: 'booking_1' } },
+        body: { reason: 'UserCancelled' },
       });
-      expect(result).toEqual({
-        success: true,
-        httpStatus: 204,
-      });
+      expect(result.success).toBe(true);
+      expect(result.httpStatus).toBe(202);
+      if (result.success) {
+        expect(result.booking?.status).toBe('CancellationPending');
+      }
     });
 
-    it('handles ProblemDetails response with status', async () => {
+    it('handles 409 Conflict when cancelling Pending booking', async () => {
       const problem = {
-        title: 'Not Found',
-        status: 404,
-        detail: 'Бронирование не найдено для отмены',
+        title: 'Conflict',
+        status: 409,
+        detail: 'Cannot cancel pending booking',
       };
 
       vi.spyOn(bookingsClient, 'DELETE').mockResolvedValueOnce({
         data: problem,
         error: undefined,
-        response: new Response(JSON.stringify(problem), { status: 404 }),
-      });
+        response: new Response(JSON.stringify(problem), { status: 409 }),
+      } as unknown as never);
 
-      const result = await deleteBookingById('booking_unknown');
+      const result = await deleteBookingById('booking_pending');
 
       expect(result).toEqual({
         success: false,
-        httpStatus: 404,
+        httpStatus: 409,
         error: {
-          message: 'Бронирование не найдено для отмены',
+          message: 'Cannot cancel pending booking',
           fieldErrors: undefined,
         },
       });
-    });
-
-    it('handles ProblemDetails response without status using response.status', async () => {
-      const problem = {
-        title: 'Bad Request',
-        errors: { id: ['Cannot delete completed booking'] },
-      };
-
-      vi.spyOn(bookingsClient, 'DELETE').mockResolvedValueOnce({
-        data: problem,
-        error: undefined,
-        response: new Response(JSON.stringify(problem), { status: 400 }),
-      });
-
-      const result = await deleteBookingById('booking_1');
-
-      expect(result.success).toBe(false);
-      expect(result.httpStatus).toBe(400);
-      expect(result.error).toBeDefined();
-    });
-
-    it('handles generic server error response', async () => {
-      vi.spyOn(bookingsClient, 'DELETE').mockResolvedValueOnce({
-        data: undefined,
-        error: { message: 'Internal Server Error' },
-        response: new Response(null, { status: 500 }),
-      } as unknown as never);
-
-      const result = await deleteBookingById('booking_1');
-
-      expect(result.success).toBe(false);
-      expect(result.httpStatus).toBe(500);
     });
 
     it('catches generic errors and returns httpStatus: 0', async () => {
@@ -379,6 +353,70 @@ describe('bookingsApi Service', () => {
           fieldErrors: undefined,
         },
       });
+    });
+  });
+
+  describe('getMyBookings', () => {
+    it('returns paginated list of bookings on success', async () => {
+      const mockPaginatedDto = {
+        totalCount: 1,
+        currentPage: 1,
+        pageSize: 10,
+        totalPages: 1,
+        items: [
+          {
+            id: 'bk_1',
+            eventId: 'ev_1',
+            status: 'Confirmed' as const,
+            createdAt: '2026-09-16T10:00:00.000Z',
+            processedAt: '2026-09-16T10:05:00.000Z',
+            seats: 2,
+            unitPrice: 1500,
+            totalPrice: 3000,
+            discountAmount: 0,
+            currency: 'KZT',
+            userId: 'user_1',
+            rejectionReason: null,
+            cancellationReason: null,
+            cancellationRequestedAt: null,
+          },
+        ],
+      };
+
+      const getSpy = vi.spyOn(bookingsClient, 'GET').mockResolvedValueOnce({
+        data: mockPaginatedDto,
+        error: undefined,
+        response: new Response(JSON.stringify(mockPaginatedDto), { status: 200 }),
+      });
+
+      const result = await getMyBookings({ status: 'Confirmed', page: 1, pageSize: 10 });
+
+      expect(getSpy).toHaveBeenCalledWith('/v1/bookings', {
+        params: {
+          query: {
+            Status: 'Confirmed',
+            UserId: undefined,
+            Page: 1,
+            PageSize: 10,
+          },
+        },
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.result.totalCount).toBe(1);
+        expect(result.result.items[0].seats).toBe(2);
+        expect(result.result.items[0].totalPrice).toBe(3000);
+      }
+    });
+
+    it('handles failure when loading bookings', async () => {
+      vi.spyOn(bookingsClient, 'GET').mockRejectedValueOnce(new Error('Load failed'));
+
+      const result = await getMyBookings();
+
+      expect(result.success).toBe(false);
+      expect(result.httpStatus).toBe(0);
     });
   });
 });

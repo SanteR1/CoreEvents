@@ -8,6 +8,7 @@ type EventCreateDto = EventSchema<'EventCreateDto'>;
 type EventUpdateDto = EventSchema<'EventUpdateDto'>;
 type EventResponseDto = EventSchema<'EventResponseDto'>;
 type EventResponsePaginatedResultDto = EventSchema<'PaginatedResultOfEventResponseDto'>;
+type SeatReservationResponseDto = EventSchema<'SeatReservationResponseDto'>;
 
 // 1. Чистые доменные типы
 export interface EventCreate {
@@ -16,13 +17,19 @@ export interface EventCreate {
   startAt: Date;
   endAt: Date;
   totalSeats: number;
+  price?: number;
+  currency?: string;
 }
+
 export interface EventUpdate {
   title: string;
   description: string | null;
   startAt: Date;
   endAt: Date;
+  price?: number;
+  currency?: string;
 }
+
 export interface EventResponse {
   id: string;
   title: string;
@@ -31,6 +38,24 @@ export interface EventResponse {
   endAt: Date;
   totalSeats: number;
   availableSeats: number;
+  price: number;
+  currency: string;
+  isActive: boolean;
+}
+
+export interface SeatReservationResponse {
+  bookingId: string;
+  eventId: string;
+  seats: number;
+  unitPrice: number;
+  totalPrice: number;
+  currency: string;
+  discountAmount: number;
+  priceVersion: number;
+  status: string;
+  rejectionReason: string | null;
+  createdAt: Date;
+  expiresAt: Date | null;
 }
 
 // 2. Размеченные объединения (Discriminated Unions)
@@ -67,11 +92,13 @@ export type CreateEventResult =
 export type UpdateEventResult =
   | {
       success: true;
+      event?: EventResponse;
       httpStatus: number;
       error?: never;
     }
   | {
       success: false;
+      event?: never;
       httpStatus: number;
       error: FormActionError;
     };
@@ -84,6 +111,32 @@ export type DeleteEventResult =
     }
   | {
       success: false;
+      httpStatus: number;
+      error: FormActionError;
+    };
+
+export type CancelEventResult =
+  | {
+      success: true;
+      httpStatus: number;
+      error?: never;
+    }
+  | {
+      success: false;
+      httpStatus: number;
+      error: FormActionError;
+    };
+
+export type EventReservationsResult =
+  | {
+      success: true;
+      reservations: SeatReservationResponse[];
+      httpStatus: number;
+      error?: never;
+    }
+  | {
+      success: false;
+      reservations?: never;
       httpStatus: number;
       error: FormActionError;
     };
@@ -138,6 +191,29 @@ function mapEventResponse(dto: EventResponseDto): EventResponse {
     endAt: dto.endAt ? new Date(dto.endAt) : new Date(),
     totalSeats: Number(dto.totalSeats) || 0,
     availableSeats: Number(dto.availableSeats) || 0,
+    price: Number(dto.price) || 0,
+    currency: dto.currency ?? 'KZT',
+    isActive: dto.isActive ?? true,
+  };
+}
+
+function mapSeatReservationResponse(dto: SeatReservationResponseDto): SeatReservationResponse {
+  return {
+    bookingId: dto.bookingId ?? '',
+    eventId: dto.eventId ?? '',
+    seats: Number(dto.seats) || 0,
+    unitPrice: Number(dto.unitPrice) || 0,
+    totalPrice: Number(dto.totalPrice) || 0,
+    currency: dto.currency ?? 'KZT',
+    discountAmount: Number(dto.discountAmount) || 0,
+    priceVersion: Number(dto.priceVersion) || 0,
+    status: dto.status ?? 'Pending',
+    rejectionReason:
+      dto.rejectionReason !== null && dto.rejectionReason !== undefined
+        ? String(dto.rejectionReason)
+        : null,
+    createdAt: dto.createdAt ? new Date(dto.createdAt) : new Date(),
+    expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : null,
   };
 }
 
@@ -158,6 +234,8 @@ export function mapEventCreateToDto(domain: EventCreate): EventCreateDto {
     startAt: domain.startAt.toISOString(),
     endAt: domain.endAt.toISOString(),
     totalSeats: domain.totalSeats,
+    price: domain.price ?? 0,
+    currency: domain.currency?.trim() ?? 'KZT',
   };
 }
 
@@ -167,6 +245,8 @@ export function mapEventUpdateToDto(domain: EventUpdate): EventUpdateDto {
     description: domain.description?.trim() ?? null,
     startAt: domain.startAt.toISOString(),
     endAt: domain.endAt.toISOString(),
+    price: domain.price,
+    currency: domain.currency?.trim(),
   };
 }
 
@@ -227,7 +307,11 @@ export async function updateEventById(
       };
     }
 
-    return { success: true, httpStatus: response.status };
+    return {
+      success: true,
+      event: data ? mapEventResponse(data) : undefined,
+      httpStatus: response.status,
+    };
   } catch (ex) {
     return { success: false, httpStatus: 0, error: toFormError(ex)! };
   }
@@ -294,11 +378,25 @@ export async function getAllEvents(
   To?: string,
   Page?: number,
   PageSize?: number,
+  MinPrice?: number,
+  MaxPrice?: number,
+  Currency?: string,
+  IsActive?: boolean,
 ): Promise<PaginatedResult> {
   try {
     const { data, error, response } = await eventsClient.GET('/v1/events', {
       params: {
-        query: { Title, From, To, Page, PageSize },
+        query: {
+          Title,
+          From,
+          To,
+          Page,
+          PageSize,
+          MinPrice,
+          MaxPrice,
+          Currency,
+          IsActive,
+        },
       },
     });
 
@@ -352,6 +450,63 @@ export async function deleteEventById(id: string): Promise<DeleteEventResult> {
 
     return {
       success: true,
+      httpStatus: response.status,
+    };
+  } catch (ex) {
+    return { success: false, httpStatus: 0, error: toFormError(ex)! };
+  }
+}
+
+export async function cancelEventById(id: string): Promise<CancelEventResult> {
+  try {
+    const { data, error, response } = await eventsClient.POST('/v1/events/{id}/cancel', {
+      params: { path: { id } },
+    });
+
+    const isProblem = isProblemDetails(data);
+
+    if (!response.ok || error || isProblem) {
+      return {
+        success: false,
+        httpStatus:
+          isProblem && typeof (data as Record<string, unknown>)?.status === 'number'
+            ? Number((data as Record<string, unknown>).status)
+            : response.status,
+        error: toFormError<CancelEventResult>(error ?? data)!,
+      };
+    }
+
+    return {
+      success: true,
+      httpStatus: response.status,
+    };
+  } catch (ex) {
+    return { success: false, httpStatus: 0, error: toFormError(ex)! };
+  }
+}
+
+export async function getEventReservations(id: string): Promise<EventReservationsResult> {
+  try {
+    const { data, error, response } = await eventsClient.GET('/v1/events/{id}/reservations', {
+      params: { path: { id } },
+    });
+
+    const isProblem = isProblemDetails(data) || !Array.isArray(data);
+
+    if (!response.ok || error || !data || isProblem) {
+      return {
+        success: false,
+        httpStatus:
+          isProblem && typeof (data as Record<string, unknown>)?.status === 'number'
+            ? Number((data as Record<string, unknown>).status)
+            : response.status,
+        error: toFormError<EventReservationsResult>(error ?? data)!,
+      };
+    }
+
+    return {
+      success: true,
+      reservations: data.map(mapSeatReservationResponse),
       httpStatus: response.status,
     };
   } catch (ex) {

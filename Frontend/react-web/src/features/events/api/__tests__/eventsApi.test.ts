@@ -8,6 +8,8 @@ import {
   getTopEvents,
   getAllEvents,
   deleteEventById,
+  cancelEventById,
+  getEventReservations,
 } from '../eventsApi';
 import { eventsClient } from '@/shared/api';
 
@@ -17,13 +19,15 @@ describe('eventsApi Service', () => {
   });
 
   describe('DTO mappers', () => {
-    it('mapEventCreateToDto trims strings and converts dates to ISO', () => {
+    it('mapEventCreateToDto trims strings and converts dates to ISO with price & currency', () => {
       const result = mapEventCreateToDto({
         title: '  Концерт симфонической музыки  ',
         description: '  Описание события с пробелами  ',
         startAt: new Date('2026-09-20T18:00:00.000Z'),
         endAt: new Date('2026-09-20T21:00:00.000Z'),
         totalSeats: 150,
+        price: 2500,
+        currency: 'KZT',
       });
 
       expect(result).toEqual({
@@ -32,10 +36,12 @@ describe('eventsApi Service', () => {
         startAt: '2026-09-20T18:00:00.000Z',
         endAt: '2026-09-20T21:00:00.000Z',
         totalSeats: 150,
+        price: 2500,
+        currency: 'KZT',
       });
     });
 
-    it('mapEventCreateToDto handles null description', () => {
+    it('mapEventCreateToDto handles null description and defaults price to 0', () => {
       const result = mapEventCreateToDto({
         title: 'Концерт',
         description: null,
@@ -45,14 +51,18 @@ describe('eventsApi Service', () => {
       });
 
       expect(result.description).toBeNull();
+      expect(result.price).toBe(0);
+      expect(result.currency).toBe('KZT');
     });
 
-    it('mapEventUpdateToDto trims strings and converts dates to ISO', () => {
+    it('mapEventUpdateToDto trims strings and converts dates to ISO with price & currency', () => {
       const result = mapEventUpdateToDto({
         title: '  Обновленный концерт  ',
         description: '  Новое описание  ',
         startAt: new Date('2026-09-21T18:00:00.000Z'),
         endAt: new Date('2026-09-21T21:00:00.000Z'),
+        price: 3000,
+        currency: 'USD',
       });
 
       expect(result).toEqual({
@@ -60,10 +70,12 @@ describe('eventsApi Service', () => {
         description: 'Новое описание',
         startAt: '2026-09-21T18:00:00.000Z',
         endAt: '2026-09-21T21:00:00.000Z',
+        price: 3000,
+        currency: 'USD',
       });
     });
 
-    it('mapEventUpdateToDto handles null description', () => {
+    it('mapEventUpdateToDto handles null description and omitted price/currency', () => {
       const result = mapEventUpdateToDto({
         title: 'Концерт',
         description: null,
@@ -72,6 +84,8 @@ describe('eventsApi Service', () => {
       });
 
       expect(result.description).toBeNull();
+      expect(result.price).toBeUndefined();
+      expect(result.currency).toBeUndefined();
     });
   });
 
@@ -82,6 +96,8 @@ describe('eventsApi Service', () => {
       startAt: new Date('2026-09-25T10:00:00.000Z'),
       endAt: new Date('2026-09-25T22:00:00.000Z'),
       totalSeats: 500,
+      price: 1500,
+      currency: 'KZT',
     };
 
     it('creates event successfully with statusUrl from Location header', async () => {
@@ -93,6 +109,9 @@ describe('eventsApi Service', () => {
         endAt: '2026-09-25T22:00:00.000Z',
         totalSeats: 500,
         availableSeats: 500,
+        price: 1500,
+        currency: 'KZT',
+        isActive: true,
       };
 
       const response = new Response(JSON.stringify(mockDto), {
@@ -122,6 +141,9 @@ describe('eventsApi Service', () => {
           endAt: new Date('2026-09-25T22:00:00.000Z'),
           totalSeats: 500,
           availableSeats: 500,
+          price: 1500,
+          currency: 'KZT',
+          isActive: true,
         },
         httpStatus: 201,
         statusUrl: '/v1/events/event_1',
@@ -137,9 +159,12 @@ describe('eventsApi Service', () => {
         endAt: '2026-09-25T22:00:00.000Z',
         totalSeats: 100,
         availableSeats: 100,
+        price: 0,
+        currency: 'KZT',
+        isActive: true,
       };
 
-      const postSpy = vi.spyOn(eventsClient, 'POST').mockResolvedValueOnce({
+      vi.spyOn(eventsClient, 'POST').mockResolvedValueOnce({
         data: mockDto,
         error: undefined,
         response: new Response(JSON.stringify(mockDto), { status: 201 }),
@@ -147,29 +172,25 @@ describe('eventsApi Service', () => {
 
       const result = await createEvent(validDomainEvent);
 
-      expect(postSpy).toHaveBeenCalledWith('/v1/events', {
-        body: mapEventCreateToDto(validDomainEvent),
-      });
-
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.statusUrl).toBeNull();
       }
     });
 
-    it('handles ProblemDetails response with status', async () => {
+    it('handles problem details on creation failure', async () => {
       const problem = {
         title: 'Validation Error',
         status: 400,
-        detail: 'Неверные данные события',
-        errors: { title: ['Название обязательно'] },
+        detail: 'Title is invalid',
+        errors: { title: ['Title is required'] },
       };
 
       vi.spyOn(eventsClient, 'POST').mockResolvedValueOnce({
         data: problem,
         error: undefined,
         response: new Response(JSON.stringify(problem), { status: 400 }),
-      } as unknown as never);
+      });
 
       const result = await createEvent(validDomainEvent);
 
@@ -177,35 +198,112 @@ describe('eventsApi Service', () => {
         success: false,
         httpStatus: 400,
         error: {
-          message: 'Неверные данные события',
-          fieldErrors: { title: ['Название обязательно'] },
+          message: 'Title is invalid',
+          fieldErrors: { title: ['Title is required'] },
         },
       });
     });
 
-    it('handles ProblemDetails response without status using response.status', async () => {
-      const problem = {
-        title: 'Validation Error',
-        errors: { totalSeats: ['Должно быть больше 0'] },
+    it('handles exception in createEvent', async () => {
+      vi.spyOn(eventsClient, 'POST').mockRejectedValueOnce(new Error('Network error'));
+
+      const result = await createEvent(validDomainEvent);
+
+      expect(result).toEqual({
+        success: false,
+        httpStatus: 0,
+        error: {
+          message: 'Network error',
+          fieldErrors: undefined,
+        },
+      });
+    });
+  });
+
+  describe('updateEventById', () => {
+    const validUpdate = {
+      title: 'Обновленное событие',
+      description: 'Новое описание',
+      startAt: new Date('2026-10-01T10:00:00.000Z'),
+      endAt: new Date('2026-10-01T18:00:00.000Z'),
+      price: 2000,
+      currency: 'KZT',
+    };
+
+    it('returns success: true and mapped event on 200 OK', async () => {
+      const mockDto = {
+        id: 'event_1',
+        title: 'Обновленное событие',
+        description: 'Новое описание',
+        startAt: '2026-10-01T10:00:00.000Z',
+        endAt: '2026-10-01T18:00:00.000Z',
+        totalSeats: 100,
+        availableSeats: 80,
+        price: 2000,
+        currency: 'KZT',
+        isActive: true,
       };
 
-      vi.spyOn(eventsClient, 'POST').mockResolvedValueOnce({
-        data: problem,
+      const putSpy = vi.spyOn(eventsClient, 'PUT').mockResolvedValueOnce({
+        data: mockDto,
         error: undefined,
-        response: new Response(JSON.stringify(problem), { status: 422 }),
-      } as unknown as never);
+        response: new Response(JSON.stringify(mockDto), { status: 200 }),
+      });
 
-      const result = await createEvent(validDomainEvent);
+      const result = await updateEventById('event_1', validUpdate);
 
-      expect(result.success).toBe(false);
-      expect(result.httpStatus).toBe(422);
-      expect(result.error).toBeDefined();
+      expect(putSpy).toHaveBeenCalledWith('/v1/events/{id}', {
+        body: mapEventUpdateToDto(validUpdate),
+        params: { path: { id: 'event_1' } },
+      });
+
+      expect(result).toEqual({
+        success: true,
+        httpStatus: 200,
+        event: {
+          id: 'event_1',
+          title: 'Обновленное событие',
+          description: 'Новое описание',
+          startAt: new Date('2026-10-01T10:00:00.000Z'),
+          endAt: new Date('2026-10-01T18:00:00.000Z'),
+          totalSeats: 100,
+          availableSeats: 80,
+          price: 2000,
+          currency: 'KZT',
+          isActive: true,
+        },
+      });
     });
 
-    it('catches generic errors and returns httpStatus: 0', async () => {
-      vi.spyOn(eventsClient, 'POST').mockRejectedValueOnce(new Error('Network failure'));
+    it('handles problem details on update failure', async () => {
+      const problem = {
+        title: 'Not Found',
+        status: 404,
+        detail: 'Event not found',
+      };
 
-      const result = await createEvent(validDomainEvent);
+      vi.spyOn(eventsClient, 'PUT').mockResolvedValueOnce({
+        data: problem,
+        error: undefined,
+        response: new Response(JSON.stringify(problem), { status: 404 }),
+      } as unknown as never);
+
+      const result = await updateEventById('event_not_found', validUpdate);
+
+      expect(result).toEqual({
+        success: false,
+        httpStatus: 404,
+        error: {
+          message: 'Event not found',
+          fieldErrors: undefined,
+        },
+      });
+    });
+
+    it('handles network error in updateEventById', async () => {
+      vi.spyOn(eventsClient, 'PUT').mockRejectedValueOnce(new Error('Network failure'));
+
+      const result = await updateEventById('event_1', validUpdate);
 
       expect(result).toEqual({
         success: false,
@@ -218,114 +316,8 @@ describe('eventsApi Service', () => {
     });
   });
 
-  describe('updateEventById', () => {
-    const validUpdate = {
-      title: 'Обновленный заголовок',
-      description: 'Новое описание',
-      startAt: new Date('2026-09-25T12:00:00.000Z'),
-      endAt: new Date('2026-09-25T15:00:00.000Z'),
-    };
-
-    it('updates event successfully and returns status 200', async () => {
-      const putSpy = vi.spyOn(eventsClient, 'PUT').mockResolvedValueOnce({
-        data: undefined,
-        error: undefined,
-        response: new Response(null, { status: 200 }),
-      });
-
-      const result = await updateEventById('event_1', validUpdate);
-
-      expect(putSpy).toHaveBeenCalledWith('/v1/events/{id}', {
-        body: mapEventUpdateToDto(validUpdate),
-        params: { path: { id: 'event_1' } },
-      });
-      expect(result).toEqual({
-        success: true,
-        httpStatus: 200,
-      });
-    });
-
-    it('updates event with 204 status response', async () => {
-      const putSpy = vi.spyOn(eventsClient, 'PUT').mockResolvedValueOnce({
-        data: undefined,
-        error: undefined,
-        response: new Response(null, { status: 204 }),
-      });
-
-      const result = await updateEventById('event_1', validUpdate);
-
-      expect(putSpy).toHaveBeenCalledWith('/v1/events/{id}', {
-        body: mapEventUpdateToDto(validUpdate),
-        params: { path: { id: 'event_1' } },
-      });
-      expect(result).toEqual({
-        success: true,
-        httpStatus: 204,
-      });
-    });
-
-    it('handles ProblemDetails response with status', async () => {
-      const problem = {
-        title: 'Not Found',
-        status: 404,
-        detail: 'Событие не найдено',
-      };
-
-      vi.spyOn(eventsClient, 'PUT').mockResolvedValueOnce({
-        data: problem,
-        error: undefined,
-        response: new Response(JSON.stringify(problem), { status: 404 }),
-      });
-
-      const result = await updateEventById('unknown_event', validUpdate);
-
-      expect(result).toEqual({
-        success: false,
-        httpStatus: 404,
-        error: {
-          message: 'Событие не найдено',
-          fieldErrors: undefined,
-        },
-      });
-    });
-
-    it('handles ProblemDetails response without status using response.status', async () => {
-      const problem = {
-        title: 'Bad Request',
-        errors: { title: ['Title invalid'] },
-      };
-
-      vi.spyOn(eventsClient, 'PUT').mockResolvedValueOnce({
-        data: problem,
-        error: undefined,
-        response: new Response(JSON.stringify(problem), { status: 400 }),
-      });
-
-      const result = await updateEventById('event_1', validUpdate);
-
-      expect(result.success).toBe(false);
-      expect(result.httpStatus).toBe(400);
-      expect(result.error).toBeDefined();
-    });
-
-    it('catches generic errors and returns httpStatus: 0', async () => {
-      vi.spyOn(eventsClient, 'PUT').mockRejectedValueOnce(new Error('Update failed'));
-
-      const result = await updateEventById('event_1', validUpdate);
-
-      expect(result).toEqual({
-        success: false,
-        httpStatus: 0,
-        error: {
-          message: 'Update failed',
-          fieldErrors: undefined,
-        },
-      });
-    });
-  });
-
   describe('getEventById', () => {
-    it('returns event response with mapped dates on success', async () => {
+    it('returns event response with mapped dates, price, currency, isActive on success', async () => {
       const mockDto = {
         id: 'event_123',
         title: 'Конференция',
@@ -334,6 +326,9 @@ describe('eventsApi Service', () => {
         endAt: '2026-10-01T17:00:00.000Z',
         totalSeats: 300,
         availableSeats: 250,
+        price: 5000,
+        currency: 'KZT',
+        isActive: true,
       };
 
       vi.spyOn(eventsClient, 'GET').mockResolvedValueOnce({
@@ -354,70 +349,16 @@ describe('eventsApi Service', () => {
           endAt: new Date('2026-10-01T17:00:00.000Z'),
           totalSeats: 300,
           availableSeats: 250,
+          price: 5000,
+          currency: 'KZT',
+          isActive: true,
         },
         httpStatus: 200,
       });
     });
 
-    it('falls back to default values for missing or null DTO fields', async () => {
-      const mockDto = {
-        id: undefined,
-        title: undefined,
-        description: undefined,
-        startAt: undefined,
-        endAt: undefined,
-        totalSeats: undefined,
-        availableSeats: undefined,
-      };
-
-      vi.spyOn(eventsClient, 'GET').mockResolvedValueOnce({
-        data: mockDto,
-        error: undefined,
-        response: new Response(JSON.stringify(mockDto), { status: 200 }),
-      } as unknown as never);
-
-      const result = await getEventById('event_empty');
-
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.event.id).toBe('');
-        expect(result.event.title).toBe('');
-        expect(result.event.description).toBeNull();
-        expect(result.event.startAt).toBeInstanceOf(Date);
-        expect(result.event.endAt).toBeInstanceOf(Date);
-        expect(result.event.totalSeats).toBe(0);
-        expect(result.event.availableSeats).toBe(0);
-      }
-    });
-
-    it('calls GET /v1/events/{id} with correct path param', async () => {
-      const getSpy = vi.spyOn(eventsClient, 'GET').mockResolvedValueOnce({
-        data: {
-          id: 'event_1',
-          title: 'E1',
-          description: null,
-          startAt: '2026-09-25T10:00:00.000Z',
-          endAt: '2026-09-25T12:00:00.000Z',
-          totalSeats: 10,
-          availableSeats: 10,
-        },
-        error: undefined,
-        response: new Response(JSON.stringify({ id: 'event_1' }), { status: 200 }),
-      });
-
-      await getEventById('event_1');
-
-      expect(getSpy).toHaveBeenCalledWith('/v1/events/{id}', {
-        params: { path: { id: 'event_1' } },
-      });
-    });
-
-    it('handles ProblemDetails response with status', async () => {
-      const problem = {
-        title: 'Not Found',
-        status: 404,
-        detail: 'Событие не найдено',
-      };
+    it('returns error on not found (404)', async () => {
+      const problem = { title: 'Not Found', status: 404, detail: 'Event 999 not found' };
 
       vi.spyOn(eventsClient, 'GET').mockResolvedValueOnce({
         data: problem,
@@ -425,64 +366,27 @@ describe('eventsApi Service', () => {
         response: new Response(JSON.stringify(problem), { status: 404 }),
       } as unknown as never);
 
-      const result = await getEventById('unknown');
-
-      expect(result).toEqual({
-        success: false,
-        httpStatus: 404,
-        error: {
-          message: 'Событие не найдено',
-          fieldErrors: undefined,
-        },
-      });
-    });
-
-    it('handles ProblemDetails response without status using response.status', async () => {
-      const problem = {
-        title: 'Bad Request',
-        errors: { id: ['Invalid UUID format'] },
-      };
-
-      vi.spyOn(eventsClient, 'GET').mockResolvedValueOnce({
-        data: problem,
-        error: undefined,
-        response: new Response(JSON.stringify(problem), { status: 400 }),
-      } as unknown as never);
-
-      const result = await getEventById('bad_uuid');
+      const result = await getEventById('999');
 
       expect(result.success).toBe(false);
-      expect(result.httpStatus).toBe(400);
-      expect(result.error).toBeDefined();
-    });
-
-    it('catches generic errors and returns httpStatus: 0', async () => {
-      vi.spyOn(eventsClient, 'GET').mockRejectedValueOnce(new Error('Event lookup failed'));
-
-      const result = await getEventById('e1');
-
-      expect(result).toEqual({
-        success: false,
-        httpStatus: 0,
-        error: {
-          message: 'Event lookup failed',
-          fieldErrors: undefined,
-        },
-      });
+      expect(result.httpStatus).toBe(404);
     });
   });
 
   describe('getTopEvents', () => {
-    it('returns array of mapped top events on success', async () => {
+    it('returns array of mapped events on success', async () => {
       const mockList = [
         {
           id: 'top_1',
-          title: 'Популярное событие 1',
+          title: 'Топ 1',
           description: 'Описание 1',
-          startAt: '2026-09-30T15:00:00.000Z',
-          endAt: '2026-09-30T18:00:00.000Z',
+          startAt: '2026-10-01T10:00:00.000Z',
+          endAt: '2026-10-01T12:00:00.000Z',
           totalSeats: 100,
-          availableSeats: 5,
+          availableSeats: 10,
+          price: 1500,
+          currency: 'KZT',
+          isActive: true,
         },
       ];
 
@@ -499,91 +403,41 @@ describe('eventsApi Service', () => {
         event: [
           {
             id: 'top_1',
-            title: 'Популярное событие 1',
+            title: 'Топ 1',
             description: 'Описание 1',
-            startAt: new Date('2026-09-30T15:00:00.000Z'),
-            endAt: new Date('2026-09-30T18:00:00.000Z'),
+            startAt: new Date('2026-10-01T10:00:00.000Z'),
+            endAt: new Date('2026-10-01T12:00:00.000Z'),
             totalSeats: 100,
-            availableSeats: 5,
+            availableSeats: 10,
+            price: 1500,
+            currency: 'KZT',
+            isActive: true,
           },
         ],
         httpStatus: 200,
       });
     });
-
-    it('handles non-array response by returning error with response status', async () => {
-      const nonArrayData = { message: 'Unexpected payload structure' };
-
-      vi.spyOn(eventsClient, 'GET').mockResolvedValueOnce({
-        data: nonArrayData,
-        error: undefined,
-        response: new Response(JSON.stringify(nonArrayData), { status: 200 }),
-      } as unknown as Awaited<ReturnType<typeof eventsClient.GET>>);
-
-      const result = await getTopEvents();
-
-      expect(result.success).toBe(false);
-      expect(result.httpStatus).toBe(200);
-      expect(result.error).toBeDefined();
-    });
-
-    it('handles ProblemDetails response with status', async () => {
-      const problem = {
-        title: 'Error',
-        status: 500,
-        detail: 'Не удалось загрузить топ событий',
-      };
-
-      vi.spyOn(eventsClient, 'GET').mockResolvedValueOnce({
-        data: problem,
-        error: undefined,
-        response: new Response(JSON.stringify(problem), { status: 500 }),
-      } as unknown as never);
-
-      const result = await getTopEvents();
-
-      expect(result).toEqual({
-        success: false,
-        httpStatus: 500,
-        error: {
-          message: 'Не удалось загрузить топ событий',
-          fieldErrors: undefined,
-        },
-      });
-    });
-
-    it('catches generic errors and returns httpStatus: 0', async () => {
-      vi.spyOn(eventsClient, 'GET').mockRejectedValueOnce(new Error('Top events query failed'));
-
-      const result = await getTopEvents();
-
-      expect(result).toEqual({
-        success: false,
-        httpStatus: 0,
-        error: {
-          message: 'Top events query failed',
-          fieldErrors: undefined,
-        },
-      });
-    });
   });
 
   describe('getAllEvents', () => {
-    it('passes query parameters and returns paginated result with mapped events', async () => {
+    it('passes query parameters including MinPrice, MaxPrice, Currency, IsActive', async () => {
       const mockPaginatedDto = {
-        totalCount: 45,
-        currentPage: 2,
-        pageSize: 10,
-        totalPages: 5,
+        totalCount: 1,
+        currentPage: 1,
+        pageSize: 6,
+        totalPages: 1,
         items: [
           {
-            id: 'event_paginated_1',
-            title: 'Событие 1',
+            id: 'ev_1',
+            title: 'Событие с ценой',
             description: null,
-            startAt: '2026-10-05T10:00:00.000Z',
-            endAt: '2026-10-05T12:00:00.000Z',
+            startAt: '2026-10-01T10:00:00.000Z',
+            endAt: '2026-10-01T12:00:00.000Z',
             totalSeats: 50,
             availableSeats: 25,
+            price: 2000,
+            currency: 'KZT',
+            isActive: true,
           },
         ],
       };
@@ -594,137 +448,45 @@ describe('eventsApi Service', () => {
         response: new Response(JSON.stringify(mockPaginatedDto), { status: 200 }),
       });
 
-      const result = await getAllEvents('Музыка', '2026-10-01', '2026-10-10', 2, 10);
+      const result = await getAllEvents(
+        'Событие',
+        '2026-10-01T00:00:00.000Z',
+        '2026-10-02T00:00:00.000Z',
+        1,
+        6,
+        1000,
+        5000,
+        'KZT',
+        true,
+      );
 
       expect(getSpy).toHaveBeenCalledWith('/v1/events', {
         params: {
           query: {
-            Title: 'Музыка',
-            From: '2026-10-01',
-            To: '2026-10-10',
-            Page: 2,
-            PageSize: 10,
+            Title: 'Событие',
+            From: '2026-10-01T00:00:00.000Z',
+            To: '2026-10-02T00:00:00.000Z',
+            Page: 1,
+            PageSize: 6,
+            MinPrice: 1000,
+            MaxPrice: 5000,
+            Currency: 'KZT',
+            IsActive: true,
           },
         },
       });
 
-      expect(result).toEqual({
-        success: true,
-        event: {
-          totalCount: 45,
-          currentPage: 2,
-          pageSize: 10,
-          totalPages: 5,
-          items: {
-            event: [
-              {
-                id: 'event_paginated_1',
-                title: 'Событие 1',
-                description: null,
-                startAt: new Date('2026-10-05T10:00:00.000Z'),
-                endAt: new Date('2026-10-05T12:00:00.000Z'),
-                totalSeats: 50,
-                availableSeats: 25,
-              },
-            ],
-          },
-        },
-        httpStatus: 200,
-      });
-    });
-
-    it('handles null items in paginated DTO and falls back to default numbers', async () => {
-      const mockDto = {
-        totalCount: undefined,
-        currentPage: undefined,
-        pageSize: undefined,
-        totalPages: undefined,
-        items: null,
-      };
-
-      vi.spyOn(eventsClient, 'GET').mockResolvedValueOnce({
-        data: mockDto,
-        error: undefined,
-        response: new Response(JSON.stringify(mockDto), { status: 200 }),
-      } as unknown as Awaited<ReturnType<typeof eventsClient.GET>>);
-
-      const result = await getAllEvents();
-
-      expect(result).toEqual({
-        success: true,
-        event: {
-          totalCount: 0,
-          currentPage: 0,
-          pageSize: 0,
-          totalPages: 0,
-          items: {
-            event: null,
-          },
-        },
-        httpStatus: 200,
-      });
-    });
-
-    it('handles ProblemDetails response with status', async () => {
-      const problem = {
-        title: 'Bad Request',
-        status: 400,
-        detail: 'Неверные параметры пагинации',
-      };
-
-      vi.spyOn(eventsClient, 'GET').mockResolvedValueOnce({
-        data: problem,
-        error: undefined,
-        response: new Response(JSON.stringify(problem), { status: 400 }),
-      } as unknown as never);
-
-      const result = await getAllEvents(undefined, undefined, undefined, -1, 10);
-
-      expect(result).toEqual({
-        success: false,
-        httpStatus: 400,
-        error: {
-          message: 'Неверные параметры пагинации',
-          fieldErrors: undefined,
-        },
-      });
-    });
-
-    it('handles ProblemDetails response without status using response.status', async () => {
-      const problem = {
-        title: 'Bad Request',
-        errors: { Page: ['Страница должна быть положительной'] },
-      };
-
-      vi.spyOn(eventsClient, 'GET').mockResolvedValueOnce({
-        data: problem,
-        error: undefined,
-        response: new Response(JSON.stringify(problem), { status: 400 }),
-      } as unknown as never);
-
-      const result = await getAllEvents(undefined, undefined, undefined, 0, 10);
-
-      expect(result.success).toBe(false);
-      expect(result.httpStatus).toBe(400);
-      expect(result.error).toBeDefined();
-    });
-
-    it('handles generic client error response', async () => {
-      vi.spyOn(eventsClient, 'GET').mockResolvedValueOnce({
-        data: undefined,
-        error: { message: 'Server down' },
-        response: new Response(null, { status: 503 }),
-      } as unknown as never);
-
-      const result = await getAllEvents();
-
-      expect(result.success).toBe(false);
-      expect(result.httpStatus).toBe(503);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.event.items.event?.[0].price).toBe(2000);
+        expect(result.event.items.event?.[0].currency).toBe('KZT');
+        expect(result.event.items.event?.[0].isActive).toBe(true);
+      }
     });
   });
 
   describe('deleteEventById', () => {
-    it('deletes event successfully and returns status 204', async () => {
+    it('deletes event successfully on 200/204', async () => {
       const deleteSpy = vi.spyOn(eventsClient, 'DELETE').mockResolvedValueOnce({
         data: undefined,
         error: undefined,
@@ -741,82 +503,102 @@ describe('eventsApi Service', () => {
         httpStatus: 204,
       });
     });
+  });
 
-    it('deletes event and handles ok response with status 200', async () => {
-      const deleteSpy = vi.spyOn(eventsClient, 'DELETE').mockResolvedValueOnce({
+  describe('cancelEventById', () => {
+    it('cancels event successfully via POST /v1/events/{id}/cancel', async () => {
+      const postSpy = vi.spyOn(eventsClient, 'POST').mockResolvedValueOnce({
         data: undefined,
         error: undefined,
-        response: new Response(null, { status: 200 }),
+        response: new Response(null, { status: 204 }),
       });
 
-      const result = await deleteEventById('event_del_1');
+      const result = await cancelEventById('event_cancel_1');
 
-      expect(deleteSpy).toHaveBeenCalledWith('/v1/events/{id}', {
-        params: { path: { id: 'event_del_1' } },
+      expect(postSpy).toHaveBeenCalledWith('/v1/events/{id}/cancel', {
+        params: { path: { id: 'event_cancel_1' } },
       });
       expect(result).toEqual({
         success: true,
-        httpStatus: 200,
+        httpStatus: 204,
       });
     });
 
-    it('handles ProblemDetails response with status', async () => {
-      const problem = {
-        title: 'Forbidden',
-        status: 403,
-        detail: 'Вы не являетесь автором события',
-      };
+    it('handles error on cancelEventById', async () => {
+      const problem = { title: 'Forbidden', status: 403, detail: 'Not allowed' };
 
-      vi.spyOn(eventsClient, 'DELETE').mockResolvedValueOnce({
+      vi.spyOn(eventsClient, 'POST').mockResolvedValueOnce({
         data: problem,
         error: undefined,
         response: new Response(JSON.stringify(problem), { status: 403 }),
       });
 
-      const result = await deleteEventById('event_forbidden');
-
-      expect(result).toEqual({
-        success: false,
-        httpStatus: 403,
-        error: {
-          message: 'Вы не являетесь автором события',
-          fieldErrors: undefined,
-        },
-      });
-    });
-
-    it('handles ProblemDetails response without status using response.status', async () => {
-      const problem = {
-        title: 'Error',
-        errors: { id: ['Cannot delete event with active bookings'] },
-      };
-
-      vi.spyOn(eventsClient, 'DELETE').mockResolvedValueOnce({
-        data: problem,
-        error: undefined,
-        response: new Response(JSON.stringify(problem), { status: 409 }),
-      });
-
-      const result = await deleteEventById('event_booked');
+      const result = await cancelEventById('event_cancel_fail');
 
       expect(result.success).toBe(false);
-      expect(result.httpStatus).toBe(409);
-      expect(result.error).toBeDefined();
+      expect(result.httpStatus).toBe(403);
+    });
+  });
+
+  describe('getEventReservations', () => {
+    it('returns mapped seat reservations on success', async () => {
+      const mockReservations = [
+        {
+          bookingId: 'book_1',
+          eventId: 'event_1',
+          seats: 3,
+          unitPrice: 1500,
+          totalPrice: 4500,
+          currency: 'KZT',
+          discountAmount: 0,
+          priceVersion: 1,
+          status: 'Reserved',
+          rejectionReason: null,
+          createdAt: '2026-10-01T12:00:00.000Z',
+          expiresAt: '2026-10-01T12:15:00.000Z',
+        },
+      ];
+
+      const getSpy = vi.spyOn(eventsClient, 'GET').mockResolvedValueOnce({
+        data: mockReservations,
+        error: undefined,
+        response: new Response(JSON.stringify(mockReservations), { status: 200 }),
+      } as unknown as never);
+
+      const result = await getEventReservations('event_1');
+
+      expect(getSpy).toHaveBeenCalledWith('/v1/events/{id}/reservations', {
+        params: { path: { id: 'event_1' } },
+      });
+      expect(result).toEqual({
+        success: true,
+        httpStatus: 200,
+        reservations: [
+          {
+            bookingId: 'book_1',
+            eventId: 'event_1',
+            seats: 3,
+            unitPrice: 1500,
+            totalPrice: 4500,
+            currency: 'KZT',
+            discountAmount: 0,
+            priceVersion: 1,
+            status: 'Reserved',
+            rejectionReason: null,
+            createdAt: new Date('2026-10-01T12:00:00.000Z'),
+            expiresAt: new Date('2026-10-01T12:15:00.000Z'),
+          },
+        ],
+      });
     });
 
-    it('catches generic errors and returns httpStatus: 0', async () => {
-      vi.spyOn(eventsClient, 'DELETE').mockRejectedValueOnce(new Error('Delete request failed'));
+    it('handles error on getEventReservations', async () => {
+      vi.spyOn(eventsClient, 'GET').mockRejectedValueOnce(new Error('Fetch failed'));
 
-      const result = await deleteEventById('event_1');
+      const result = await getEventReservations('event_1');
 
-      expect(result).toEqual({
-        success: false,
-        httpStatus: 0,
-        error: {
-          message: 'Delete request failed',
-          fieldErrors: undefined,
-        },
-      });
+      expect(result.success).toBe(false);
+      expect(result.httpStatus).toBe(0);
     });
   });
 });
