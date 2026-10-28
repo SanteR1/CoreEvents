@@ -2,136 +2,103 @@ using System.Text.Json;
 using Bookings.Application.Abstractions.Messaging;
 using Bookings.Application.Commands;
 using CoreEvents.Shared.Contracts.Events;
+using CoreEvents.Shared.Contracts.Exceptions;
+using CoreEvents.Shared.Contracts.Registry;
 using CoreEvents.Shared.Contracts.Serialization;
 using MediatR;
 
 namespace Bookings.Infrastructure.Messaging;
 
-internal sealed class EventServiceResponseDispatcher(IMediator mediator) : IIntegrationEventDispatcher
+internal sealed class EventServiceResponseDispatcher : IIntegrationEventDispatcher
 {
-    public async Task DispatchAsync(string eventType, string payload, CancellationToken ct)
+    private readonly Dictionary<string, Func<string, CancellationToken, Task>> _handlers
+        = new(StringComparer.Ordinal);
+    private readonly IIntegrationEventRegistry _registry;
+
+    public EventServiceResponseDispatcher(IMediator mediator, IIntegrationEventRegistry? registry = null)
     {
-        switch (eventType)
+        _registry = registry ?? new IntegrationEventRegistry();
+        RegisterBookingResponses(mediator);
+        RegisterEventLifecycleResponses(mediator);
+    }
+
+    private void RegisterBookingResponses(IMediator mediator)
+    {
+        Register<BookingReservationAccepted>((e, ct) =>
+            mediator.Send(new BookingReservationAcceptedCommand(
+                e.BookingId,
+                e.EventId,
+                e.Seats,
+                e.UnitPrice,
+                e.TotalPrice,
+                e.Currency,
+                e.DiscountAmount,
+                e.PriceVersion,
+                e.ExpiresAt), ct));
+
+        Register<BookingReservationRejected>((e, ct) =>
+            mediator.Send(new RejectBookingCommand(e.BookingId, e.RejectionReason), ct));
+
+        Register<BookingReservationReleased>((e, ct) =>
+            mediator.Send(new ApplyBookingCancellationCommand(e.BookingId), ct));
+
+        Register<EventBookingValidationCompleted>((e, ct) =>
         {
-            case nameof(BookingReservationAccepted):
-                await DispatchReservationAcceptedAsync(payload, ct);
-                break;
-            case nameof(BookingReservationRejected):
-                await DispatchReservationRejectedAsync(payload, ct);
-                break;
-            case nameof(BookingReservationReleased):
-                await DispatchReservationReleasedAsync(payload, ct);
-                break;
-            case nameof(EventCreated):
-                await DispatchEventCreatedAsync(payload, ct);
-                break;
-            case nameof(EventUpdated):
-                await DispatchEventUpdatedAsync(payload, ct);
-                break;
-            case nameof(EventCancelled):
-                await DispatchEventCancelledAsync(payload, ct);
-                break;
-            case nameof(EventBookingValidationCompleted):
-                await DispatchLegacyValidationAsync(payload, ct);
-                break;
-            case nameof(EventBookingCancellationCompleted):
-                await DispatchLegacyCancellationAsync(payload, ct);
-                break;
-            default:
-                throw new InvalidOperationException($"Неизвестный тип события: {eventType}");
-        }
-    }
-
-    private async Task DispatchReservationAcceptedAsync(string payload, CancellationToken ct)
-    {
-        var e = Deserialize<BookingReservationAccepted>(payload);
-        var command = new BookingReservationAcceptedCommand(
-            e.BookingId,
-            e.EventId,
-            e.Seats,
-            e.UnitPrice,
-            e.TotalPrice,
-            e.Currency,
-            e.DiscountAmount,
-            e.PriceVersion,
-            e.ExpiresAt);
-        await mediator.Send(command, ct);
-    }
-
-    private async Task DispatchReservationRejectedAsync(string payload, CancellationToken ct)
-    {
-        var e = Deserialize<BookingReservationRejected>(payload);
-        await mediator.Send(new RejectBookingCommand(e.BookingId, e.RejectionReason), ct);
-    }
-
-    private async Task DispatchReservationReleasedAsync(string payload, CancellationToken ct)
-    {
-        var e = Deserialize<BookingReservationReleased>(payload);
-        await mediator.Send(new ApplyBookingCancellationCommand(e.BookingId), ct);
-    }
-
-    private async Task DispatchEventCreatedAsync(string payload, CancellationToken ct)
-    {
-        var e = Deserialize<EventCreated>(payload);
-        var command = new SyncEventCreatedCommand(
-            e.EventId,
-            e.Title,
-            e.StartAt,
-            e.EndAt,
-            e.UnitPrice,
-            e.Currency,
-            e.PriceVersion,
-            e.TotalSeats,
-            e.IsActive,
-            e.Version,
-            e.CreatedAt);
-        await mediator.Send(command, ct);
-    }
-
-    private async Task DispatchEventUpdatedAsync(string payload, CancellationToken ct)
-    {
-        var e = Deserialize<EventUpdated>(payload);
-        var command = new SyncEventUpdatedCommand(
-            e.EventId,
-            e.Title,
-            e.StartAt,
-            e.EndAt,
-            e.UnitPrice,
-            e.Currency,
-            e.PriceVersion,
-            e.TotalSeats,
-            e.IsActive,
-            e.Version,
-            e.UpdatedAt);
-        await mediator.Send(command, ct);
-    }
-
-    private async Task DispatchEventCancelledAsync(string payload, CancellationToken ct)
-    {
-        var e = Deserialize<EventCancelled>(payload);
-        var command = new SyncEventCancelledCommand(e.EventId, e.Reason, e.Version, e.CancelledAt);
-        await mediator.Send(command, ct);
-    }
-
-    private async Task DispatchLegacyValidationAsync(string payload, CancellationToken ct)
-    {
-        var e = Deserialize<EventBookingValidationCompleted>(payload);
-        if (e.CanBeBooked)
-        {
-            await mediator.Send(new ConfirmBookingCommand(e.EventId, e.BookingId), ct);
-        }
-        else
-        {
+            if (e.CanBeBooked)
+            {
+                return mediator.Send(new ConfirmBookingCommand(e.EventId, e.BookingId), ct);
+            }
             var reason = e.FailureReason.GetValueOrDefault();
-            await mediator.Send(new RejectBookingCommand(e.BookingId, reason), ct);
-        }
+            return mediator.Send(new RejectBookingCommand(e.BookingId, reason), ct);
+        });
+
+        Register<EventBookingCancellationCompleted>((e, ct) =>
+            mediator.Send(new ApplyBookingCancellationCommand(e.BookingId), ct));
     }
 
-    private async Task DispatchLegacyCancellationAsync(string payload, CancellationToken ct)
+    private void RegisterEventLifecycleResponses(IMediator mediator)
     {
-        var e = Deserialize<EventBookingCancellationCompleted>(payload);
-        await mediator.Send(new ApplyBookingCancellationCommand(e.BookingId), ct);
+        Register<EventCreated>((e, ct) =>
+            mediator.Send(new SyncEventCreatedCommand(
+                e.EventId,
+                e.Title,
+                e.StartAt,
+                e.EndAt,
+                e.UnitPrice,
+                e.Currency,
+                e.PriceVersion,
+                e.TotalSeats,
+                e.IsActive,
+                e.Version,
+                e.CreatedAt), ct));
+
+        Register<EventUpdated>((e, ct) =>
+            mediator.Send(new SyncEventUpdatedCommand(
+                e.EventId,
+                e.Title,
+                e.StartAt,
+                e.EndAt,
+                e.UnitPrice,
+                e.Currency,
+                e.PriceVersion,
+                e.TotalSeats,
+                e.IsActive,
+                e.Version,
+                e.UpdatedAt), ct));
+
+        Register<EventCancelled>((e, ct) =>
+            mediator.Send(new SyncEventCancelledCommand(e.EventId, e.Reason, e.Version, e.CancelledAt), ct));
     }
+
+    public IReadOnlyCollection<string> SupportedEventTypes => _handlers.Keys;
+
+    public Task DispatchAsync(string eventType, string payload, CancellationToken ct) =>
+        _handlers.TryGetValue(eventType, out var h)
+            ? h(payload, ct)
+            : throw new UnknownEventTypeException(eventType);
+
+    private void Register<T>(Func<T, CancellationToken, Task> handle) where T : IIntegrationEvent =>
+        _handlers[_registry.GetName<T>()] = (p, ct) => handle(Deserialize<T>(p), ct);
 
     private static T Deserialize<T>(string payload) =>
         JsonSerializer.Deserialize<T>(payload, IntegrationEventJsonOptions.Default)

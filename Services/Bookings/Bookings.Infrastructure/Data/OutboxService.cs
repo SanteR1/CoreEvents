@@ -4,12 +4,20 @@ using Bookings.Application.Abstractions.Messaging;
 using Bookings.Infrastructure.Data.Entities;
 using Bookings.Infrastructure.Messaging.Kafka;
 using CoreEvents.Shared.Contracts.Events;
+using CoreEvents.Shared.Contracts.Infrastructure;
+using CoreEvents.Shared.Contracts.Registry;
 using CoreEvents.Shared.Contracts.Serialization;
 
 namespace Bookings.Infrastructure.Data;
 
-internal sealed class OutboxService(BookingsDbContext dbContext, IEventTopicMapper topicMapper, ICorrelationContext correlationContext) : IOutboxService
+internal sealed class OutboxService(
+    BookingsDbContext dbContext,
+    IEventTopicMapper topicMapper,
+    ICorrelationContext correlationContext,
+    IIntegrationEventRegistry? registry = null) : IOutboxService
 {
+    private readonly IIntegrationEventRegistry _registry = registry ?? new IntegrationEventRegistry();
+
     public void Publish<T>(T integrationEvent, string partitionKey)
     {
         var metadata = new EventMetadata
@@ -18,7 +26,7 @@ internal sealed class OutboxService(BookingsDbContext dbContext, IEventTopicMapp
             CorrelationId = correlationContext.CorrelationId,
             CausationId = correlationContext.CausationId,
             CreatedAt = DateTimeOffset.UtcNow,
-            EventType = typeof(T).Name
+            EventType = _registry.GetName(typeof(T))
         };
 
         var headers = EventMetadataHeaderMapper.ToHeaderDictionary(metadata);

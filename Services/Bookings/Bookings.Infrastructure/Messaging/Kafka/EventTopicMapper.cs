@@ -1,5 +1,6 @@
 using Bookings.Application.Abstractions.Messaging;
 using CoreEvents.Shared.Contracts.Events;
+using CoreEvents.Shared.Contracts.Infrastructure;
 
 namespace Bookings.Infrastructure.Messaging.Kafka;
 

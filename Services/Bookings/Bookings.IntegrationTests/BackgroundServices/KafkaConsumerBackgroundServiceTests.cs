@@ -7,6 +7,7 @@ using Bookings.IntegrationTests.Infrastructure.Bases;
 using Bookings.IntegrationTests.Infrastructure.Factories;
 using Confluent.Kafka;
 using CoreEvents.Shared.Contracts.Events;
+using CoreEvents.Shared.Contracts.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -42,7 +43,7 @@ public class KafkaConsumerBackgroundServiceTests(IntegrationTestFactory factory)
             { "correlationId", Encoding.UTF8.GetBytes(correlationId.ToString()) },
             { "createdAt", Encoding.UTF8.GetBytes(DateTimeOffset.UtcNow.ToString("O")) },
             { "causationId", Encoding.UTF8.GetBytes(causationId.ToString()) },
-            { "eventType", Encoding.UTF8.GetBytes("EventBookingValidationCompleted") }
+            { "eventType", Encoding.UTF8.GetBytes("event.booking-validation-completed.v1") }
         };
 
         var message = new Message<string, string>
@@ -83,7 +84,7 @@ public class KafkaConsumerBackgroundServiceTests(IntegrationTestFactory factory)
 
         inboxMessage.CorrelationId.Should().Be(correlationId);
         inboxMessage.CausationId.Should().Be(causationId);
-        inboxMessage.MessageType.Should().Be("EventBookingValidationCompleted");
+        inboxMessage.MessageType.Should().Be("event.booking-validation-completed.v1");
         inboxMessage.Topic.Should().Be(KafkaTopics.EventConfirmed);
         inboxMessage.MessageKey.Should().Be(eventId.ToString());
 
