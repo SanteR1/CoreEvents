@@ -1,4 +1,5 @@
 using CoreEvents.Shared.Contracts.Events;
+using CoreEvents.Shared.Contracts.Infrastructure;
 using Events.Application.Abstractions.Messaging;
 
 namespace Events.Infrastructure.Messaging.Kafka;

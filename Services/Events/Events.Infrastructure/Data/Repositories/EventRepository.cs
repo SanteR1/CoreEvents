@@ -67,6 +67,7 @@ internal sealed class EventRepository : IEventRepository
         }
         catch (DbUpdateConcurrencyException ex)
         {
+            _context.ChangeTracker.Clear();
             // Пробрасываем доменное исключение в слой Application
             throw new ConcurrencyException("Обнаружена конкурентная модификация данных.", ex);
         }

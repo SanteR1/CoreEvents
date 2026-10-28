@@ -13,7 +13,7 @@ public record SeatReservationResponseDto(
     string Currency,
     decimal DiscountAmount,
     long PriceVersion,
-    SeatReservationStatus Status,
+    SeatsReservationStatus Status,
     ValidationFailureReason? RejectionReason,
     DateTimeOffset CreatedAt,
     DateTimeOffset? ExpiresAt

@@ -40,6 +40,14 @@ internal sealed class SeatReservationRepository : ISeatReservationRepository
 
     public async Task<int> SaveChangesAsync(CancellationToken ct = default)
     {
-        return await _context.SaveChangesAsync(ct);
+        try
+        {
+            return await _context.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            _context.ChangeTracker.Clear();
+            throw new Events.Domain.Exceptions.ConcurrencyException("Обнаружена конкурентная модификация данных.", ex);
+        }
     }
 }

@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text;
+using CoreEvents.Shared.Contracts.Registry;
 using Events.Application.Abstractions;
 using Events.Application.Abstractions.Messaging;
 using Events.Application.Abstractions.Persistence;
@@ -24,16 +25,46 @@ namespace Microsoft.Extensions.DependencyInjection;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
+    public static IServiceCollection AddInfrastructureServices(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        IHostEnvironment environment)
     {
         var currentAssembly = Assembly.GetExecutingAssembly();
         services.AddResiliencePipelines(currentAssembly);
 
         services.AddSingleton<ICorrelationContext, CorrelationContext>();
         services.AddSingleton<IEventTopicMapper, EventTopicMapper>();
+        services.AddSingleton<IIntegrationEventRegistry>(new IntegrationEventRegistry());
 
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IInboxRepository, InboxRepository>();
         services.AddScoped<IOutboxService, OutboxService>();
 
+        services.AddJwtAuthentication(configuration);
+
+        services.AddHostedService<OutboxBackgroundWorker>();
+        services.AddHostedService<KafkaConsumerBackgroundService>();
+
+        services.AddOptions<KafkaOptions>()
+            .Bind(configuration.GetSection("Kafka"))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        services.AddAuthorization();
+        services.AddRedis(configuration);
+        services.AddDataBase(configuration, environment);
+        services.AddScoped<IEventRepository, EventRepository>();
+        services.AddScoped<ISeatReservationRepository, SeatReservationRepository>();
+        services.AddSingleton<IMessageProducer, MessageProducer>();
+        services.AddScoped<IIntegrationEventDispatcher, BookingRequestDispatcher>();
+        services.AddSingleton<IExceptionAnalyzer, InfrastructureExceptionAnalyzer>();
+
+        return services;
+    }
+
+    private static void AddJwtAuthentication(this IServiceCollection services, IConfiguration configuration)
+    {
         services.AddOptions<JwtOptions>()
             .Bind(configuration.GetSection(JwtOptions.SectionName))
             .ValidateDataAnnotations()
@@ -66,26 +97,8 @@ public static class DependencyInjection
                         Encoding.UTF8.GetBytes(jwtOptions.SecretKey))
                 };
             });
-        services.AddHostedService<OutboxBackgroundWorker>();
-        services.AddHostedService<KafkaConsumerBackgroundService>();
-
-        services.AddOptions<KafkaOptions>()
-            .Bind(configuration.GetSection("Kafka"))
-            .ValidateDataAnnotations()
-            .ValidateOnStart();
-
-        services.AddAuthorization();
-        services.AddRedis(configuration);
-        services.AddDataBase(configuration, environment);
-        services.AddScoped<IEventRepository, EventRepository>();
-        services.AddScoped<ISeatReservationRepository, SeatReservationRepository>();
-        services.AddSingleton<IMessageProducer, MessageProducer>();
-        services.AddScoped<IIntegrationEventDispatcher, BookingRequestDispatcher>();
-        services.AddSingleton<IExceptionAnalyzer, InfrastructureExceptionAnalyzer>();
-        services.AddRedis(configuration);
-
-        return services;
     }
+
     private static void AddDataBase(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
         var connectionString = configuration.GetConnectionString("DefaultConnection")

@@ -106,6 +106,10 @@ namespace Events.Infrastructure.Migrations
 
                     b.ToTable("events", null, t =>
                         {
+                            t.HasCheckConstraint("CK_events_available_seats_le_total", "\"available_seats\" <= \"total_seats\"");
+
+                            t.HasCheckConstraint("CK_events_available_seats_non_negative", "\"available_seats\" >= 0");
+
                             t.HasCheckConstraint("CK_events_dates", "\"start_at\" < \"end_at\"");
                         });
                 });

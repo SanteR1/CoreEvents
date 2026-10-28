@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using Confluent.Kafka;
 using CoreEvents.Shared.Contracts.Events;
+using CoreEvents.Shared.Contracts.Infrastructure;
 using CoreEvents.Shared.Contracts.Serialization;
 
 namespace Events.Infrastructure.Messaging.Kafka;
@@ -35,6 +36,8 @@ internal static class EventMetadataHeaderMapper
         CreatedAt = DateTimeOffset.Parse(GetHeader(headers, "createdAt"), CultureInfo.InvariantCulture),
         EventType = GetHeader(headers, "eventType")
     };
+
+    public static string HeadersToJson(Headers headers) => SerializeHeaders(headers);
 
     // Полный дамп всех headers как есть — для хранения в Inbox/аудита,
     // в отличие от ParseMetadata, который вычленяет только известные 5 полей.

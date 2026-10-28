@@ -1,24 +1,37 @@
-using Events.Application.Abstractions.Caching;
+using Events.Application.Abstractions;
 using Events.Application.Abstractions.Messaging;
 using Events.Domain.DomainEvents;
-using MediatR;
 
 namespace Events.Application.Events;
 
-internal sealed class InvalidateEventCacheHandler : INotificationHandler<DomainEventNotification>
+internal sealed class InvalidateEventCacheHandler(
+    IOutboxService outboxService)
+    : IPreCommitHandler<SeatsReleased>,
+      IPreCommitHandler<SeatsReserved>,
+      IPreCommitHandler<EventCreated>,
+      IPreCommitHandler<EventCancelled>
 {
-    private readonly ICacheService _cacheService;
-
-    public InvalidateEventCacheHandler(ICacheService cacheService)
+    public Task Handle(SeatsReleased notification, CancellationToken ct)
     {
-        _cacheService = cacheService;
+        outboxService.AddCacheInvalidation(notification.EventId);
+        return Task.CompletedTask;
     }
 
-    public async Task Handle(
-        DomainEventNotification notification,
-        CancellationToken cancellationToken)
+    public Task Handle(SeatsReserved notification, CancellationToken ct)
     {
-        if (notification.DomainEvent is ICacheInvalidationEvent cacheEvent)
-            await _cacheService.DeleteAsync(CacheKeys.Event(cacheEvent.EventId), cancellationToken);
+        outboxService.AddCacheInvalidation(notification.EventId);
+        return Task.CompletedTask;
+    }
+
+    public Task Handle(EventCreated notification, CancellationToken ct)
+    {
+        outboxService.AddCacheInvalidation(notification.EventId);
+        return Task.CompletedTask;
+    }
+
+    public Task Handle(EventCancelled notification, CancellationToken ct)
+    {
+        outboxService.AddCacheInvalidation(notification.EventId);
+        return Task.CompletedTask;
     }
 }

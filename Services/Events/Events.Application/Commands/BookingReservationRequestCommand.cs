@@ -11,20 +11,29 @@ using MediatR;
 namespace Events.Application.Commands;
 
 [ResiliencePipeline(ResiliencePipelines.CommandConcurrency)]
-public record BookingReservationRequestCommand(Guid BookingId, Guid EventId, Guid UserId, int Seats) : ICommand<Unit>;
+public record BookingReservationRequestCommand(
+    Guid BookingId,
+    Guid EventId,
+    Guid UserId,
+    int Seats,
+    InboxEnvelope Inbox) : IInboxCommand
+{
+    public BookingReservationRequestCommand(Guid bookingId, Guid eventId, Guid userId, int seats)
+        : this(bookingId, eventId, userId, seats, InboxEnvelope.CreateDefault("booking.reservation-requested.v1")) { }
+}
 
 internal class BookingReservationRequestHandler(
     IEventRepository eventRepository,
     ISeatReservationRepository reservationRepository,
     IOutboxService outboxService,
-    ICorrelationContext correlationContext) : IRequestHandler<BookingReservationRequestCommand, Unit>
+    ICorrelationContext correlationContext) : IRequestHandler<BookingReservationRequestCommand, InboxProcessingResult>
 {
-    public async Task<Unit> Handle(BookingReservationRequestCommand request, CancellationToken cancellationToken)
+    public async Task<InboxProcessingResult> Handle(BookingReservationRequestCommand request, CancellationToken cancellationToken)
     {
         var existingReservation = await reservationRepository.GetByBookingIdAsync(request.BookingId, cancellationToken);
         if (existingReservation != null && TryHandleExistingReservation(request, existingReservation))
         {
-            return Unit.Value;
+            return InboxProcessingResult.Processed;
         }
 
         var correlationId = correlationContext.CorrelationId != Guid.Empty ? correlationContext.CorrelationId : request.BookingId;
@@ -34,30 +43,30 @@ internal class BookingReservationRequestHandler(
         if (@event == null || !@event.IsActive)
         {
             await RejectReservationAsync(request, ValidationFailureReason.EventNotFound, correlationId, causationId, cancellationToken);
-            return Unit.Value;
+            return InboxProcessingResult.Processed;
         }
 
         if (@event.StartAt <= DateTime.UtcNow)
         {
             await RejectReservationAsync(request, ValidationFailureReason.EventAlreadyPassed, correlationId, causationId, cancellationToken);
-            return Unit.Value;
+            return InboxProcessingResult.Processed;
         }
 
-        if (!@event.TryReserveSeats(request.Seats))
+        if (@event.TryReserveSeats(request.BookingId, request.Seats, DateTimeOffset.UtcNow) != ReserveSeatsResult.Reserved)
         {
             await RejectReservationAsync(request, ValidationFailureReason.SeatsNotAvailable, correlationId, causationId, cancellationToken);
-            return Unit.Value;
+            return InboxProcessingResult.Processed;
         }
 
         await AcceptReservationAsync(request, @event, correlationId, causationId, cancellationToken);
-        return Unit.Value;
+        return InboxProcessingResult.Processed;
     }
 
     private bool TryHandleExistingReservation(BookingReservationRequestCommand request, SeatReservation existingReservation)
     {
-        if (existingReservation.Status == SeatReservationStatus.Reserved)
+        if (existingReservation.Status == SeatsReservationStatus.Reserved)
         {
-            outboxService.Publish(
+            outboxService.AddIntegrationEvent(
                 new BookingReservationAccepted
                 {
                     BookingId = existingReservation.BookingId,
@@ -74,10 +83,10 @@ internal class BookingReservationRequestHandler(
             return true;
         }
 
-        if (existingReservation.Status == SeatReservationStatus.CancelledBeforeReservation ||
-            existingReservation.Status == SeatReservationStatus.Rejected)
+        if (existingReservation.Status == SeatsReservationStatus.CancelledBeforeReservation ||
+            existingReservation.Status == SeatsReservationStatus.Rejected)
         {
-            outboxService.Publish(
+            outboxService.AddIntegrationEvent(
                 new BookingReservationRejected
                 {
                     BookingId = request.BookingId,
@@ -102,7 +111,7 @@ internal class BookingReservationRequestHandler(
         reservationRepository.Add(rejected);
         await reservationRepository.SaveChangesAsync(ct);
 
-        outboxService.Publish(
+        outboxService.AddIntegrationEvent(
             new BookingReservationRejected
             {
                 BookingId = request.BookingId,
@@ -135,7 +144,7 @@ internal class BookingReservationRequestHandler(
         reservationRepository.Add(reservation);
         await eventRepository.SaveChangesAsync(ct);
 
-        outboxService.Publish(
+        outboxService.AddIntegrationEvent(
             new BookingReservationAccepted
             {
                 BookingId = reservation.BookingId,

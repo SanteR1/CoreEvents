@@ -13,7 +13,7 @@ public sealed class SeatReservation
     public string Currency { get; private set; } = "KZT";
     public decimal DiscountAmount { get; private set; }
     public long PriceVersion { get; private set; }
-    public SeatReservationStatus Status { get; private set; }
+    public SeatsReservationStatus Status { get; private set; }
     public ValidationFailureReason? RejectionReason { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset? UpdatedAt { get; private set; }
@@ -61,7 +61,7 @@ public sealed class SeatReservation
             Currency = string.IsNullOrWhiteSpace(currency) ? "KZT" : currency.Trim().ToUpperInvariant(),
             DiscountAmount = discountAmount,
             PriceVersion = priceVersion,
-            Status = SeatReservationStatus.Reserved,
+            Status = SeatsReservationStatus.Reserved,
             ExpiresAt = expiresAt,
             CreatedAt = DateTimeOffset.UtcNow,
             CorrelationId = correlationId,
@@ -87,7 +87,7 @@ public sealed class SeatReservation
             Currency = "KZT",
             DiscountAmount = 0.00m,
             PriceVersion = 1,
-            Status = SeatReservationStatus.Rejected,
+            Status = SeatsReservationStatus.Rejected,
             RejectionReason = reason,
             CreatedAt = DateTimeOffset.UtcNow,
             CorrelationId = correlationId,
@@ -112,7 +112,7 @@ public sealed class SeatReservation
             Currency = "KZT",
             DiscountAmount = 0.00m,
             PriceVersion = 1,
-            Status = SeatReservationStatus.CancelledBeforeReservation,
+            Status = SeatsReservationStatus.CancelledBeforeReservation,
             CreatedAt = DateTimeOffset.UtcNow,
             CorrelationId = correlationId,
             CausationId = causationId
@@ -121,12 +121,12 @@ public sealed class SeatReservation
 
     public bool Release()
     {
-        if (Status != SeatReservationStatus.Reserved)
+        if (Status != SeatsReservationStatus.Reserved)
         {
             return false;
         }
 
-        Status = SeatReservationStatus.Released;
+        Status = SeatsReservationStatus.Released;
         UpdatedAt = DateTimeOffset.UtcNow;
         return true;
     }

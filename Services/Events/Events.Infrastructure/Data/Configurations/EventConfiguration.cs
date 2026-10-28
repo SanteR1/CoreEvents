@@ -10,7 +10,12 @@ internal sealed class EventConfiguration : IEntityTypeConfiguration<Event>
     {
         builder.ToTable("events");
 
-        builder.ToTable(x => x.HasCheckConstraint("CK_events_dates", "\"start_at\" < \"end_at\""));
+        builder.ToTable(x =>
+        {
+            x.HasCheckConstraint("CK_events_dates", "\"start_at\" < \"end_at\"");
+            x.HasCheckConstraint("CK_events_available_seats_le_total", "\"available_seats\" <= \"total_seats\"");
+            x.HasCheckConstraint("CK_events_available_seats_non_negative", "\"available_seats\" >= 0");
+        });
 
         builder.HasKey(x => x.Id);
 

@@ -124,6 +124,7 @@ internal sealed class EventService : IEventService
             title: createDto.Title!,
             startAt: createDto.StartAt!.Value,
             endAt: createDto.EndAt!.Value,
+            now: DateTimeOffset.UtcNow,
             totalSeats: createDto.TotalSeats!.Value,
             description: createDto.Description,
             price: createDto.Price,
@@ -131,7 +132,7 @@ internal sealed class EventService : IEventService
 
         _eventRepository.Add(entity);
 
-        _outboxService.Publish(
+        _outboxService.AddIntegrationEvent(
             new EventCreated
             {
                 EventId = entity.Id,
@@ -166,7 +167,7 @@ internal sealed class EventService : IEventService
             updateDto.Price,
             updateDto.Currency);
 
-        _outboxService.Publish(
+        _outboxService.AddIntegrationEvent(
             new EventUpdated
             {
                 EventId = existing.Id,
@@ -196,9 +197,9 @@ internal sealed class EventService : IEventService
         var existing = await _eventRepository.GetByIdAsync(id, ct);
         if (existing == null) throw new EventNotFoundException(id);
 
-        existing.Cancel();
+        existing.Cancel(DateTimeOffset.UtcNow);
 
-        _outboxService.Publish(
+        _outboxService.AddIntegrationEvent(
             new EventCancelled
             {
                 EventId = existing.Id,

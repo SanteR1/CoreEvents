@@ -1,4 +1,5 @@
 using Events.Domain.DomainEvents;
+using Events.Domain.Enums;
 using Events.Domain.Exceptions;
 
 namespace Events.Domain.Entities;
@@ -52,6 +53,7 @@ public sealed class Event
         string? title,
         DateTime? startAt,
         DateTime? endAt,
+        DateTimeOffset now,
         int? totalSeats = null,
         string? description = null,
         decimal price = 0.00m,
@@ -59,7 +61,7 @@ public sealed class Event
     {
         ThrowIfNotValid(title, startAt, endAt, totalSeats, price);
 
-        return new Event(
+        var @event = new Event(
             id: Guid.NewGuid(),
             title: title!.Trim(),
             startAt: startAt!.Value,
@@ -68,6 +70,10 @@ public sealed class Event
             description: description,
             price: price,
             currency: currency);
+
+        @event.RaiseDomainEvent(new EventCreated(@event.Id, @event.Title, @event.TotalSeats, now));
+
+        return @event;
     }
 
     public void Update(
@@ -102,29 +108,42 @@ public sealed class Event
         Version++;
     }
 
-    public void Cancel()
+    public void Cancel(DateTimeOffset now)
     {
         if (!IsActive) return;
         IsActive = false;
         Version++;
+
+        RaiseDomainEvent(new EventCancelled(Id, now));
     }
 
-    public bool TryReserveSeats(int count = 1)
+    public ReserveSeatsResult TryReserveSeats(Guid bookingId, int count, DateTimeOffset now)
     {
-        if (!IsActive) return false;
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(count);
+        if (bookingId == Guid.Empty)
+            throw new ArgumentException("BookingId обязателен.", nameof(bookingId));
 
-        if (AvailableSeats < count) return false;
+        if (!IsActive) return Reject(SeatsReservationRejectionReason.EventInactive);
+        if (AvailableSeats < count) return Reject(SeatsReservationRejectionReason.InsufficientSeats);
         AvailableSeats -= count;
 
-        RaiseDomainEvent(new SeatsReserved(Id));
+        RaiseDomainEvent(new SeatsReserved(Id, bookingId, count, Price, Currency, now));
 
-        return true;
+        return ReserveSeatsResult.Reserved;
+
+        ReserveSeatsResult Reject(SeatsReservationRejectionReason reason)
+        {
+            RaiseDomainEvent(new SeatsReservationRejected(
+                Id, bookingId, count, AvailableSeats, reason, now));
+            return ReserveSeatsResult.Rejected;
+        }
     }
 
-    public bool ReleaseSeats(int count = 1)
+    public bool ReleaseSeats(Guid bookingId, int count, DateTimeOffset now)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(count);
+        if (bookingId == Guid.Empty)
+            throw new ArgumentException("BookingId обязателен.", nameof(bookingId));
 
         if (AvailableSeats + count > TotalSeats)
         {
@@ -133,8 +152,7 @@ public sealed class Event
 
         AvailableSeats += count;
 
-        RaiseDomainEvent(new SeatsReleased(Id));
-
+        RaiseDomainEvent(new SeatsReleased(Id, bookingId, count, now));
         return true;
     }
 

@@ -1,6 +1,6 @@
 namespace Events.Domain.Enums;
 
-public enum SeatReservationStatus
+public enum SeatsReservationStatus
 {
     Reserved = 0,
     Released = 1,
