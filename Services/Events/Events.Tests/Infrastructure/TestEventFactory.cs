@@ -12,14 +12,17 @@ public static class TestEventFactory
         DateTime? endAt = null,
         int seats = 10,
         decimal price = 0.00m,
-        string currency = "KZT")
+        string currency = "KZT",
+        DateTimeOffset? now = null)
     {
+        var currentNow = now ?? DateTimeOffset.UtcNow;
         return Event.Create(
             title: title,
-            description: description,
-            startAt: startAt ?? DateTime.UtcNow.AddDays(1),
-            endAt: endAt ?? DateTime.UtcNow.AddDays(1).AddHours(2),
+            startAt: startAt ?? currentNow.UtcDateTime.AddDays(1),
+            endAt: endAt ?? currentNow.UtcDateTime.AddDays(1).AddHours(2),
+            now: currentNow,
             totalSeats: seats,
+            description: description,
             price: price,
             currency: currency
         );

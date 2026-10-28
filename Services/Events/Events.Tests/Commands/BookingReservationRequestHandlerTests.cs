@@ -1,13 +1,14 @@
 using AwesomeAssertions;
 using CoreEvents.Shared.Contracts.Events;
 using Events.Application.Abstractions;
+using Events.Application.Abstractions.Messaging;
 using Events.Application.Abstractions.Repositories;
 using Events.Application.Commands;
 using Events.Domain.Entities;
 using Events.Domain.Enums;
 using Events.Tests.Infrastructure;
-using MediatR;
 using Moq;
+using Xunit;
 
 namespace Events.Tests.Commands;
 
@@ -56,7 +57,7 @@ public class BookingReservationRequestHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        result.Should().Be(Unit.Value);
+        result.Should().Be(InboxProcessingResult.Processed);
         @event.AvailableSeats.Should().Be(8);
 
         _reservationRepositoryMock.Verify(r => r.Add(It.Is<SeatReservation>(s =>
@@ -65,12 +66,10 @@ public class BookingReservationRequestHandlerTests
             s.Seats == 2 &&
             s.UnitPrice == 500m &&
             s.TotalPrice == 1000m &&
-            s.Status == SeatReservationStatus.Reserved)),
+            s.Status == SeatsReservationStatus.Reserved)),
             Times.Once);
 
-        _eventRepositoryMock.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
-
-        _outboxServiceMock.Verify(o => o.Publish(
+        _outboxServiceMock.Verify(o => o.AddIntegrationEvent(
             It.Is<BookingReservationAccepted>(e =>
                 e.BookingId == bookingId &&
                 e.EventId == eventId &&
@@ -99,9 +98,9 @@ public class BookingReservationRequestHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        result.Should().Be(Unit.Value);
+        result.Should().Be(InboxProcessingResult.Processed);
 
-        _outboxServiceMock.Verify(o => o.Publish(
+        _outboxServiceMock.Verify(o => o.AddIntegrationEvent(
             It.Is<BookingReservationRejected>(e =>
                 e.BookingId == command.BookingId &&
                 e.RejectionReason == ValidationFailureReason.EventNotFound),
@@ -129,9 +128,9 @@ public class BookingReservationRequestHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        result.Should().Be(Unit.Value);
+        result.Should().Be(InboxProcessingResult.Processed);
 
-        _outboxServiceMock.Verify(o => o.Publish(
+        _outboxServiceMock.Verify(o => o.AddIntegrationEvent(
             It.Is<BookingReservationRejected>(e =>
                 e.BookingId == command.BookingId &&
                 e.RejectionReason == ValidationFailureReason.EventNotFound),
@@ -158,10 +157,10 @@ public class BookingReservationRequestHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        result.Should().Be(Unit.Value);
+        result.Should().Be(InboxProcessingResult.Processed);
         @event.AvailableSeats.Should().Be(2); // Unchanged
 
-        _outboxServiceMock.Verify(o => o.Publish(
+        _outboxServiceMock.Verify(o => o.AddIntegrationEvent(
             It.Is<BookingReservationRejected>(e =>
                 e.BookingId == command.BookingId &&
                 e.RejectionReason == ValidationFailureReason.SeatsNotAvailable),
@@ -189,12 +188,12 @@ public class BookingReservationRequestHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        result.Should().Be(Unit.Value);
+        result.Should().Be(InboxProcessingResult.Processed);
 
         _eventRepositoryMock.Verify(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
         _reservationRepositoryMock.Verify(r => r.Add(It.IsAny<SeatReservation>()), Times.Never);
 
-        _outboxServiceMock.Verify(o => o.Publish(
+        _outboxServiceMock.Verify(o => o.AddIntegrationEvent(
             It.Is<BookingReservationAccepted>(e =>
                 e.BookingId == bookingId &&
                 e.EventId == eventId),
@@ -221,11 +220,11 @@ public class BookingReservationRequestHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        result.Should().Be(Unit.Value);
+        result.Should().Be(InboxProcessingResult.Processed);
 
         _eventRepositoryMock.Verify(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
 
-        _outboxServiceMock.Verify(o => o.Publish(
+        _outboxServiceMock.Verify(o => o.AddIntegrationEvent(
             It.Is<BookingReservationRejected>(e =>
                 e.BookingId == bookingId),
             eventId.ToString()),

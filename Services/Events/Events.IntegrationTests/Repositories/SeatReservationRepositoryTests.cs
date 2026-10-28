@@ -48,7 +48,7 @@ public class SeatReservationRepositoryTests(ApiOnlyIntegrationTestFactory factor
             inDb.UnitPrice.Should().Be(1000m);
             inDb.TotalPrice.Should().Be(2000m);
             inDb.Currency.Should().Be("KZT");
-            inDb.Status.Should().Be(SeatReservationStatus.Reserved);
+            inDb.Status.Should().Be(SeatsReservationStatus.Reserved);
         });
     }
 

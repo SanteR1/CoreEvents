@@ -264,7 +264,7 @@ public class EventServiceTests
         result.Should().BeTrue();
         existEvent.IsActive.Should().BeFalse();
         _eventRepositoryMock.Verify(repo => repo.GetByIdAsync(existEvent.Id, It.IsAny<CancellationToken>()), Times.Once);
-        _outboxServiceMock.Verify(o => o.Publish(
+        _outboxServiceMock.Verify(o => o.AddIntegrationEvent(
             It.Is<CoreEvents.Shared.Contracts.Events.EventCancelled>(e => e.EventId == existEvent.Id),
             existEvent.Id.ToString()), Times.Once);
         _eventRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -287,7 +287,7 @@ public class EventServiceTests
         result.Should().BeTrue();
         existEvent.IsActive.Should().BeFalse();
         _eventRepositoryMock.Verify(repo => repo.GetByIdAsync(existEvent.Id, It.IsAny<CancellationToken>()), Times.Once);
-        _outboxServiceMock.Verify(o => o.Publish(
+        _outboxServiceMock.Verify(o => o.AddIntegrationEvent(
             It.Is<CoreEvents.Shared.Contracts.Events.EventCancelled>(e => e.EventId == existEvent.Id),
             existEvent.Id.ToString()), Times.Once);
         _eventRepositoryMock.Verify(repo => repo.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);

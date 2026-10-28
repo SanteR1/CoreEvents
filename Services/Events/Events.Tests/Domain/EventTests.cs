@@ -115,9 +115,10 @@ public class EventTests
         // Arrange
         var eventEntity = TestEventFactory.Create();
         var initialVersion = eventEntity.Version;
+        var now = DateTimeOffset.UtcNow;
 
         // Act
-        eventEntity.Cancel();
+        eventEntity.Cancel(now);
 
         // Assert
         eventEntity.IsActive.Should().BeFalse();
@@ -125,17 +126,18 @@ public class EventTests
     }
 
     [Fact]
-    public void TryReserveSeats_WhenEventIsInactive_ShouldReturnFalse()
+    public void TryReserveSeats_WhenEventIsInactive_ShouldReturnRejected()
     {
         // Arrange
+        var now = DateTimeOffset.UtcNow;
         var eventEntity = TestEventFactory.Create(seats: 10);
-        eventEntity.Cancel();
+        eventEntity.Cancel(now);
 
         // Act
-        var result = eventEntity.TryReserveSeats(1);
+        var result = eventEntity.TryReserveSeats(Guid.NewGuid(), 1, now);
 
         // Assert
-        result.Should().BeFalse();
+        result.Should().Be(Events.Domain.Enums.ReserveSeatsResult.Rejected);
         eventEntity.AvailableSeats.Should().Be(10);
     }
 
@@ -143,16 +145,17 @@ public class EventTests
     public void TryReserveSeats_WhenSeatsAvailable_ShouldDecreaseAvailableSeats()
     {
         // Arrange
+        var now = DateTimeOffset.UtcNow;
         int seats = 10;
         int reserveSeats = 1;
         int availableSeats = 9;
         var eventEntity = TestEventFactory.Create(seats: seats);
 
         // Act
-        var result = eventEntity.TryReserveSeats(reserveSeats);
+        var result = eventEntity.TryReserveSeats(Guid.NewGuid(), reserveSeats, now);
 
         // Assert
-        result.Should().BeTrue();
+        result.Should().Be(Events.Domain.Enums.ReserveSeatsResult.Reserved);
         eventEntity.AvailableSeats.Should().Be(availableSeats);
     }
 
@@ -160,44 +163,47 @@ public class EventTests
     public void TryReserveSeats_ExactlyAllAvailableSeats_ShouldSetAvailableSeatsToZero()
     {
         // Arrange
+        var now = DateTimeOffset.UtcNow;
         var eventEntity = TestEventFactory.Create(seats: 5);
 
         // Act
-        var result = eventEntity.TryReserveSeats(5);
+        var result = eventEntity.TryReserveSeats(Guid.NewGuid(), 5, now);
 
         // Assert
-        result.Should().BeTrue();
+        result.Should().Be(Events.Domain.Enums.ReserveSeatsResult.Reserved);
         eventEntity.AvailableSeats.Should().Be(0);
     }
 
     [Fact]
-    public void TryReserveSeats_WhenNoSeatsLeft_ShouldReturnFalseAndNotChangeAvailableSeats()
+    public void TryReserveSeats_WhenNoSeatsLeft_ShouldReturnRejectedAndNotChangeAvailableSeats()
     {
         // Arrange
+        var now = DateTimeOffset.UtcNow;
         int seats = 1;
         var eventEntity = TestEventFactory.Create(seats: seats);
-        eventEntity.TryReserveSeats(1);
+        eventEntity.TryReserveSeats(Guid.NewGuid(), 1, now);
 
         // Act
-        var result = eventEntity.TryReserveSeats(1);
+        var result = eventEntity.TryReserveSeats(Guid.NewGuid(), 1, now);
 
         // Assert
-        result.Should().BeFalse();
+        result.Should().Be(Events.Domain.Enums.ReserveSeatsResult.Rejected);
         eventEntity.AvailableSeats.Should().Be(0);
     }
 
     [Fact]
-    public void TryReserveSeats_WhenRequestExceedsAvailable_ShouldReturnFalseAndKeepAvailableSeatsUnchanged()
+    public void TryReserveSeats_WhenRequestExceedsAvailable_ShouldReturnRejectedAndKeepAvailableSeatsUnchanged()
     {
         // Arrange
+        var now = DateTimeOffset.UtcNow;
         int seats = 5;
         var eventEntity = TestEventFactory.Create(seats: seats);
 
         // Act
-        var result = eventEntity.TryReserveSeats(6);
+        var result = eventEntity.TryReserveSeats(Guid.NewGuid(), 6, now);
 
         // Assert
-        result.Should().BeFalse();
+        result.Should().Be(Events.Domain.Enums.ReserveSeatsResult.Rejected);
         eventEntity.AvailableSeats.Should().Be(seats);
     }
 
@@ -207,10 +213,11 @@ public class EventTests
     public void TryReserveSeats_WithNonPositiveCount_ShouldThrowArgumentOutOfRangeException(int count)
     {
         // Arrange
+        var now = DateTimeOffset.UtcNow;
         var eventEntity = TestEventFactory.Create(seats: 5);
 
         // Act
-        Func<bool> act = () => eventEntity.TryReserveSeats(count);
+        Action act = () => eventEntity.TryReserveSeats(Guid.NewGuid(), count, now);
 
         // Assert
         act.Should().Throw<ArgumentOutOfRangeException>()
@@ -221,12 +228,14 @@ public class EventTests
     public void ReleaseSeats_WithValidAmount_ShouldIncreaseAvailableSeats()
     {
         // Arrange
+        var now = DateTimeOffset.UtcNow;
         int seats = 10;
         var eventEntity = TestEventFactory.Create(seats: seats);
-        eventEntity.TryReserveSeats(2);
+        var bookingId = Guid.NewGuid();
+        eventEntity.TryReserveSeats(bookingId, 2, now);
 
         // Act
-        var result = eventEntity.ReleaseSeats(1);
+        var result = eventEntity.ReleaseSeats(bookingId, 1, now);
 
         // Assert
         result.Should().BeTrue();
@@ -237,11 +246,12 @@ public class EventTests
     public void ReleaseSeats_WhenNothingWasReserved_ShouldReturnFalseAndNotExceedTotalSeats()
     {
         // Arrange
+        var now = DateTimeOffset.UtcNow;
         int seats = 10;
         var eventEntity = TestEventFactory.Create(seats: seats);
 
         // Act
-        var result = eventEntity.ReleaseSeats(1);
+        var result = eventEntity.ReleaseSeats(Guid.NewGuid(), 1, now);
 
         // Assert
         result.Should().BeFalse();
@@ -254,10 +264,11 @@ public class EventTests
     public void ReleaseSeats_WithNonPositiveCount_ShouldThrowArgumentOutOfRangeException(int count)
     {
         // Arrange
+        var now = DateTimeOffset.UtcNow;
         var eventEntity = TestEventFactory.Create(seats: 5);
 
         // Act
-        Func<bool> act = () => eventEntity.ReleaseSeats(count);
+        Action act = () => eventEntity.ReleaseSeats(Guid.NewGuid(), count, now);
 
         // Assert
         act.Should().Throw<ArgumentOutOfRangeException>()

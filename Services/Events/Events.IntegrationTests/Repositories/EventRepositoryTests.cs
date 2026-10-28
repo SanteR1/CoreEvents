@@ -17,7 +17,7 @@ public class EventRepositoryTests(ApiOnlyIntegrationTestFactory factory) : ApiOn
     public async Task AddAndSave_ViaRepository_ShouldPersistEvent()
     {
         // Arrange
-        var newEvent = Event.Create("Real Test", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(1).AddHours(1), 10);
+        var newEvent = Event.Create("Real Test", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(1).AddHours(1), DateTimeOffset.UtcNow, 10);
 
         // Act
         await ExecuteScopeAsync(sp =>
@@ -68,7 +68,7 @@ public class EventRepositoryTests(ApiOnlyIntegrationTestFactory factory) : ApiOn
         // Arrange
         var id = await ExecuteDbContextAsync(async ctx =>
         {
-            var e = Event.Create("To Delete", DateTime.UtcNow, DateTime.UtcNow.AddHours(1), 5);
+            var e = Event.Create("To Delete", DateTime.UtcNow, DateTime.UtcNow.AddHours(1), DateTimeOffset.UtcNow, 5);
             ctx.Events.Add(e);
             await ctx.SaveChangesAsync();
             return e.Id;
@@ -97,7 +97,7 @@ public class EventRepositoryTests(ApiOnlyIntegrationTestFactory factory) : ApiOn
         // Arrange
         await ExecuteDbContextAsync(async ctx =>
         {
-            var e = Event.Create("NoTrack", DateTime.UtcNow, DateTime.UtcNow.AddHours(1), 5);
+            var e = Event.Create("NoTrack", DateTime.UtcNow, DateTime.UtcNow.AddHours(1), DateTimeOffset.UtcNow, 5);
             ctx.Events.Add(e);
             await ctx.SaveChangesAsync();
         });
@@ -128,7 +128,7 @@ public class EventRepositoryTests(ApiOnlyIntegrationTestFactory factory) : ApiOn
             List<Event> events = new List<Event>(20);
             for (int i = 0; i < 20; i++)
             {
-                events.Add(Event.Create("Event " + i, fromDate, toDate, 10));
+                events.Add(Event.Create("Event " + i, fromDate, toDate, DateTimeOffset.UtcNow, 10));
             }
             ctx.Events.AddRange(events);
             await ctx.SaveChangesAsync();
@@ -170,7 +170,7 @@ public class EventRepositoryTests(ApiOnlyIntegrationTestFactory factory) : ApiOn
             List<Event> events = new List<Event>(27);
             for (int i = 0; i < 27; i++)
             {
-                events.Add(Event.Create("Event " + i, fromDate, toDate, 10));
+                events.Add(Event.Create("Event " + i, fromDate, toDate, DateTimeOffset.UtcNow, 10));
             }
             ctx.Events.AddRange(events);
             await ctx.SaveChangesAsync();
@@ -198,7 +198,7 @@ public class EventRepositoryTests(ApiOnlyIntegrationTestFactory factory) : ApiOn
         // Arrange
         var id = await ExecuteDbContextAsync(async ctx =>
         {
-            var e = Event.Create("Event Test", DateTime.UtcNow, DateTime.UtcNow.AddHours(1), 5);
+            var e = Event.Create("Event Test", DateTime.UtcNow, DateTime.UtcNow.AddHours(1), DateTimeOffset.UtcNow, 5);
             ctx.Events.Add(e);
             await ctx.SaveChangesAsync();
             return e.Id;
@@ -238,7 +238,7 @@ public class EventRepositoryTests(ApiOnlyIntegrationTestFactory factory) : ApiOn
         var dateEndAtUpdate = DateTime.UtcNow.AddDays(2);
         var id = await ExecuteDbContextAsync(async ctx =>
         {
-            var e = Event.Create("Old Title", DateTime.UtcNow, DateTime.UtcNow.AddHours(1), 5);
+            var e = Event.Create("Old Title", DateTime.UtcNow, DateTime.UtcNow.AddHours(1), DateTimeOffset.UtcNow, 5);
             ctx.Events.Add(e);
             await ctx.SaveChangesAsync();
             return e.Id;

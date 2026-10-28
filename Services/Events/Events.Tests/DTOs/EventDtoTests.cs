@@ -74,6 +74,7 @@ public class EventDtoTests
             title: "Default Currency Event",
             startAt: DateTime.UtcNow.AddDays(1),
             endAt: DateTime.UtcNow.AddDays(1).AddHours(2),
+            now: DateTimeOffset.UtcNow,
             totalSeats: 20
         );
 
@@ -111,7 +112,7 @@ public class EventDtoTests
         dto.UnitPrice.Should().Be(500m);
         dto.TotalPrice.Should().Be(1500m);
         dto.Currency.Should().Be("KZT");
-        dto.Status.Should().Be(SeatReservationStatus.Reserved);
+        dto.Status.Should().Be(SeatsReservationStatus.Reserved);
         dto.ExpiresAt.Should().Be(expiresAt);
     }
 

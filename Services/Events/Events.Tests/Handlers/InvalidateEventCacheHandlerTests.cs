@@ -1,53 +1,75 @@
-using Events.Application.Abstractions.Caching;
-using Events.Application.Abstractions.Messaging;
+using AwesomeAssertions;
+using Events.Application.Abstractions;
 using Events.Application.Events;
 using Events.Domain.DomainEvents;
 using Moq;
+using Xunit;
 
 namespace Events.Tests.Handlers;
 
 public class InvalidateEventCacheHandlerTests
 {
-    private readonly Mock<ICacheService> _cacheServiceMock;
+    private readonly Mock<IOutboxService> _outboxServiceMock = new();
     private readonly InvalidateEventCacheHandler _handler;
 
     public InvalidateEventCacheHandlerTests()
     {
-        _cacheServiceMock = new Mock<ICacheService>();
-        _handler = new InvalidateEventCacheHandler(_cacheServiceMock.Object);
+        _handler = new InvalidateEventCacheHandler(_outboxServiceMock.Object);
     }
 
     [Fact]
-    public async Task Handle_ShouldDeleteCache_WhenEventImplementsICacheInvalidationEvent()
+    public async Task Handle_SeatsReleased_ShouldAddCacheInvalidationToOutbox()
     {
         // Arrange
         var eventId = Guid.NewGuid();
-        var domainEvent = new SeatsReleased(eventId);
-        var notification = new DomainEventNotification(domainEvent);
+        var domainEvent = new SeatsReleased(eventId, Guid.NewGuid(), 2, DateTimeOffset.UtcNow);
 
         // Act
-        await _handler.Handle(notification, CancellationToken.None);
+        await _handler.Handle(domainEvent, CancellationToken.None);
 
         // Assert
-        _cacheServiceMock.Verify(
-            x => x.DeleteAsync(CacheKeys.Event(eventId), It.IsAny<CancellationToken>()),
-            Times.Once);
+        _outboxServiceMock.Verify(x => x.AddCacheInvalidation(eventId), Times.Once);
     }
 
     [Fact]
-    public async Task Handle_ShouldDoNothing_WhenEventIsNotRelatedToCache()
+    public async Task Handle_SeatsReserved_ShouldAddCacheInvalidationToOutbox()
     {
         // Arrange
         var eventId = Guid.NewGuid();
-        var irrelevantEvent = new EventCreated(eventId);
-        var notification = new DomainEventNotification(irrelevantEvent);
+        var domainEvent = new SeatsReserved(eventId, Guid.NewGuid(), 2, 100m, "KZT", DateTimeOffset.UtcNow);
 
         // Act
-        await _handler.Handle(notification, CancellationToken.None);
+        await _handler.Handle(domainEvent, CancellationToken.None);
 
         // Assert
-        _cacheServiceMock.Verify(
-            x => x.DeleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            Times.Never);
+        _outboxServiceMock.Verify(x => x.AddCacheInvalidation(eventId), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_EventCreated_ShouldAddCacheInvalidationToOutbox()
+    {
+        // Arrange
+        var eventId = Guid.NewGuid();
+        var domainEvent = new EventCreated(eventId, "Title", 100, DateTimeOffset.UtcNow);
+
+        // Act
+        await _handler.Handle(domainEvent, CancellationToken.None);
+
+        // Assert
+        _outboxServiceMock.Verify(x => x.AddCacheInvalidation(eventId), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_EventCancelled_ShouldAddCacheInvalidationToOutbox()
+    {
+        // Arrange
+        var eventId = Guid.NewGuid();
+        var domainEvent = new EventCancelled(eventId, DateTimeOffset.UtcNow);
+
+        // Act
+        await _handler.Handle(domainEvent, CancellationToken.None);
+
+        // Assert
+        _outboxServiceMock.Verify(x => x.AddCacheInvalidation(eventId), Times.Once);
     }
 }

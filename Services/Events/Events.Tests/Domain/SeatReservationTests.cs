@@ -32,7 +32,7 @@ public class SeatReservationTests
             causationId: causationId);
 
         // Assert
-        reservation.Status.Should().Be(SeatReservationStatus.Reserved);
+        reservation.Status.Should().Be(SeatsReservationStatus.Reserved);
         reservation.BookingId.Should().Be(bookingId);
         reservation.EventId.Should().Be(eventId);
         reservation.Seats.Should().Be(3);
@@ -119,7 +119,7 @@ public class SeatReservationTests
         reservation.Release();
 
         // Assert
-        reservation.Status.Should().Be(SeatReservationStatus.Released);
+        reservation.Status.Should().Be(SeatsReservationStatus.Released);
         reservation.UpdatedAt.Should().NotBeNull();
     }
 
@@ -152,7 +152,7 @@ public class SeatReservationTests
         var reservation = SeatReservation.CreateCancelledBeforeReservation(bookingId, eventId, 2, correlationId, causationId);
 
         // Assert
-        reservation.Status.Should().Be(SeatReservationStatus.CancelledBeforeReservation);
+        reservation.Status.Should().Be(SeatsReservationStatus.CancelledBeforeReservation);
         reservation.BookingId.Should().Be(bookingId);
         reservation.EventId.Should().Be(eventId);
         reservation.Seats.Should().Be(2);
@@ -166,7 +166,7 @@ public class SeatReservationTests
             Guid.NewGuid(), Guid.NewGuid(), 1, ValidationFailureReason.SeatsNotAvailable, Guid.NewGuid(), Guid.NewGuid());
 
         // Assert
-        reservation.Status.Should().Be(SeatReservationStatus.Rejected);
+        reservation.Status.Should().Be(SeatsReservationStatus.Rejected);
         reservation.RejectionReason.Should().Be(ValidationFailureReason.SeatsNotAvailable);
     }
 }

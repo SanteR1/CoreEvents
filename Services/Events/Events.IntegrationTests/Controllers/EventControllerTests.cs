@@ -364,6 +364,7 @@ public sealed class EventControllerTests(ApiOnlyIntegrationTestFactory factory) 
             "Cheap Event",
             DateTime.UtcNow.AddDays(1),
             DateTime.UtcNow.AddDays(1).AddHours(2),
+            now: DateTimeOffset.UtcNow,
             totalSeats: 10,
             price: 500m,
             currency: "KZT");
@@ -372,6 +373,7 @@ public sealed class EventControllerTests(ApiOnlyIntegrationTestFactory factory) 
             "Expensive Event",
             DateTime.UtcNow.AddDays(2),
             DateTime.UtcNow.AddDays(2).AddHours(2),
+            now: DateTimeOffset.UtcNow,
             totalSeats: 10,
             price: 2500m,
             currency: "KZT");
@@ -401,6 +403,7 @@ public sealed class EventControllerTests(ApiOnlyIntegrationTestFactory factory) 
             "Valid Event",
             DateTime.UtcNow.AddDays(1),
             DateTime.UtcNow.AddDays(1).AddHours(2),
+            now: DateTimeOffset.UtcNow,
             totalSeats: 10,
             price: 1000m,
             currency: "KZT");
