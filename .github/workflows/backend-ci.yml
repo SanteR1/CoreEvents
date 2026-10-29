@@ -2,7 +2,7 @@ name: Backend CI/CD (.NET)
 
 on:
   push:
-    branches: [main, master, dev]
+    branches: [main, master]
     paths:
       - "Gateway/**"
       - "Services/**"
@@ -33,6 +33,8 @@ jobs:
   build-and-test:
     name: Build, Analyze & Test
     runs-on: ubuntu-latest
+    env:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
 
     steps:
       - name: Checkout repository
@@ -65,8 +67,31 @@ jobs:
         # - IDisposableAnalyzers
         # - .NET SDK CodeStyle / Recommended Analyzers
 
+      - name: Log in to Docker Hub
+        if: env.DOCKERHUB_USERNAME != ''
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+
+      - name: Pre-pull Docker images for Integration Tests
+        run: |
+          images=(
+            "postgres:18-alpine"
+            "confluentinc/cp-kafka:7.9.0"
+            "redis:8.10-alpine"
+          )
+          for img in "${images[@]}"; do
+            echo "Pulling $img..."
+            for i in {1..3}; do
+              docker pull "$img" && break || { echo "Pull failed, retry $i in 5s..."; sleep 5; }
+            done
+          done
+
       - name: Run Tests (Unit & Integration)
-        run: dotnet test CoreEvents.slnx --no-build -c Release
+        run: dotnet test CoreEvents.slnx --no-build -c Release --max-parallel-test-modules 1
 
       - name: Publish Gateway API
         run: dotnet publish Gateway/Gateway.Api/Gateway.Api.csproj -c Release --no-build -o publish/gateway-api /p:UseAppHost=false

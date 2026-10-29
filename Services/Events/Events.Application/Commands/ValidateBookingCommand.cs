@@ -4,21 +4,30 @@ using Events.Application.Abstractions.Messaging;
 using Events.Application.Abstractions.Repositories;
 using Events.Application.Abstractions.Resilience.Attributes;
 using Events.Application.Abstractions.Resilience.Constants;
+using Events.Domain.Enums;
 using MediatR;
 
 namespace Events.Application.Commands;
 
 [ResiliencePipeline(ResiliencePipelines.CommandConcurrency)]
-public record ValidateBookingCommand(Guid BookingId, Guid EventId, int Seats) : ICommand<Unit>;
-
-internal class ValidateBookingHandler(IEventRepository repository, IOutboxService outboxService) : IRequestHandler<ValidateBookingCommand, Unit>
+public record ValidateBookingCommand(
+    Guid BookingId,
+    Guid EventId,
+    int Seats,
+    InboxEnvelope Inbox) : IInboxCommand
 {
-    public async Task<Unit> Handle(ValidateBookingCommand request, CancellationToken cancellationToken)
+    public ValidateBookingCommand(Guid bookingId, Guid eventId, int seats)
+        : this(bookingId, eventId, seats, InboxEnvelope.CreateDefault("booking.created.v1")) { }
+}
+
+internal class ValidateBookingHandler(IEventRepository repository, IOutboxService outboxService) : IRequestHandler<ValidateBookingCommand, InboxProcessingResult>
+{
+    public async Task<InboxProcessingResult> Handle(ValidateBookingCommand request, CancellationToken cancellationToken)
     {
         var @event = await repository.GetByIdAsync(request.EventId, cancellationToken);
         if (@event == null)
         {
-            outboxService.Publish(
+            outboxService.AddIntegrationEvent(
                 new EventBookingValidationCompleted
                 {
                     BookingId = request.BookingId,
@@ -28,12 +37,12 @@ internal class ValidateBookingHandler(IEventRepository repository, IOutboxServic
                 },
                 partitionKey: request.EventId.ToString());
 
-            return Unit.Value;
+            return InboxProcessingResult.Processed;
         }
 
         if (@event.StartAt <= DateTime.UtcNow)
         {
-            outboxService.Publish(
+            outboxService.AddIntegrationEvent(
                 new EventBookingValidationCompleted
                 {
                     BookingId = request.BookingId,
@@ -43,12 +52,12 @@ internal class ValidateBookingHandler(IEventRepository repository, IOutboxServic
                 },
                 partitionKey: request.EventId.ToString());
 
-            return Unit.Value;
+            return InboxProcessingResult.Processed;
         }
 
-        if (!@event.TryReserveSeats(request.Seats))
+        if (@event.TryReserveSeats(request.BookingId, request.Seats, DateTimeOffset.UtcNow) != ReserveSeatsResult.Reserved)
         {
-            outboxService.Publish(
+            outboxService.AddIntegrationEvent(
                 new EventBookingValidationCompleted
                 {
                     BookingId = request.BookingId,
@@ -58,11 +67,11 @@ internal class ValidateBookingHandler(IEventRepository repository, IOutboxServic
                 },
                 partitionKey: request.EventId.ToString());
 
-            return Unit.Value;
+            return InboxProcessingResult.Processed;
         }
 
-        outboxService.Publish(
-            new EventBookingValidationCompleted()
+        outboxService.AddIntegrationEvent(
+            new EventBookingValidationCompleted
             {
                 BookingId = request.BookingId,
                 EventId = request.EventId,
@@ -70,6 +79,6 @@ internal class ValidateBookingHandler(IEventRepository repository, IOutboxServic
             },
             partitionKey: request.EventId.ToString());
 
-        return Unit.Value;
+        return InboxProcessingResult.Processed;
     }
 }

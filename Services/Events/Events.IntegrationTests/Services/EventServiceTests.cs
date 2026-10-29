@@ -22,7 +22,7 @@ public class EventServiceTests(ApiOnlyIntegrationTestFactory factory) : ApiOnlyI
                 var futureDate1 = DateTime.UtcNow.AddDays(1);
                 var futureDate2 = futureDate1.AddHours(1);
 
-                events.Add(Event.Create($"Large {i}", futureDate1, futureDate2, 5));
+                events.Add(Event.Create($"Large {i}", futureDate1, futureDate2, DateTimeOffset.UtcNow, 5));
             }
             await ctx.AddRangeAsync(events);
             await ctx.SaveChangesAsync();
@@ -55,7 +55,7 @@ public class EventServiceTests(ApiOnlyIntegrationTestFactory factory) : ApiOnlyI
                 var futureDate1 = DateTime.UtcNow;
                 var futureDate2 = DateTime.UtcNow.AddHours(1);
 
-                events.Add(Event.Create($"Event {i}", futureDate1, futureDate2, 5));
+                events.Add(Event.Create($"Event {i}", futureDate1, futureDate2, DateTimeOffset.UtcNow, 5));
             }
             await ctx.AddRangeAsync(events);
             await ctx.SaveChangesAsync();
@@ -103,7 +103,7 @@ public class EventServiceTests(ApiOnlyIntegrationTestFactory factory) : ApiOnlyI
                 var futureDate1 = DateTime.UtcNow.AddDays(i);
                 var futureDate2 = DateTime.UtcNow.AddDays(i + 1);
 
-                events.Add(Event.Create($"Event {i}", futureDate1, futureDate2, 5));
+                events.Add(Event.Create($"Event {i}", futureDate1, futureDate2, DateTimeOffset.UtcNow, 5));
             }
             await ctx.AddRangeAsync(events);
             await ctx.SaveChangesAsync();
@@ -131,7 +131,7 @@ public class EventServiceTests(ApiOnlyIntegrationTestFactory factory) : ApiOnlyI
         var dateEndAt = dateStartAt.AddHours(5);
         await ExecuteDbContextAsync(ctx =>
         {
-            var event1 = Event.Create("Target Event", dateStartAt, dateEndAt, 10);
+            var event1 = Event.Create("Target Event", dateStartAt, dateEndAt, DateTimeOffset.UtcNow, 10);
             ctx.Add(event1);
             return ctx.SaveChangesAsync();
         });
@@ -164,8 +164,8 @@ public class EventServiceTests(ApiOnlyIntegrationTestFactory factory) : ApiOnlyI
         var dateEndAt = dateStartAt.AddHours(2);
         await ExecuteDbContextAsync(ctx =>
         {
-            var event1 = Event.Create("Exact Match", dateStartAt, dateEndAt, 5);
-            var event2 = Event.Create("Exact Match", dateStartAt.AddDays(1), dateEndAt.AddDays(1).AddHours(2), 5);
+            var event1 = Event.Create("Exact Match", dateStartAt, dateEndAt, DateTimeOffset.UtcNow, 5);
+            var event2 = Event.Create("Exact Match", dateStartAt.AddDays(1), dateEndAt.AddDays(1).AddHours(2), DateTimeOffset.UtcNow, 5);
             ctx.AddRange(event1, event2);
             return ctx.SaveChangesAsync();
         });
@@ -198,8 +198,8 @@ public class EventServiceTests(ApiOnlyIntegrationTestFactory factory) : ApiOnlyI
         var filterDate = futureDate1.AddHours(1);
         await ExecuteDbContextAsync(ctx =>
         {
-            var event1 = Event.Create("Before", futureDate1, futureDate1.AddHours(2), 5);
-            var event2 = Event.Create("AtFrom", futureDate2, futureDate2.AddHours(2), 5);
+            var event1 = Event.Create("Before", futureDate1, futureDate1.AddHours(2), DateTimeOffset.UtcNow, 5);
+            var event2 = Event.Create("AtFrom", futureDate2, futureDate2.AddHours(2), DateTimeOffset.UtcNow, 5);
             ctx.AddRange(event1, event2);
             return ctx.SaveChangesAsync();
         });
@@ -230,8 +230,8 @@ public class EventServiceTests(ApiOnlyIntegrationTestFactory factory) : ApiOnlyI
         // Arrange
         await ExecuteDbContextAsync(ctx =>
         {
-            var event1 = Event.Create("TEST Event", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(2), 10);
-            var event2 = Event.Create("Event A", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(2), 10);
+            var event1 = Event.Create("TEST Event", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(2), DateTimeOffset.UtcNow, 10);
+            var event2 = Event.Create("Event A", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(2), DateTimeOffset.UtcNow, 10);
             ctx.AddRange(event1, event2);
             return ctx.SaveChangesAsync();
         });
@@ -259,8 +259,8 @@ public class EventServiceTests(ApiOnlyIntegrationTestFactory factory) : ApiOnlyI
         // Arrange
         await ExecuteDbContextAsync(ctx =>
         {
-            var event1 = Event.Create("Event A", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(2), 10);
-            var event2 = Event.Create("Event B", DateTime.UtcNow.AddDays(3), DateTime.UtcNow.AddDays(4), 10);
+            var event1 = Event.Create("Event A", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(2), DateTimeOffset.UtcNow, 10);
+            var event2 = Event.Create("Event B", DateTime.UtcNow.AddDays(3), DateTime.UtcNow.AddDays(4), DateTimeOffset.UtcNow, 10);
             ctx.AddRange(event1, event2);
             return ctx.SaveChangesAsync();
         });
@@ -285,8 +285,8 @@ public class EventServiceTests(ApiOnlyIntegrationTestFactory factory) : ApiOnlyI
         var filterDate = futureDate.AddHours(2);
         await ExecuteDbContextAsync(ctx =>
         {
-            var event1 = Event.Create("Inside", futureDate, filterDate, 5);
-            var event2 = Event.Create("Outside", futureDate.AddHours(1), futureDate.AddHours(3), 5);
+            var event1 = Event.Create("Inside", futureDate, filterDate, DateTimeOffset.UtcNow, 5);
+            var event2 = Event.Create("Outside", futureDate.AddHours(1), futureDate.AddHours(3), DateTimeOffset.UtcNow, 5);
             ctx.AddRange(event1, event2);
             return ctx.SaveChangesAsync();
         });

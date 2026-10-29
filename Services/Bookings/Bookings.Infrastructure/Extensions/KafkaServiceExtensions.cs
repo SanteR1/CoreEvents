@@ -2,6 +2,7 @@ using Bookings.Infrastructure.Messaging.Options;
 using Confluent.Kafka;
 using Confluent.Kafka.Admin;
 using CoreEvents.Shared.Contracts.Events;
+using CoreEvents.Shared.Contracts.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;

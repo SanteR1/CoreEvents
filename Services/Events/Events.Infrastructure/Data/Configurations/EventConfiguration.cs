@@ -10,7 +10,12 @@ internal sealed class EventConfiguration : IEntityTypeConfiguration<Event>
     {
         builder.ToTable("events");
 
-        builder.ToTable(x => x.HasCheckConstraint("CK_events_dates", "\"start_at\" < \"end_at\""));
+        builder.ToTable(x =>
+        {
+            x.HasCheckConstraint("CK_events_dates", "\"start_at\" < \"end_at\"");
+            x.HasCheckConstraint("CK_events_available_seats_le_total", "\"available_seats\" <= \"total_seats\"");
+            x.HasCheckConstraint("CK_events_available_seats_non_negative", "\"available_seats\" >= 0");
+        });
 
         builder.HasKey(x => x.Id);
 
@@ -55,6 +60,34 @@ internal sealed class EventConfiguration : IEntityTypeConfiguration<Event>
 
         builder.Property(x => x.TotalSeats)
             .HasColumnName("total_seats")
+            .IsRequired();
+
+        builder.Property(x => x.Price)
+            .HasColumnName("price")
+            .HasPrecision(18, 2)
+            .HasDefaultValue(0.00m)
+            .IsRequired();
+
+        builder.Property(x => x.Currency)
+            .HasColumnName("currency")
+            .HasMaxLength(3)
+            .HasDefaultValue("KZT")
+            .IsRequired();
+
+        builder.Property(x => x.PriceVersion)
+            .HasColumnName("price_version")
+            .HasDefaultValue(1L)
+            .IsRequired();
+
+        builder.Property(x => x.IsActive)
+            .HasColumnName("is_active")
+            .HasDefaultValue(true)
+            .HasSentinel(false)
+            .IsRequired();
+
+        builder.Property(x => x.Version)
+            .HasColumnName("version")
+            .HasDefaultValue(1L)
             .IsRequired();
     }
 }

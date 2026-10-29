@@ -3,6 +3,7 @@ using System.Text.Json;
 using AwesomeAssertions;
 using Confluent.Kafka;
 using CoreEvents.Shared.Contracts.Events;
+using CoreEvents.Shared.Contracts.Infrastructure;
 using Events.Infrastructure.Data;
 using Events.Infrastructure.Data.Entities;
 using Events.IntegrationTests.Infrastructure.Bases;
@@ -44,7 +45,7 @@ public class KafkaConsumerBackgroundServiceTests(IntegrationTestFactory factory)
             { "correlationId", Encoding.UTF8.GetBytes(correlationId.ToString()) },
             { "createdAt", Encoding.UTF8.GetBytes(DateTimeOffset.UtcNow.ToString("O")) },
             { "causationId", Encoding.UTF8.GetBytes(causationId.ToString()) },
-            { "eventType", Encoding.UTF8.GetBytes("BookingConfirmed") }
+            { "eventType", Encoding.UTF8.GetBytes("booking.confirmed.v1") }
         };
 
         var message = new Message<string, string>
@@ -85,7 +86,7 @@ public class KafkaConsumerBackgroundServiceTests(IntegrationTestFactory factory)
 
         inboxMessage.CorrelationId.Should().Be(correlationId);
         inboxMessage.CausationId.Should().Be(causationId);
-        inboxMessage.MessageType.Should().Be("BookingConfirmed");
+        inboxMessage.MessageType.Should().Be("booking.confirmed.v1");
         inboxMessage.Topic.Should().Be(KafkaTopics.BookingConfirmed);
         inboxMessage.MessageKey.Should().Be(eventId.ToString());
 

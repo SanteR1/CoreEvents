@@ -1,6 +1,7 @@
 namespace CoreEvents.Shared.Contracts.Events;
 
-public record EventBookingCancellationCompleted
+[EventName("event.booking-cancellation-completed.v1")]
+public record EventBookingCancellationCompleted : IIntegrationEvent
 {
     public required Guid BookingId { get; init; }
     public required Guid EventId { get; init; }

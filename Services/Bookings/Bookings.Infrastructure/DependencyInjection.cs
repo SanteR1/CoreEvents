@@ -67,6 +67,7 @@ public static class DependencyInjection
             });
         services.AddHostedService<OutboxBackgroundWorker>();
         services.AddHostedService<KafkaConsumerBackgroundService>();
+        services.AddHostedService<Bookings.Infrastructure.BackgroundServices.BookingExpirationBackgroundService>();
 
         services.AddOptions<KafkaOptions>()
             .Bind(configuration.GetSection("Kafka"))
@@ -76,6 +77,7 @@ public static class DependencyInjection
         services.AddAuthorization();
         services.AddDataBase(configuration, environment);
         services.AddScoped<IBookingRepository, BookingRepository>();
+        services.AddScoped<IEventProjectionRepository, EventProjectionRepository>();
         services.AddScoped<IIntegrationEventDispatcher, EventServiceResponseDispatcher>();
         services.AddSingleton<IMessageProducer, MessageProducer>();
         services.AddSingleton<IExceptionAnalyzer, InfrastructureExceptionAnalyzer>();

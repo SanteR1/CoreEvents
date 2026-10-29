@@ -4,5 +4,6 @@ public enum ValidationFailureReason
 {
     EventNotFound = 0,
     EventAlreadyPassed = 1,
-    SeatsNotAvailable = 2
+    SeatsNotAvailable = 2,
+    Timeout = 3
 }

@@ -63,6 +63,9 @@ describe('EditEventPage', () => {
     endAt: new Date('2026-11-10T16:00:00Z'),
     totalSeats: 30,
     availableSeats: 15,
+    price: 1500,
+    currency: 'KZT',
+    isActive: true,
   };
 
   beforeEach(() => {
@@ -218,6 +221,23 @@ describe('EditEventPage', () => {
             fieldErrors: {
               startAt: ['Некорректный формат даты начала'],
               endAt: ['Некорректный формат даты окончания'],
+            },
+          },
+        });
+
+        const argsNegativePrice = createActionArgs('ev-edit-1', {
+          title: 'Title',
+          startAt: '2026-11-10T10:00',
+          endAt: '2026-11-10T12:00',
+          price: '-100',
+          currency: 'TOOLONG',
+        });
+        const resNegativePrice = await action(argsNegativePrice);
+        expect(resNegativePrice).toMatchObject({
+          error: {
+            fieldErrors: {
+              price: ['Цена не может быть отрицательной'],
+              currency: ['Код валюты должен содержать максимум 3 символа'],
             },
           },
         });

@@ -10,7 +10,10 @@ public record EventResponseDto(
     DateTime StartAt,
     DateTime EndAt,
     int TotalSeats,
-    int AvailableSeats
+    int AvailableSeats,
+    decimal Price,
+    string Currency,
+    bool IsActive
 )
 {
     public static Expression<Func<Event, EventResponseDto>> ToDto => entity => new EventResponseDto(
@@ -20,7 +23,10 @@ public record EventResponseDto(
         entity.StartAt,
         entity.EndAt,
         entity.TotalSeats,
-        entity.AvailableSeats
+        entity.AvailableSeats,
+        entity.Price,
+        entity.Currency,
+        entity.IsActive
     );
 
     public static EventResponseDto FromEntity(Event entity) => new(
@@ -30,7 +36,10 @@ public record EventResponseDto(
         entity.StartAt,
         entity.EndAt,
         entity.TotalSeats,
-        entity.AvailableSeats
+        entity.AvailableSeats,
+        entity.Price,
+        entity.Currency,
+        entity.IsActive
     );
 
     public static EventResponseDto FromEntity(EventCacheDto entity) => new(
@@ -40,7 +49,10 @@ public record EventResponseDto(
         entity.StartAt,
         entity.EndAt,
         entity.TotalSeats,
-        entity.AvailableSeats
+        entity.AvailableSeats,
+        entity.Price,
+        entity.Currency,
+        entity.IsActive
     );
 
     public static IReadOnlyList<EventResponseDto> FromEntity(IEnumerable<Event> entity) =>

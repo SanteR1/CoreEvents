@@ -1,13 +1,17 @@
 import { Form, Link, useNavigation } from 'react-router';
 import { type BookingResponse } from '@/features/bookings/api/bookingsApi';
 import { useAuth } from '@/features/auth/hooks/useAuth';
+import { formatPrice } from '@/shared/lib/format/price';
 
 interface BookingDetailsProps {
   booking: BookingResponse;
   isCancellingInProgress?: boolean;
 }
 
-export const BookingDetails = ({ booking, isCancellingInProgress }: BookingDetailsProps) => {
+export const BookingDetails = ({
+  booking,
+  isCancellingInProgress = false,
+}: BookingDetailsProps) => {
   const navigation = useNavigation();
   const { user, isAdmin, isAuthenticated } = useAuth();
   const isCancelling =
@@ -16,13 +20,15 @@ export const BookingDetails = ({ booking, isCancellingInProgress }: BookingDetai
   const isOwner = Boolean(user?.id && booking.userId && user.id === booking.userId);
   const hasCancelPermission = isAdmin || (booking.userId ? isOwner : isAuthenticated);
 
+  const isCancellationPendingState =
+    isCancellingInProgress || booking.status === 'CancellationPending';
+
+  // На бэкенде отмена разрешена только для подтвержденных бронирований (Confirmed)
   const canCancel =
-    (booking.status === 'Pending' || booking.status === 'Confirmed') &&
-    !isCancellingInProgress &&
-    hasCancelPermission;
+    booking.status === 'Confirmed' && !isCancellingInProgress && hasCancelPermission;
 
   const getStatusBadge = (status: BookingResponse['status']) => {
-    if (isCancellingInProgress) {
+    if (isCancellationPendingState) {
       return (
         <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-950/50 dark:text-amber-300">
           <span className="relative flex h-1.5 w-1.5">
@@ -79,6 +85,7 @@ export const BookingDetails = ({ booking, isCancellingInProgress }: BookingDetai
       </div>
 
       <div className="space-y-4">
+        {/* Детальная информация */}
         <div className="grid grid-cols-1 gap-4 border-y border-(--border) py-4 text-sm sm:grid-cols-2">
           <div>
             <span className="text-xs font-medium text-(--text)">Событие:</span>
@@ -98,6 +105,28 @@ export const BookingDetails = ({ booking, isCancellingInProgress }: BookingDetai
           </div>
 
           <div>
+            <span className="text-xs font-medium text-(--text)">Количество мест:</span>
+            <p className="mt-1 text-base font-semibold text-(--text-h)">{booking.seats}</p>
+          </div>
+
+          <div>
+            <span className="text-xs font-medium text-(--text)">Итоговая стоимость:</span>
+            <p className="mt-1 text-base font-bold text-indigo-600 dark:text-indigo-400">
+              {formatPrice(booking.totalPrice, booking.currency)}
+            </p>
+            {booking.unitPrice > 0 && booking.seats > 1 && (
+              <p className="text-xs text-(--text)">
+                ({formatPrice(booking.unitPrice, booking.currency)} за место)
+              </p>
+            )}
+            {booking.discountAmount > 0 && (
+              <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                Скидка: {formatPrice(booking.discountAmount, booking.currency)}
+              </p>
+            )}
+          </div>
+
+          <div>
             <span className="text-xs font-medium text-(--text)">Дата создания:</span>
             <p className="mt-1 font-medium text-(--text-h)">
               {booking.createdAt ? new Date(booking.createdAt).toLocaleString('ru-RU') : '—'}
@@ -114,6 +143,30 @@ export const BookingDetails = ({ booking, isCancellingInProgress }: BookingDetai
           </div>
         </div>
 
+        {/* Уведомление о причине отклонения */}
+        {booking.status === 'Rejected' && booking.rejectionReason && (
+          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-400">
+            <span className="font-semibold">Причина отклонения: </span>
+            <span>{booking.rejectionReason}</span>
+          </div>
+        )}
+
+        {/* Уведомление о причине отмены */}
+        {booking.status === 'Cancelled' && (
+          <div className="rounded-xl border border-(--border) bg-(--code-bg) p-4 text-sm text-(--text)">
+            <p>
+              <span className="font-semibold text-(--text-h)">Причина отмены: </span>
+              <span>{booking.cancellationReason ?? 'Отменено пользователем'}</span>
+            </p>
+            {booking.cancellationRequestedAt && (
+              <p className="mt-1 text-xs">
+                Запрос на отмену:{' '}
+                {new Date(booking.cancellationRequestedAt).toLocaleString('ru-RU')}
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Секция действий */}
         <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
           <Link
@@ -123,7 +176,7 @@ export const BookingDetails = ({ booking, isCancellingInProgress }: BookingDetai
             ← К афише событий
           </Link>
 
-          {isCancellingInProgress && (
+          {isCancellationPendingState && (
             <span className="inline-flex items-center gap-2 rounded-lg bg-amber-50 px-3.5 py-2 text-xs font-medium text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
               <span className="relative flex h-2 w-2">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
@@ -143,6 +196,7 @@ export const BookingDetails = ({ booking, isCancellingInProgress }: BookingDetai
               }}
             >
               <input type="hidden" name="intent" value="cancel" />
+              <input type="hidden" name="reason" value="UserCancelled" />
               <button
                 type="submit"
                 disabled={isCancelling}

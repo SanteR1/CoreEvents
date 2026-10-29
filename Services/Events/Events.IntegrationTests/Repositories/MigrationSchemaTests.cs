@@ -176,6 +176,8 @@ public class MigrationSchemaTests(ApiOnlyIntegrationTestFactory factory, ITestOu
                     CASE 
                         WHEN character_maximum_length IS NOT NULL 
                             THEN data_type || '(' || character_maximum_length || ')'
+                        WHEN numeric_precision IS NOT NULL AND numeric_scale IS NOT NULL 
+                            THEN data_type || '(' || numeric_precision || ',' || numeric_scale || ')'
                         ELSE data_type 
                     END AS DataType, 
                     
@@ -207,6 +209,10 @@ public class MigrationSchemaTests(ApiOnlyIntegrationTestFactory factory, ITestOu
             WHERE tc.constraint_type = 'CHECK';";
 
             var dbChecks = (await connection.QueryAsync<CheckConstraintDef>(dbChecksQuery)).ToList();
+            foreach (var c in dbChecks)
+            {
+                output.WriteLine($"[DB CHECK] Table: {c.TableName}, Clause: '{c.CheckClause}', Normalized: '{NormalizeSql(c.CheckClause)}'");
+            }
 
             // ==========================================
             // 3. ASSERT: Сверяем EF Core и Физическую БД
@@ -252,7 +258,10 @@ string.Equals(u.ColumnName, efUnique.ColumnName, StringComparison.Ordinal));
         return;
         // Вспомогательный метод для нормализации SQL-строк при сравнении Check-ограничений
         static string NormalizeSql(string sql) =>
-            sql.Replace("(", "")
+            sql.Replace("::numeric", "")
+                .Replace("::text", "")
+                .Replace("<>", "!=")
+                .Replace("(", "")
                 .Replace(")", "")
                 .Replace(" ", "")
                 .Replace("\"", "")

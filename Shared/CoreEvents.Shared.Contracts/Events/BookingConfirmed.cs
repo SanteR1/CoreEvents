@@ -1,6 +1,7 @@
 namespace CoreEvents.Shared.Contracts.Events;
 
-public record BookingConfirmed
+[EventName("booking.confirmed.v1")]
+public record BookingConfirmed : IIntegrationEvent
 {
     public required Guid BookingId { get; init; }
     public required Guid EventId { get; init; }

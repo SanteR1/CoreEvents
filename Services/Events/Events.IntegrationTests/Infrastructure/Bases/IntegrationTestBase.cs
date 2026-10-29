@@ -152,7 +152,11 @@ public abstract class IntegrationTestBase<TFactory> : IAsyncLifetime where TFact
     internal void AssertSchemaMatches(EventsDbContext db)
     {
         var config = new CompareEfSqlConfig();
-        config.IgnoreTheseErrors("NOT IN DATABASE: Event->Property 'RowVersion', column name. Expected = xmin");
+        config.IgnoreTheseErrors(
+            "NOT IN DATABASE: Event->Property 'RowVersion', column name. Expected = xmin\n" +
+            "NOT IN DATABASE: SeatReservation->Property 'RowVersion', column name. Expected = xmin\n" +
+            "DIFFERENT: Event->Property 'Currency', default value sql. Expected = 'KZT', found = 'KZT'::character varying\n" +
+            "DIFFERENT: Event->Property 'IsActive', default value sql. Expected = TRUE, found = true");
         var comparer = new CompareEfSql(config);
 
         // Выполняем сравнение, используя полную строку подключения из фабрики

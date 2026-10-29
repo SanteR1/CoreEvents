@@ -1,8 +1,10 @@
 using AwesomeAssertions;
+using Bookings.Application.Abstractions;
 using Bookings.Application.Abstractions.Repositories;
 using Bookings.Application.Commands;
 using Bookings.Domain.Entities;
 using Bookings.Domain.Enums;
+using CoreEvents.Shared.Contracts.Events;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -12,14 +14,17 @@ namespace Bookings.Tests.Commands;
 public class ApplyBookingCancellationHandlerTests
 {
     private readonly Mock<IBookingRepository> _repositoryMock;
+    private readonly Mock<IOutboxService> _outboxServiceMock;
     private readonly Mock<ILogger<ApplyBookingCancellationCommandHandler>> _loggerMock;
     private readonly ApplyBookingCancellationCommandHandler _handler;
+
     public ApplyBookingCancellationHandlerTests()
     {
         _repositoryMock = new Mock<IBookingRepository>();
+        _outboxServiceMock = new Mock<IOutboxService>();
         _loggerMock = new Mock<ILogger<ApplyBookingCancellationCommandHandler>>();
 
-        _handler = new ApplyBookingCancellationCommandHandler(_repositoryMock.Object, _loggerMock.Object);
+        _handler = new ApplyBookingCancellationCommandHandler(_repositoryMock.Object, _outboxServiceMock.Object, _loggerMock.Object);
     }
 
     [Fact]
@@ -49,10 +54,11 @@ public class ApplyBookingCancellationHandlerTests
 
         _repositoryMock.Verify(r => r.Update(It.IsAny<Booking>()), Times.Never);
         _repositoryMock.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _outboxServiceMock.Verify(o => o.Publish(It.IsAny<BookingCancelled>(), It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
-    public async Task Handle_Should_CancelBookingAndUpdateRepository_When_BookingIsFound()
+    public async Task Handle_Should_CancelBookingAndPublishToOutbox_When_BookingIsFound()
     {
         // Arrange
         var command = new ApplyBookingCancellationCommand(Guid.NewGuid());
@@ -72,16 +78,13 @@ public class ApplyBookingCancellationHandlerTests
         booking.Status.Should().Be(BookingStatus.Cancelled);
 
         _repositoryMock.Verify(r => r.Update(booking), Times.Once);
-
         _repositoryMock.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
 
-        _loggerMock.Verify(
-            logger => logger.Log(
-                It.IsAny<LogLevel>(),
-                It.IsAny<EventId>(),
-                It.IsAny<It.IsAnyType>(),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Never);
+        _outboxServiceMock.Verify(o => o.Publish(
+            It.Is<BookingCancelled>(e =>
+                e.BookingId == booking.Id &&
+                e.EventId == booking.EventId),
+            booking.EventId.ToString()),
+            Times.Once);
     }
 }

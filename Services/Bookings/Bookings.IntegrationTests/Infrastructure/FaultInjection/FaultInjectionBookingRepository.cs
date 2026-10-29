@@ -1,4 +1,5 @@
 using Bookings.Application.Abstractions.Repositories;
+using Bookings.Application.DTOs;
 using Bookings.Domain.Entities;
 using Bookings.Domain.Enums;
 using Bookings.Infrastructure.Data;
@@ -24,6 +25,30 @@ sealed class FaultInjectingBookingRepository(IBookingRepository inner, FaultInje
     {
         await CheckForTimeoutsAsync(ct);
         return await inner.GetPendingAsync(ct);
+    }
+
+    public async Task<IReadOnlyList<Booking>> GetActiveBookingsByEventIdAsync(Guid eventId, int limit, CancellationToken ct = default)
+    {
+        await CheckForTimeoutsAsync(ct);
+        return await inner.GetActiveBookingsByEventIdAsync(eventId, limit, ct);
+    }
+
+    public async Task<IReadOnlyList<Booking>> GetExpiredPendingBookingsAsync(DateTime threshold, int limit, CancellationToken ct = default)
+    {
+        await CheckForTimeoutsAsync(ct);
+        return await inner.GetExpiredPendingBookingsAsync(threshold, limit, ct);
+    }
+
+    public async Task<IReadOnlyList<Booking>> GetStaleCancellationPendingBookingsAsync(DateTimeOffset threshold, int limit, CancellationToken ct = default)
+    {
+        await CheckForTimeoutsAsync(ct);
+        return await inner.GetStaleCancellationPendingBookingsAsync(threshold, limit, ct);
+    }
+
+    public async Task<PaginatedResult<Booking>> GetUserBookingsAsync(Guid userId, bool isAdmin, BookingFilter filter, CancellationToken ct = default)
+    {
+        await CheckForTimeoutsAsync(ct);
+        return await inner.GetUserBookingsAsync(userId, isAdmin, filter, ct);
     }
 
     public async Task<int> SaveChangesAsync(CancellationToken ct = default)

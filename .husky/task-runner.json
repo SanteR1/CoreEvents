@@ -1,0 +1,49 @@
+{
+  "$schema": "https://alirezanet.github.io/Husky.Net/schema.json",
+  "tasks": [
+    {
+      "name": "csharp-format-style",
+      "group": "pre-commit",
+      "command": "dotnet",
+      "args": ["format", "CoreEvents.slnx", "style", "--no-restore", "--include", "${staged}"],
+      "include": ["**/*.cs"],
+      "exclude": ["**/obj/**", "**/bin/**"]
+    },
+    {
+      "name": "frontend-prettier",
+      "group": "pre-commit",
+      "pathMode": "absolute",
+      "cwd": "Frontend/react-web",
+      "command": "npx",
+      "args": ["prettier", "--write", "${staged}"],
+      "include": [
+        "Frontend/react-web/**/*.ts",
+        "Frontend/react-web/**/*.tsx",
+        "Frontend/react-web/**/*.js",
+        "Frontend/react-web/**/*.jsx",
+        "Frontend/react-web/**/*.json",
+        "Frontend/react-web/**/*.css"
+      ]
+    },
+    {
+      "name": "frontend-eslint",
+      "group": "pre-commit",
+      "pathMode": "absolute",
+      "cwd": "Frontend/react-web",
+      "command": "npx",
+      "args": ["eslint", "--fix", "${staged}"],
+      "include": [
+        "Frontend/react-web/**/*.ts",
+        "Frontend/react-web/**/*.tsx",
+        "Frontend/react-web/**/*.js",
+        "Frontend/react-web/**/*.jsx"
+      ]
+    },
+    {
+      "name": "stage-formatted-files",
+      "group": "pre-commit",
+      "command": "git",
+      "args": ["add", "${staged}"]
+    }
+  ]
+}

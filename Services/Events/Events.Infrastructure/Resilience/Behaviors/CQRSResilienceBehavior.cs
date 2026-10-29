@@ -1,15 +1,17 @@
 using System.Collections.Concurrent;
 using System.Reflection;
+using Events.Application.Abstractions.Messaging;
 using Events.Application.Abstractions.Resilience.Attributes;
+using Events.Application.Abstractions.Resilience.Constants;
 using MediatR;
 using Polly.Registry;
 
 namespace Events.Infrastructure.Resilience.Behaviors;
 
 public sealed class CqrsResilienceBehavior<TRequest, TResponse>(
-ResiliencePipelineProvider<string> pipelineProvider)
-: IPipelineBehavior<TRequest, TResponse>
-where TRequest : IRequest<TResponse>
+    ResiliencePipelineProvider<string> pipelineProvider)
+    : IPipelineBehavior<TRequest, TResponse>
+    where TRequest : notnull
 {
     private static readonly ConcurrentDictionary<Type, string[]> _pipelineCache = new();
 
@@ -57,8 +59,18 @@ where TRequest : IRequest<TResponse>
         var multiAttr = type.GetCustomAttribute<ResiliencePipelinesAttribute>();
         if (multiAttr != null) return multiAttr.Keys;
 
-        return type.GetCustomAttributes<ResiliencePipelineAttribute>()
+        var attrs = type.GetCustomAttributes<ResiliencePipelineAttribute>()
             .Select(a => a.Key)
             .ToArray();
+
+        if (attrs.Length > 0) return attrs;
+
+        // Конвенция по умолчанию: все IInboxCommand автоматически защищены ретраями конкуренции (40001 / 40P01 / DbUpdateConcurrencyException)
+        if (typeof(IInboxCommand).IsAssignableFrom(type))
+        {
+            return [ResiliencePipelines.CommandConcurrency];
+        }
+
+        return [];
     }
 }

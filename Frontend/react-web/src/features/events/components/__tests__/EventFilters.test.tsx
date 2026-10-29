@@ -40,6 +40,14 @@ describe('EventFilters', () => {
       expect(toInput).toHaveValue('');
       expect(toInput).toHaveAttribute('name', 'to');
 
+      const minPriceInput = screen.getByLabelText('Цена от (₸)');
+      expect(minPriceInput).toHaveValue(null);
+      expect(minPriceInput).toHaveAttribute('name', 'minPrice');
+
+      const maxPriceInput = screen.getByLabelText('Цена до (₸)');
+      expect(maxPriceInput).toHaveValue(null);
+      expect(maxPriceInput).toHaveAttribute('name', 'maxPrice');
+
       const hiddenPageSize = document.querySelector<HTMLInputElement>('input[name="pageSize"]')!;
       expect(hiddenPageSize).toBeInTheDocument();
       expect(hiddenPageSize.value).toBe('6');
@@ -54,12 +62,16 @@ describe('EventFilters', () => {
         initialTitle: 'Конференция',
         initialFrom: '2026-07-01',
         initialTo: '2026-07-10',
+        initialMinPrice: '1000',
+        initialMaxPrice: '5000',
         pageSize: 12,
       });
 
       expect(screen.getByLabelText('Название события')).toHaveValue('Конференция');
       expect(screen.getByLabelText('Дата с')).toHaveValue('2026-07-01');
       expect(screen.getByLabelText('Дата по')).toHaveValue('2026-07-10');
+      expect(screen.getByLabelText('Цена от (₸)')).toHaveValue(1000);
+      expect(screen.getByLabelText('Цена до (₸)')).toHaveValue(5000);
 
       const hiddenPageSize = document.querySelector<HTMLInputElement>('input[name="pageSize"]')!;
       expect(hiddenPageSize.value).toBe('12');

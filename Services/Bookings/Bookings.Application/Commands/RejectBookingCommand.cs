@@ -1,7 +1,9 @@
+using Bookings.Application.Abstractions;
 using Bookings.Application.Abstractions.Messaging;
 using Bookings.Application.Abstractions.Repositories;
 using Bookings.Application.Abstractions.Resilience.Attributes;
 using Bookings.Application.Abstractions.Resilience.Constants;
+using Bookings.Domain.Enums;
 using CoreEvents.Shared.Contracts.Events;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -11,7 +13,10 @@ namespace Bookings.Application.Commands;
 [ResiliencePipeline(ResiliencePipelines.CommandConcurrency)]
 public record RejectBookingCommand(Guid BookingId, ValidationFailureReason Reason) : ICommand<Unit>;
 
-internal class RejectBookingHandler(IBookingRepository repository, ILogger<RejectBookingHandler> logger) : IRequestHandler<RejectBookingCommand, Unit>
+internal class RejectBookingHandler(
+    IBookingRepository repository,
+    IOutboxService outboxService,
+    ILogger<RejectBookingHandler> logger) : IRequestHandler<RejectBookingCommand, Unit>
 {
     public async Task<Unit> Handle(RejectBookingCommand request, CancellationToken cancellationToken)
     {
@@ -22,11 +27,24 @@ internal class RejectBookingHandler(IBookingRepository repository, ILogger<Rejec
             return Unit.Value;
         }
 
-        booking.Reject();
+        if (booking.Status == BookingStatus.Pending)
+        {
+            booking.Reject(request.Reason);
+            repository.Update(booking);
 
-        repository.Update(booking);
+            outboxService.Publish(
+                new BookingRejected
+                {
+                    BookingId = booking.Id,
+                    EventId = booking.EventId,
+                    UserId = booking.UserId,
+                    Reason = request.Reason,
+                    RejectedAt = DateTimeOffset.UtcNow
+                },
+                partitionKey: booking.EventId.ToString());
 
-        await repository.SaveChangesAsync(cancellationToken);
+            await repository.SaveChangesAsync(cancellationToken);
+        }
 
         return Unit.Value;
     }
