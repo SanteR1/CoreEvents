@@ -91,7 +91,10 @@ jobs:
           done
 
       - name: Run Tests (Unit & Integration)
-        run: dotnet test CoreEvents.slnx --no-build -c Release --max-parallel-test-modules 1
+        run: dotnet test CoreEvents.slnx --no-build -c Release --max-parallel-test-modules 1 --filter "Category!=LongRunning"
+
+      - name: Run Tests (Long-Running & Concurrency Series)
+        run: dotnet test CoreEvents.slnx --no-build -c Release --max-parallel-test-modules 1 --filter "Category=LongRunning" --ignore-exit-code 8
 
       - name: Publish Gateway API
         run: dotnet publish Gateway/Gateway.Api/Gateway.Api.csproj -c Release --no-build -o publish/gateway-api /p:UseAppHost=false
