@@ -131,12 +131,31 @@ public class SeatReservationTests
             Guid.NewGuid(), Guid.NewGuid(), 2, 100m, "KZT", 0m, 1L,
             DateTimeOffset.UtcNow.AddMinutes(15), Guid.NewGuid(), Guid.NewGuid());
         reservation.Release();
+        var firstUpdatedAt = reservation.UpdatedAt;
 
         // Act
         var result = reservation.Release();
 
         // Assert
         result.Should().BeFalse();
+        reservation.Status.Should().Be(SeatsReservationStatus.Released);
+        reservation.UpdatedAt.Should().Be(firstUpdatedAt);
+    }
+
+    [Theory]
+    [InlineData(ValidationFailureReason.SeatsNotAvailable)]
+    public void Release_WhenRejected_ShouldReturnFalse(ValidationFailureReason reason)
+    {
+        // Arrange
+        var reservation = SeatReservation.CreateRejected(
+            Guid.NewGuid(), Guid.NewGuid(), 1, reason, Guid.NewGuid(), Guid.NewGuid());
+
+        // Act
+        var result = reservation.Release();
+
+        // Assert
+        result.Should().BeFalse();
+        reservation.Status.Should().Be(SeatsReservationStatus.Rejected);
     }
 
     [Fact]
