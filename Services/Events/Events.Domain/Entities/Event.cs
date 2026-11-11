@@ -71,7 +71,19 @@ public sealed class Event
             price: price,
             currency: currency);
 
-        @event.RaiseDomainEvent(new EventCreated(@event.Id, @event.Title, @event.TotalSeats, now));
+        @event.RaiseDomainEvent(new EventCreatedDomainEvent(
+        @event.Id,
+        @event.Title,
+        @event.Description,
+        @event.StartAt,
+        @event.EndAt,
+        @event.Price,
+        @event.Currency,
+        @event.PriceVersion,
+        @event.TotalSeats,
+        @event.IsActive,
+        @event.Version,
+        now));
 
         return @event;
     }
@@ -80,6 +92,7 @@ public sealed class Event
         string? title,
         DateTime? startAt,
         DateTime? endAt,
+        DateTimeOffset now,
         string? description = null,
         decimal? price = null,
         string? currency = null)
@@ -106,6 +119,21 @@ public sealed class Event
         }
 
         Version++;
+
+        RaiseDomainEvent(new EventUpdatedDomainEvent(
+        Id,
+        Title,
+        Description,
+        StartAt,
+        EndAt,
+        Price,
+        Currency,
+        PriceVersion,
+        TotalSeats,
+        IsActive,
+        Version,
+        now
+        ));
     }
 
     public void Cancel(DateTimeOffset now)
@@ -114,7 +142,7 @@ public sealed class Event
         IsActive = false;
         Version++;
 
-        RaiseDomainEvent(new EventCancelled(Id, now));
+        RaiseDomainEvent(new EventCancelledDomainEvent(Id, Version, now));
     }
 
     public ReserveSeatsResult TryReserveSeats(Guid bookingId, int count, DateTimeOffset now)
@@ -123,20 +151,14 @@ public sealed class Event
         if (bookingId == Guid.Empty)
             throw new ArgumentException("BookingId обязателен.", nameof(bookingId));
 
-        if (!IsActive) return Reject(SeatsReservationRejectionReason.EventInactive);
-        if (AvailableSeats < count) return Reject(SeatsReservationRejectionReason.InsufficientSeats);
+        if (!IsActive) return ReserveSeatsResult.EventInactive;
+        if (AvailableSeats < count) return ReserveSeatsResult.InsufficientSeats;
+
         AvailableSeats -= count;
 
-        RaiseDomainEvent(new SeatsReserved(Id, bookingId, count, Price, Currency, now));
+        RaiseDomainEvent(new SeatsReservedDomainEvent(Id, bookingId, count, Price, Currency, now));
 
         return ReserveSeatsResult.Reserved;
-
-        ReserveSeatsResult Reject(SeatsReservationRejectionReason reason)
-        {
-            RaiseDomainEvent(new SeatsReservationRejected(
-                Id, bookingId, count, AvailableSeats, reason, now));
-            return ReserveSeatsResult.Rejected;
-        }
     }
 
     public bool ReleaseSeats(Guid bookingId, int count, DateTimeOffset now)
@@ -152,7 +174,7 @@ public sealed class Event
 
         AvailableSeats += count;
 
-        RaiseDomainEvent(new SeatsReleased(Id, bookingId, count, now));
+        RaiseDomainEvent(new SeatsReleasedDomainEvent(Id, bookingId, count, now));
         return true;
     }
 

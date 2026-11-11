@@ -20,7 +20,6 @@ public static class DependencyInjection
         // Автоматическая регистрация всех IPreCommitHandler и IPostCommitHandler
         services.AddDomainEventHandlers(typeof(ICommand).Assembly);
 
-        services.AddScoped<IEventService, EventService>();
         return services;
     }
 }

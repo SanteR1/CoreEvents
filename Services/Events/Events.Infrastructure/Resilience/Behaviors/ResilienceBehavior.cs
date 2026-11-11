@@ -8,7 +8,7 @@ using Polly.Registry;
 
 namespace Events.Infrastructure.Resilience.Behaviors;
 
-public sealed class CqrsResilienceBehavior<TRequest, TResponse>(
+public sealed class ResilienceBehavior<TRequest, TResponse>(
     ResiliencePipelineProvider<string> pipelineProvider)
     : IPipelineBehavior<TRequest, TResponse>
     where TRequest : notnull

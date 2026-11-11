@@ -2,6 +2,7 @@ using System.Data;
 using Events.Application.Abstractions.Persistence;
 using Events.Domain.DomainEvents;
 using Events.Domain.Entities;
+using Events.Domain.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 
@@ -60,9 +61,16 @@ internal sealed class UnitOfWork(EventsDbContext dbContext) : IUnitOfWork, IDisp
         }
     }
 
-    public Task<int> SaveChangesAsync(CancellationToken ct)
+    public async Task<int> SaveChangesAsync(CancellationToken ct)
     {
-        return dbContext.SaveChangesAsync(ct);
+        try
+        {
+            return await dbContext.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            throw new ConcurrencyException("Обнаружена конкурентная модификация данных.", ex);
+        }
     }
 
     public IReadOnlyList<IDomainEvent> CollectDomainEvents()

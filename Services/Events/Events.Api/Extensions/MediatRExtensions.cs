@@ -10,7 +10,7 @@ public static class MediatRExtensions
     {
         // Строгий порядок конвейера MediatR (луковичная архитектура / Onion):
         // 1. Resilience (Polly) — внешний контур, перехватывает сбои (deadlock, transient) и перезапускает всю цепочку с чистой транзакцией
-        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(CqrsResilienceBehavior<,>));
+        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ResilienceBehavior<,>));
 
         // 2. Transaction — открывает транзакцию UnitOfWork и координирует pre/post commit события
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(TransactionBehavior<,>));

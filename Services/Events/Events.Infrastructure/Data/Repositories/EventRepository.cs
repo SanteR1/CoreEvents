@@ -1,7 +1,6 @@
 using Events.Application.Abstractions.Repositories;
 using Events.Application.DTOs;
 using Events.Domain.Entities;
-using Events.Domain.Exceptions;
 using Microsoft.EntityFrameworkCore;
 
 namespace Events.Infrastructure.Data.Repositories;
@@ -35,6 +34,7 @@ internal sealed class EventRepository : IEventRepository
             .OrderByDescending(e => e.StartAt)
             .Skip((eventFilter.Page - 1) * eventFilter.PageSize)
             .Take(eventFilter.PageSize)
+            .AsNoTracking()
             .ToListAsync(ct);
 
         return new PaginatedResult<Event>()
@@ -56,21 +56,8 @@ internal sealed class EventRepository : IEventRepository
         return await _context.Events
                              .OrderByDescending(x => (double)(x.TotalSeats - x.AvailableSeats) / x.TotalSeats)
                              .Take(take)
+                             .AsNoTracking()
                              .ToListAsync(ct);
-    }
-
-    public async Task<int> SaveChangesAsync(CancellationToken ct = default)
-    {
-        try
-        {
-            return await _context.SaveChangesAsync(ct);
-        }
-        catch (DbUpdateConcurrencyException ex)
-        {
-            _context.ChangeTracker.Clear();
-            // Пробрасываем доменное исключение в слой Application
-            throw new ConcurrencyException("Обнаружена конкурентная модификация данных.", ex);
-        }
     }
 
     public void Add(Event entity)

@@ -27,10 +27,7 @@ internal sealed class BookingRequestDispatcher : IIntegrationEventDispatcher
             mediator.Send(new SyncBookingCancelledCommand(e.BookingId, e.EventId, env), ct));
         Register<BookingRejected>((e, env, ct) =>
             mediator.Send(new SyncBookingCancelledCommand(e.BookingId, e.EventId, env), ct));
-        Register<BookingCreated>((e, env, ct) =>
-            mediator.Send(new ValidateBookingCommand(e.BookingId, e.EventId, e.Seats, env), ct));
-        Register<BookingCancellationRequested>((e, env, ct) =>
-            mediator.Send(new ReleaseSeatsCommand(e.BookingId, e.EventId, e.Seats, env), ct));
+
 
         // Осознанный no-op: места резервируются на BookingReservationRequested
         RegisterNoOp<BookingConfirmed>((env, ct) =>

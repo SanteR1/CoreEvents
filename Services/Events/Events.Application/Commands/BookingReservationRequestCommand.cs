@@ -4,6 +4,7 @@ using Events.Application.Abstractions.Messaging;
 using Events.Application.Abstractions.Repositories;
 using Events.Application.Abstractions.Resilience.Attributes;
 using Events.Application.Abstractions.Resilience.Constants;
+using Events.Application.Common.Mappers;
 using Events.Domain.Entities;
 using Events.Domain.Enums;
 using MediatR;
@@ -42,23 +43,24 @@ internal class BookingReservationRequestHandler(
         var @event = await eventRepository.GetByIdAsync(request.EventId, cancellationToken);
         if (@event == null || !@event.IsActive)
         {
-            await RejectReservationAsync(request, ValidationFailureReason.EventNotFound, correlationId, causationId, cancellationToken);
+            RejectReservation(request, ValidationFailureReason.EventNotFound, correlationId, causationId);
             return InboxProcessingResult.Processed;
         }
 
         if (@event.StartAt <= DateTime.UtcNow)
         {
-            await RejectReservationAsync(request, ValidationFailureReason.EventAlreadyPassed, correlationId, causationId, cancellationToken);
+            RejectReservation(request, ValidationFailureReason.EventAlreadyPassed, correlationId, causationId);
             return InboxProcessingResult.Processed;
         }
 
-        if (@event.TryReserveSeats(request.BookingId, request.Seats, DateTimeOffset.UtcNow) != ReserveSeatsResult.Reserved)
+        var reserveResult = @event.TryReserveSeats(request.BookingId, request.Seats, DateTimeOffset.UtcNow);
+        if (reserveResult != ReserveSeatsResult.Reserved)
         {
-            await RejectReservationAsync(request, ValidationFailureReason.SeatsNotAvailable, correlationId, causationId, cancellationToken);
+            RejectReservation(request, reserveResult.ToValidationFailureReason(), correlationId, causationId);
             return InboxProcessingResult.Processed;
         }
 
-        await AcceptReservationAsync(request, @event, correlationId, causationId, cancellationToken);
+        AcceptReservation(request, @event, correlationId, causationId);
         return InboxProcessingResult.Processed;
     }
 
@@ -100,16 +102,14 @@ internal class BookingReservationRequestHandler(
         return false;
     }
 
-    private async Task RejectReservationAsync(
+    private void RejectReservation(
         BookingReservationRequestCommand request,
         ValidationFailureReason reason,
         Guid correlationId,
-        Guid causationId,
-        CancellationToken ct)
+        Guid causationId)
     {
         var rejected = SeatReservation.CreateRejected(request.BookingId, request.EventId, request.Seats, reason, correlationId, causationId);
         reservationRepository.Add(rejected);
-        await reservationRepository.SaveChangesAsync(ct);
 
         outboxService.AddIntegrationEvent(
             new BookingReservationRejected
@@ -121,12 +121,11 @@ internal class BookingReservationRequestHandler(
             partitionKey: request.EventId.ToString());
     }
 
-    private async Task AcceptReservationAsync(
+    private void AcceptReservation(
         BookingReservationRequestCommand request,
         Event @event,
         Guid correlationId,
-        Guid causationId,
-        CancellationToken ct)
+        Guid causationId)
     {
         var expiresAt = DateTimeOffset.UtcNow.AddMinutes(15);
         var reservation = SeatReservation.CreateReserved(
@@ -142,7 +141,6 @@ internal class BookingReservationRequestHandler(
             causationId);
 
         reservationRepository.Add(reservation);
-        await eventRepository.SaveChangesAsync(ct);
 
         outboxService.AddIntegrationEvent(
             new BookingReservationAccepted

@@ -8,5 +8,4 @@ public interface ISeatReservationRepository
     Task<IReadOnlyList<SeatReservation>> GetByEventIdAsync(Guid eventId, CancellationToken ct = default);
     void Add(SeatReservation entity);
     void Update(SeatReservation entity);
-    Task<int> SaveChangesAsync(CancellationToken ct = default);
 }

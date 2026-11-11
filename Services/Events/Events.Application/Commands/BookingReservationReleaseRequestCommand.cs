@@ -36,7 +36,7 @@ internal class BookingReservationReleaseRequestHandler(
         var reservation = await reservationRepository.GetByBookingIdAsync(request.BookingId, cancellationToken);
         if (reservation == null)
         {
-            await HandleMissingReservationAsync(request, correlationId, causationId, cancellationToken);
+            HandleMissingReservation(request, correlationId, causationId);
             return InboxProcessingResult.Processed;
         }
 
@@ -50,11 +50,10 @@ internal class BookingReservationReleaseRequestHandler(
         return InboxProcessingResult.Processed;
     }
 
-    private async Task HandleMissingReservationAsync(
+    private void HandleMissingReservation(
         BookingReservationReleaseRequestCommand request,
         Guid correlationId,
-        Guid causationId,
-        CancellationToken ct)
+        Guid causationId)
     {
         var tombstone = SeatReservation.CreateCancelledBeforeReservation(
             request.BookingId,
@@ -64,7 +63,6 @@ internal class BookingReservationReleaseRequestHandler(
             causationId);
 
         reservationRepository.Add(tombstone);
-        await reservationRepository.SaveChangesAsync(ct);
         PublishReleasedEvent(request);
     }
 
@@ -80,7 +78,6 @@ internal class BookingReservationReleaseRequestHandler(
             @event.ReleaseSeats(request.BookingId, request.Seats, DateTimeOffset.UtcNow);
         }
 
-        await reservationRepository.SaveChangesAsync(ct);
         PublishReleasedEvent(request);
     }
 

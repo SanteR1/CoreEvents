@@ -1,7 +1,9 @@
 using Asp.Versioning;
 using Events.Application.Abstractions.Repositories;
+using Events.Application.Commands;
 using Events.Application.DTOs;
-using Events.Application.Services;
+using Events.Application.Queries;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,11 +15,10 @@ namespace Events.Api.Controllers;
 [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
 public class EventsController : ControllerBase
 {
-    private readonly IEventService _eventService;
-
-    public EventsController(IEventService eventService)
+    private readonly IMediator _mediator;
+    public EventsController(IMediator mediator)
     {
-        _eventService = eventService;
+        _mediator = mediator;
     }
 
     /// <summary>Получение каталога событий с пагинацией и фильтрацией.</summary>
@@ -28,7 +29,7 @@ public class EventsController : ControllerBase
         [FromQuery] EventFilter filter,
         CancellationToken ct)
     {
-        return Ok(await _eventService.GetAllEventsAsync(filter, ct));
+        return Ok(await _mediator.Send(new GetEventsQuery(filter), ct));
     }
 
     /// <summary>Получение детальной информации о событии по идентификатору.</summary>
@@ -38,7 +39,7 @@ public class EventsController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<EventResponseDto>> GetById(Guid id, CancellationToken ct)
     {
-        var result = await _eventService.GetEventByIdAsync(id, ct);
+        var result = await _mediator.Send(new GetEventByIdQuery(id), ct);
         return Ok(result);
     }
 
@@ -48,7 +49,7 @@ public class EventsController : ControllerBase
     [ProducesResponseType(typeof(IEnumerable<EventResponseDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IEnumerable<EventResponseDto>>> GetTopEventsBySalesPercentageAsync(CancellationToken ct)
     {
-        var result = await _eventService.GetTopEventsBySalesPercentageAsync(ct);
+        var result = await _mediator.Send(new GetTopEventsQuery(), ct);
         return Ok(result);
     }
 
@@ -64,7 +65,7 @@ public class EventsController : ControllerBase
         [FromBody] EventCreateDto entity,
         CancellationToken ct)
     {
-        var createdEvent = await _eventService.CreateEventAsync(entity, ct);
+        var createdEvent = await _mediator.Send(new CreateEventCommand(entity), ct);
 
         return CreatedAtAction(
             nameof(GetById),
@@ -87,8 +88,8 @@ public class EventsController : ControllerBase
         [FromBody] EventUpdateDto entity,
         CancellationToken ct)
     {
-        var updated = await _eventService.UpdateEventAsync(id, entity, ct);
-        return Ok(updated);
+        var updatedEvent = await _mediator.Send(new UpdateEventCommand(id, entity), ct);
+        return Ok(updatedEvent);
     }
 
     /// <summary>Удаление / отмена события (только Admin). Переводит IsActive = false и отправляет EventCancelled в Outbox.</summary>
@@ -101,7 +102,7 @@ public class EventsController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
-        await _eventService.DeleteEventAsync(id, ct);
+        await _mediator.Send(new CancelEventCommand(id), ct);
         return NoContent();
     }
 

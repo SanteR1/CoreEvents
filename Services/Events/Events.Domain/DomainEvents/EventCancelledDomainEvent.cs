@@ -1,7 +1,8 @@
+using Events.Domain.Enums;
+
 namespace Events.Domain.DomainEvents;
 
-public sealed record EventCreated(
+public sealed record EventCancelledDomainEvent(
     Guid EventId,
-    string Title,
-    int TotalSeats,
+    long Version,
     DateTimeOffset OccurredAt) : IDomainEvent;

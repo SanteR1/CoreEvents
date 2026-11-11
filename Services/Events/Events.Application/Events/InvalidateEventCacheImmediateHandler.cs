@@ -6,27 +6,32 @@ namespace Events.Application.Events;
 
 internal sealed class InvalidateEventCacheImmediateHandler(
     ICacheService cacheService)
-    : IPostCommitHandler<SeatsReleased>,
-      IPostCommitHandler<SeatsReserved>,
-      IPostCommitHandler<EventCreated>,
-      IPostCommitHandler<EventCancelled>
+    : IPostCommitHandler<SeatsReleasedDomainEvent>,
+      IPostCommitHandler<SeatsReservedDomainEvent>,
+      IPostCommitHandler<EventCreatedDomainEvent>,
+      IPostCommitHandler<EventCancelledDomainEvent>,
+      IPostCommitHandler<EventUpdatedDomainEvent>
 {
-    public Task Handle(SeatsReleased notification, CancellationToken ct)
+    public Task Handle(SeatsReleasedDomainEvent notification, CancellationToken ct)
     {
         return cacheService.DeleteAsync(CacheKeys.Event(notification.EventId), ct);
     }
 
-    public Task Handle(SeatsReserved notification, CancellationToken ct)
+    public Task Handle(SeatsReservedDomainEvent notification, CancellationToken ct)
     {
         return cacheService.DeleteAsync(CacheKeys.Event(notification.EventId), ct);
     }
 
-    public Task Handle(EventCreated notification, CancellationToken ct)
+    public Task Handle(EventCreatedDomainEvent notification, CancellationToken ct)
     {
         return cacheService.DeleteAsync(CacheKeys.Event(notification.EventId), ct);
     }
 
-    public Task Handle(EventCancelled notification, CancellationToken ct)
+    public Task Handle(EventCancelledDomainEvent notification, CancellationToken ct)
+    {
+        return cacheService.DeleteAsync(CacheKeys.Event(notification.EventId), ct);
+    }
+    public Task Handle(EventUpdatedDomainEvent notification, CancellationToken ct)
     {
         return cacheService.DeleteAsync(CacheKeys.Event(notification.EventId), ct);
     }
