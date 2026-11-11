@@ -22,7 +22,7 @@ public class InvalidateEventCacheImmediateHandlerTests
     {
         // Arrange
         var eventId = Guid.NewGuid();
-        var domainEvent = new SeatsReleased(eventId, Guid.NewGuid(), 2, DateTimeOffset.UtcNow);
+        var domainEvent = new SeatsReleasedDomainEvent(eventId, Guid.NewGuid(), 2, DateTimeOffset.UtcNow);
 
         // Act
         await _handler.Handle(domainEvent, CancellationToken.None);
@@ -36,7 +36,7 @@ public class InvalidateEventCacheImmediateHandlerTests
     {
         // Arrange
         var eventId = Guid.NewGuid();
-        var domainEvent = new SeatsReserved(eventId, Guid.NewGuid(), 2, 100m, "KZT", DateTimeOffset.UtcNow);
+        var domainEvent = new SeatsReservedDomainEvent(eventId, Guid.NewGuid(), 2, 100m, "KZT", DateTimeOffset.UtcNow);
 
         // Act
         await _handler.Handle(domainEvent, CancellationToken.None);
@@ -50,7 +50,20 @@ public class InvalidateEventCacheImmediateHandlerTests
     {
         // Arrange
         var eventId = Guid.NewGuid();
-        var domainEvent = new EventCreated(eventId, "Title", 100, DateTimeOffset.UtcNow);
+        var now = DateTimeOffset.UtcNow;
+        var domainEvent = new EventCreatedDomainEvent(
+            EventId: eventId,
+            Title: "Title",
+            Description: null,
+            StartAt: DateTime.UtcNow.AddDays(1),
+            EndAt: DateTime.UtcNow.AddDays(2),
+            UnitPrice: 1000m,
+            Currency: "KZT",
+            PriceVersion: 1,
+            TotalSeats: 100,
+            IsActive: true,
+            Version: 1,
+            OccurredAt: now);
 
         // Act
         await _handler.Handle(domainEvent, CancellationToken.None);
@@ -64,7 +77,34 @@ public class InvalidateEventCacheImmediateHandlerTests
     {
         // Arrange
         var eventId = Guid.NewGuid();
-        var domainEvent = new EventCancelled(eventId, DateTimeOffset.UtcNow);
+        var domainEvent = new EventCancelledDomainEvent(eventId, 1L, DateTimeOffset.UtcNow);
+
+        // Act
+        await _handler.Handle(domainEvent, CancellationToken.None);
+
+        // Assert
+        _cacheServiceMock.Verify(x => x.DeleteAsync(CacheKeys.Event(eventId), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_EventUpdated_ShouldDeleteDirectlyFromCache()
+    {
+        // Arrange
+        var eventId = Guid.NewGuid();
+        var now = DateTimeOffset.UtcNow;
+        var domainEvent = new EventUpdatedDomainEvent(
+            EventId: eventId,
+            Title: "Updated",
+            Description: null,
+            StartAt: DateTime.UtcNow.AddDays(1),
+            EndAt: DateTime.UtcNow.AddDays(2),
+            UnitPrice: 1000m,
+            Currency: "KZT",
+            PriceVersion: 2,
+            TotalSeats: 100,
+            IsActive: true,
+            Version: 2,
+            OccurredAt: now);
 
         // Act
         await _handler.Handle(domainEvent, CancellationToken.None);

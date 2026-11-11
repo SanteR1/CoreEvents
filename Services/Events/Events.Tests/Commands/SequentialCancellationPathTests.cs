@@ -35,24 +35,25 @@ public class SequentialCancellationPathTests
         eventsMock.Setup(e => e.GetByIdAsync(@event.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(@event);
 
-        var releaseSeatsHandler = new ReleaseSeatsHandler(
+        var correlationContextMock = new Mock<ICorrelationContext>();
+
+        var releaseHandler = new BookingReservationReleaseRequestHandler(
             eventsMock.Object,
             reservationsMock.Object,
             outboxMock.Object,
-            NullLogger<ReleaseSeatsHandler>.Instance);
+            correlationContextMock.Object);
 
         var syncCancelledHandler = new SyncBookingCancelledHandler(
             eventsMock.Object,
             reservationsMock.Object,
             NullLogger<SyncBookingCancelledHandler>.Instance);
 
-        // 1. Вызов пути ReleaseSeatsCommand
-        var legacyCmd = new ReleaseSeatsCommand(bookingId, @event.Id, 3);
-        await releaseSeatsHandler.Handle(legacyCmd, CancellationToken.None);
+        // 1. Вызов основного пути BookingReservationReleaseRequestCommand
+        var releaseCmd = new BookingReservationReleaseRequestCommand(bookingId, @event.Id, 3, CoreEvents.Shared.Contracts.Events.CancellationReason.UserCancelled);
+        await releaseHandler.Handle(releaseCmd, CancellationToken.None);
 
         reservation.Status.Should().Be(SeatsReservationStatus.Released);
         @event.AvailableSeats.Should().Be(10, "Места должны быть возвращены первым вызовом");
-        eventsMock.Verify(e => e.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never, "Сохранение возложено на TransactionBehavior");
 
         // 2. Последующий вызов пути SyncBookingCancelledCommand
         var syncCmd = new SyncBookingCancelledCommand(bookingId, @event.Id);
@@ -60,7 +61,5 @@ public class SequentialCancellationPathTests
 
         // Assert: места не должны вернуться второй раз!
         @event.AvailableSeats.Should().Be(10, "Повторный вызов другого пути не должен приводить к двойному возврату мест");
-        reservationsMock.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never,
-            "Sync-путь для AlreadyReleased должен завершаться no-op без вызова SaveChangesAsync");
     }
 }

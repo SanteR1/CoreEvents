@@ -1,14 +1,15 @@
 using AwesomeAssertions;
 using Events.Application.DTOs;
-using Events.Application.Services;
+using Events.Application.Queries;
 using Events.Domain.Entities;
 using Events.IntegrationTests.Infrastructure.Bases;
 using Events.IntegrationTests.Infrastructure.Factories;
+using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Events.IntegrationTests.Services;
+namespace Events.IntegrationTests.Queries;
 
-public class EventServiceTests(ApiOnlyIntegrationTestFactory factory) : ApiOnlyIntegrationTestBase(factory)
+public class GetEventsQueryIntegrationTests(ApiOnlyIntegrationTestFactory factory) : ApiOnlyIntegrationTestBase(factory)
 {
     [Fact]
     public async Task GetAllEventsAsync_WithLargeDataset_ShouldExecuteEfficientSkipTakeWithoutMemoryOverflow()
@@ -31,10 +32,9 @@ public class EventServiceTests(ApiOnlyIntegrationTestFactory factory) : ApiOnlyI
         // Act
         var result = await ExecuteScopeAsync(sp =>
         {
-            var service = sp.GetRequiredService<IEventService>();
-            return service.GetAllEventsAsync(new EventFilter { Page = 1, PageSize = 10000 }, CancellationToken.None);
+            var mediator = sp.GetRequiredService<ISender>();
+            return mediator.Send(new GetEventsQuery(new EventFilter { Page = 1, PageSize = 10000 }), CancellationToken.None);
         });
-
         // Assert
         result.TotalCount.Should().Be(1000);
         result.Items.Should().HaveCount(100);
@@ -64,8 +64,8 @@ public class EventServiceTests(ApiOnlyIntegrationTestFactory factory) : ApiOnlyI
         // Act
         var result = await ExecuteScopeAsync(sp =>
         {
-            var service = sp.GetRequiredService<IEventService>();
-            return service.GetAllEventsAsync(new EventFilter { Page = 2, PageSize = 10 }, CancellationToken.None);
+            var mediator = sp.GetRequiredService<ISender>();
+            return mediator.Send(new GetEventsQuery(new EventFilter { Page = 2, PageSize = 10 }), CancellationToken.None);
         });
 
         // Assert
@@ -81,8 +81,8 @@ public class EventServiceTests(ApiOnlyIntegrationTestFactory factory) : ApiOnlyI
         // Act
         var result = await ExecuteScopeAsync(sp =>
         {
-            var service = sp.GetRequiredService<IEventService>();
-            return service.GetAllEventsAsync(new EventFilter { Title = "NonExistent" }, CancellationToken.None);
+            var mediator = sp.GetRequiredService<ISender>();
+            return mediator.Send(new GetEventsQuery(new EventFilter { Title = "NonExistent" }), CancellationToken.None);
         });
 
         // Assert
@@ -112,8 +112,8 @@ public class EventServiceTests(ApiOnlyIntegrationTestFactory factory) : ApiOnlyI
         // Act
         var result = await ExecuteScopeAsync(sp =>
         {
-            var service = sp.GetRequiredService<IEventService>();
-            return service.GetAllEventsAsync(new EventFilter { Page = 3, PageSize = 10 }, CancellationToken.None);
+            var mediator = sp.GetRequiredService<ISender>();
+            return mediator.Send(new GetEventsQuery(new EventFilter { Page = 3, PageSize = 10 }), CancellationToken.None);
         });
 
         // Assert
@@ -139,9 +139,9 @@ public class EventServiceTests(ApiOnlyIntegrationTestFactory factory) : ApiOnlyI
         // Act
         var result = await ExecuteScopeAsync(sp =>
         {
-            var service = sp.GetRequiredService<IEventService>();
-            return service.GetAllEventsAsync(
-                new EventFilter { Title = "Target", From = dateStartAt, To = dateStartAt.AddHours(10) }, CancellationToken.None);
+            var mediator = sp.GetRequiredService<ISender>();
+            return mediator.Send(
+                new GetEventsQuery(new EventFilter { Title = "Target", From = dateStartAt, To = dateStartAt.AddHours(10) }), CancellationToken.None);
         });
 
         // Assert
@@ -173,8 +173,8 @@ public class EventServiceTests(ApiOnlyIntegrationTestFactory factory) : ApiOnlyI
         // Act
         var result = await ExecuteScopeAsync(sp =>
         {
-            var service = sp.GetRequiredService<IEventService>();
-            return service.GetAllEventsAsync(new EventFilter { From = dateStartAt, To = dateEndAt }, CancellationToken.None);
+            var mediator = sp.GetRequiredService<ISender>();
+            return mediator.Send(new GetEventsQuery(new EventFilter { From = dateStartAt, To = dateEndAt }), CancellationToken.None);
         });
 
         // Assert
@@ -207,8 +207,8 @@ public class EventServiceTests(ApiOnlyIntegrationTestFactory factory) : ApiOnlyI
         // Act
         var result = await ExecuteScopeAsync(sp =>
         {
-            var service = sp.GetRequiredService<IEventService>();
-            return service.GetAllEventsAsync(new EventFilter { From = filterDate }, CancellationToken.None);
+            var mediator = sp.GetRequiredService<ISender>();
+            return mediator.Send(new GetEventsQuery(new EventFilter { From = filterDate }), CancellationToken.None);
         });
 
         // Assert
@@ -238,8 +238,8 @@ public class EventServiceTests(ApiOnlyIntegrationTestFactory factory) : ApiOnlyI
         // Act
         var result = await ExecuteScopeAsync(sp =>
         {
-            var service = sp.GetRequiredService<IEventService>();
-            return service.GetAllEventsAsync(new EventFilter { Title = "test" }, CancellationToken.None);
+            var mediator = sp.GetRequiredService<ISender>();
+            return mediator.Send(new GetEventsQuery(new EventFilter { Title = "test" }), CancellationToken.None);
         });
 
         // Assert
@@ -268,8 +268,8 @@ public class EventServiceTests(ApiOnlyIntegrationTestFactory factory) : ApiOnlyI
         // Act
         var result = await ExecuteScopeAsync(sp =>
         {
-            var service = sp.GetRequiredService<IEventService>();
-            return service.GetAllEventsAsync(new EventFilter { Title = null! }, CancellationToken.None);
+            var mediator = sp.GetRequiredService<ISender>();
+            return mediator.Send(new GetEventsQuery(new EventFilter { Title = null! }), CancellationToken.None);
         });
 
         // Assert
@@ -294,8 +294,8 @@ public class EventServiceTests(ApiOnlyIntegrationTestFactory factory) : ApiOnlyI
         // Act
         var result = await ExecuteScopeAsync(sp =>
         {
-            var service = sp.GetRequiredService<IEventService>();
-            return service.GetAllEventsAsync(new EventFilter { To = filterDate }, CancellationToken.None);
+            var mediator = sp.GetRequiredService<ISender>();
+            return mediator.Send(new GetEventsQuery(new EventFilter { To = filterDate }), CancellationToken.None);
         });
 
         // Assert

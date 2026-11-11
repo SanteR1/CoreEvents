@@ -71,7 +71,7 @@ public class SyncBookingCancelledConcurrencyTests(ApiOnlyIntegrationTestFactory 
             using (var scope = Factory.Services.CreateScope())
             {
                 var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-                await mediator.Send(new ReleaseSeatsCommand(testBookingId2, testEvent.Id, 2), ct);
+                await mediator.Send(new BookingReservationReleaseRequestCommand(testBookingId2, testEvent.Id, 2, CancellationReason.UserCancelled), ct);
             }
 
             _isWarmedUp = true;
@@ -239,7 +239,7 @@ public class SyncBookingCancelledConcurrencyTests(ApiOnlyIntegrationTestFactory 
             cacheMessages.Count.Should().Be(baselineCacheMessages + 1,
                 $"{prefix}должно быть добавлено ровно 1 сообщение инвалидации кэша (SeatsReleased)");
 
-            const string completedWireName = "event.booking-cancellation-completed.v1";
+            const string completedWireName = "booking.reservation-released.v1";
             var cancellationMessages = await db.OutboxMessages.AsNoTracking()
                 .Where(m => m.Key == eventId.ToString() && m.MessageType == completedWireName)
                 .ToListAsync();
@@ -250,11 +250,11 @@ public class SyncBookingCancelledConcurrencyTests(ApiOnlyIntegrationTestFactory 
                     $"{prefix}должно быть добавлено ровно 1 сообщение {completedWireName}");
 
                 var targetCancellation = cancellationMessages.Single(m => m.Payload.Contains(targetBookingId.ToString(), StringComparison.Ordinal));
-                var payload = JsonSerializer.Deserialize<EventBookingCancellationCompleted>(
+                var payload = JsonSerializer.Deserialize<BookingReservationReleased>(
                     targetCancellation.Payload,
                     IntegrationEventJsonOptions.Default);
                 payload.Should().NotBeNull();
-                payload.SeatsReleased.Should().BeTrue($"{prefix}SeatsReleased в payload должен быть true");
+                payload.Seats.Should().Be(3, $"{prefix}Seats в payload должен быть 3");
                 payload.BookingId.Should().Be(targetBookingId);
                 payload.EventId.Should().Be(eventId);
             }
@@ -404,7 +404,7 @@ public class SyncBookingCancelledConcurrencyTests(ApiOnlyIntegrationTestFactory 
                     using (LogContext.PushProperty("EventId", @event.Id.ToString()))
                     {
                         await startSignal.Task;
-                        await mediator2.Send(new ReleaseSeatsCommand(targetBookingId, @event.Id, 3), ct);
+                        await mediator2.Send(new BookingReservationReleaseRequestCommand(targetBookingId, @event.Id, 3, CancellationReason.UserCancelled), ct);
                     }
                 }
                 catch (Exception ex)
@@ -556,7 +556,7 @@ public class SyncBookingCancelledConcurrencyTests(ApiOnlyIntegrationTestFactory 
                         using (LogContext.PushProperty("EventId", @event.Id.ToString()))
                         {
                             await startSignal.Task;
-                            await mediator2.Send(new ReleaseSeatsCommand(targetBookingId, @event.Id, 3), TestContext.Current.CancellationToken);
+                            await mediator2.Send(new BookingReservationReleaseRequestCommand(targetBookingId, @event.Id, 3, CancellationReason.UserCancelled), TestContext.Current.CancellationToken);
                         }
                     }
                     catch (Exception ex)
@@ -690,7 +690,7 @@ public class SyncBookingCancelledConcurrencyTests(ApiOnlyIntegrationTestFactory 
                     using (LogContext.PushProperty("EventId", @event.Id.ToString()))
                     {
                         await startSignal.Task;
-                        await mediator2.Send(new ReleaseSeatsCommand(targetBookingId, @event.Id, 3), TestContext.Current.CancellationToken);
+                        await mediator2.Send(new BookingReservationReleaseRequestCommand(targetBookingId, @event.Id, 3, CancellationReason.UserCancelled), TestContext.Current.CancellationToken);
                     }
                 }
                 catch (Exception ex)

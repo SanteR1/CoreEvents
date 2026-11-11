@@ -2,7 +2,6 @@ using System.Reflection;
 using AwesomeAssertions;
 using Events.Application.Abstractions.Messaging;
 using Events.Domain.DomainEvents;
-using Events.Domain.Entities;
 using MediatR;
 using Xunit;
 

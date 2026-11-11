@@ -45,8 +45,6 @@ public class SyncBookingCancelledHandlerTests
 
         // Assert
         result.Should().Be(InboxProcessingResult.Processed);
-        _reservationsMock.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
-        _eventsMock.Verify(e => e.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -72,7 +70,6 @@ public class SyncBookingCancelledHandlerTests
 
         // Assert
         result.Should().Be(InboxProcessingResult.Processed);
-        _reservationsMock.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -96,7 +93,6 @@ public class SyncBookingCancelledHandlerTests
 
         // Assert
         result.Should().Be(InboxProcessingResult.Processed);
-        _reservationsMock.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -121,7 +117,6 @@ public class SyncBookingCancelledHandlerTests
 
         // Assert
         await act.Should().ThrowAsync<DataIntegrityException>();
-        _reservationsMock.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -179,7 +174,6 @@ public class SyncBookingCancelledHandlerTests
 
         // Assert
         await act.Should().ThrowAsync<DataIntegrityException>();
-        _reservationsMock.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -206,6 +200,5 @@ public class SyncBookingCancelledHandlerTests
         result.Should().Be(InboxProcessingResult.Processed);
         reservation.Status.Should().Be(SeatsReservationStatus.Released);
         @event.AvailableSeats.Should().Be(10);
-        _reservationsMock.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never, "Сохранение возложено на TransactionBehavior");
     }
 }

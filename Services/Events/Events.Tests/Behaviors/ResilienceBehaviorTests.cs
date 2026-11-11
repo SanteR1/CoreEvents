@@ -10,11 +10,11 @@ using Xunit;
 
 namespace Events.Tests.Behaviors;
 
-public sealed class CQRSResilienceBehaviorTests : IDisposable
+public sealed class ResilienceBehaviorTests : IDisposable
 {
     private readonly ResiliencePipelineRegistry<string> _pipelineRegistry = new();
 
-    private CqrsResilienceBehavior<TRequest, TResponse> CreateBehavior<TRequest, TResponse>() where TRequest : notnull =>
+    private ResilienceBehavior<TRequest, TResponse> CreateBehavior<TRequest, TResponse>() where TRequest : notnull =>
         new(_pipelineRegistry);
 
     [Fact]

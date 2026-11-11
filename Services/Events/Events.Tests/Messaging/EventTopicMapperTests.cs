@@ -11,8 +11,6 @@ public class EventTopicMapperTests
     private readonly EventTopicMapper _mapper = new();
 
     [Theory]
-    [InlineData(typeof(EventBookingValidationCompleted), KafkaTopics.EventConfirmed)]
-    [InlineData(typeof(EventBookingCancellationCompleted), KafkaTopics.EventConfirmed)]
     [InlineData(typeof(BookingReservationAccepted), KafkaTopics.EventTopic)]
     [InlineData(typeof(BookingReservationRejected), KafkaTopics.EventTopic)]
     [InlineData(typeof(BookingReservationReleased), KafkaTopics.EventTopic)]
@@ -48,8 +46,6 @@ public class EventTopicMapperTests
         // All published events
         var publishedTopics = new[]
         {
-            _mapper.GetTopicFor<EventBookingValidationCompleted>(),
-            _mapper.GetTopicFor<EventBookingCancellationCompleted>(),
             _mapper.GetTopicFor<BookingReservationAccepted>(),
             _mapper.GetTopicFor<BookingReservationRejected>(),
             _mapper.GetTopicFor<BookingReservationReleased>(),

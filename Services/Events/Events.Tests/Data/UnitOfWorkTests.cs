@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using AwesomeAssertions;
 using Events.Domain.DomainEvents;
 using Events.Domain.Entities;
+using Events.Domain.Exceptions;
 using Events.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
@@ -89,6 +90,38 @@ public sealed class UnitOfWorkTests : IDisposable
     public void HasActiveTransaction_ShouldBeFalse_Initially()
     {
         _unitOfWork.HasActiveTransaction.Should().BeFalse();
+    }
+
+    [Fact]
+    [SuppressMessage("IDisposableAnalyzers.Correctness", "IDISP013:Await in using", Justification = "Testing exception during save changes")]
+    public async Task SaveChangesAsync_WhenDbUpdateConcurrencyException_ShouldThrowDomainConcurrencyException()
+    {
+        // Arrange
+        var options = new DbContextOptionsBuilder<EventsDbContext>()
+            .UseNpgsql("Host=localhost;Database=dummy")
+            .AddInterceptors(new ConcurrencyExceptionInterceptor())
+            .Options;
+        await using var faultyContext = new EventsDbContext(options);
+        var uow = new UnitOfWork(faultyContext);
+
+        // Act
+        var act = () => uow.SaveChangesAsync(CancellationToken.None);
+
+        // Assert
+        var ex = await act.Should().ThrowAsync<ConcurrencyException>();
+        ex.Which.Message.Should().Contain("Обнаружена конкурентная модификация данных.");
+        ex.Which.InnerException.Should().BeOfType<DbUpdateConcurrencyException>();
+    }
+
+    private sealed class ConcurrencyExceptionInterceptor : Microsoft.EntityFrameworkCore.Diagnostics.SaveChangesInterceptor
+    {
+        public override ValueTask<Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult<int>> SavingChangesAsync(
+            Microsoft.EntityFrameworkCore.Diagnostics.DbContextEventData eventData,
+            Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult<int> result,
+            CancellationToken cancellationToken = default)
+        {
+            throw new DbUpdateConcurrencyException("Optimistic concurrency violation");
+        }
     }
 
     public void Dispose()

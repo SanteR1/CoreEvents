@@ -1,4 +1,5 @@
 using AwesomeAssertions;
+using Events.Application.Abstractions.Persistence;
 using Events.Application.Abstractions.Repositories;
 using Events.Application.DTOs;
 using Events.Domain.Entities;
@@ -20,11 +21,12 @@ public class EventRepositoryTests(ApiOnlyIntegrationTestFactory factory) : ApiOn
         var newEvent = Event.Create("Real Test", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(1).AddHours(1), DateTimeOffset.UtcNow, 10);
 
         // Act
-        await ExecuteScopeAsync(sp =>
+        await ExecuteScopeAsync(async sp =>
         {
             var repo = sp.GetRequiredService<IEventRepository>();
+            var uow = sp.GetRequiredService<IUnitOfWork>();
             repo.Add(newEvent);
-            return repo.SaveChangesAsync();
+            await uow.SaveChangesAsync(CancellationToken.None);
         });
 
         // Assert
@@ -78,9 +80,10 @@ public class EventRepositoryTests(ApiOnlyIntegrationTestFactory factory) : ApiOn
         await ExecuteScopeAsync(async sp =>
         {
             var repo = sp.GetRequiredService<IEventRepository>();
+            var uow = sp.GetRequiredService<IUnitOfWork>();
             var existing = await repo.GetByIdAsync(id, CancellationToken.None);
             repo.Delete(existing!);
-            await repo.SaveChangesAsync(CancellationToken.None);
+            await uow.SaveChangesAsync(CancellationToken.None);
         });
 
         // Assert
@@ -254,11 +257,13 @@ public class EventRepositoryTests(ApiOnlyIntegrationTestFactory factory) : ApiOn
                 title: "Updated Title",
                 startAt: dateStartAtUpdate,
                 endAt: dateEndAtUpdate,
+                DateTimeOffset.Now,
                 description: "Updated description"
                 );
 
             repo.Update(existing!);
-            await repo.SaveChangesAsync(CancellationToken.None);
+            var uow = sp.GetRequiredService<IUnitOfWork>();
+            await uow.SaveChangesAsync(CancellationToken.None);
             return existing;
         });
 

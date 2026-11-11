@@ -1,4 +1,6 @@
 using AwesomeAssertions;
+using Events.Domain.DomainEvents;
+using Events.Domain.Enums;
 using Events.Domain.Exceptions;
 using Events.Tests.Infrastructure;
 
@@ -51,9 +53,10 @@ public class EventTests
         // Act
         eventEntity.Update(
             title: "New Title",
-            description: "New Description",
             startAt: DateTime.UtcNow.AddDays(2),
             endAt: DateTime.UtcNow.AddDays(2).AddHours(2),
+            DateTimeOffset.Now,
+            description: "New Description",
             price: 100m,
             currency: "KZT");
 
@@ -74,9 +77,10 @@ public class EventTests
         // Act
         eventEntity.Update(
             title: eventEntity.Title,
-            description: eventEntity.Description,
             startAt: eventEntity.StartAt,
             endAt: eventEntity.EndAt,
+            DateTimeOffset.Now,
+            description: eventEntity.Description,
             price: 250m,
             currency: "KZT");
 
@@ -97,9 +101,10 @@ public class EventTests
         // Act
         eventEntity.Update(
             title: eventEntity.Title,
-            description: eventEntity.Description,
             startAt: eventEntity.StartAt,
             endAt: eventEntity.EndAt,
+            DateTimeOffset.Now,
+            description: eventEntity.Description,
             price: 100m,
             currency: "EUR");
 
@@ -132,13 +137,15 @@ public class EventTests
         var now = DateTimeOffset.UtcNow;
         var eventEntity = TestEventFactory.Create(seats: 10);
         eventEntity.Cancel(now);
+        _ = eventEntity.PopDomainEvents(); // очищаем события отмены
 
         // Act
         var result = eventEntity.TryReserveSeats(Guid.NewGuid(), 1, now);
 
         // Assert
-        result.Should().Be(Events.Domain.Enums.ReserveSeatsResult.Rejected);
+        result.Should().Be(ReserveSeatsResult.EventInactive);
         eventEntity.AvailableSeats.Should().Be(10);
+        eventEntity.PopDomainEvents().OfType<SeatsReservedDomainEvent>().Should().BeEmpty();
     }
 
     [Fact]
@@ -182,13 +189,15 @@ public class EventTests
         int seats = 1;
         var eventEntity = TestEventFactory.Create(seats: seats);
         eventEntity.TryReserveSeats(Guid.NewGuid(), 1, now);
+        _ = eventEntity.PopDomainEvents(); // очищаем событие первой успешной брони
 
         // Act
         var result = eventEntity.TryReserveSeats(Guid.NewGuid(), 1, now);
 
         // Assert
-        result.Should().Be(Events.Domain.Enums.ReserveSeatsResult.Rejected);
+        result.Should().Be(ReserveSeatsResult.InsufficientSeats);
         eventEntity.AvailableSeats.Should().Be(0);
+        eventEntity.PopDomainEvents().OfType<SeatsReservedDomainEvent>().Should().BeEmpty();
     }
 
     [Fact]
@@ -203,8 +212,9 @@ public class EventTests
         var result = eventEntity.TryReserveSeats(Guid.NewGuid(), 6, now);
 
         // Assert
-        result.Should().Be(Events.Domain.Enums.ReserveSeatsResult.Rejected);
+        result.Should().Be(ReserveSeatsResult.InsufficientSeats);
         eventEntity.AvailableSeats.Should().Be(seats);
+        eventEntity.PopDomainEvents().OfType<SeatsReservedDomainEvent>().Should().BeEmpty();
     }
 
     [Theory]

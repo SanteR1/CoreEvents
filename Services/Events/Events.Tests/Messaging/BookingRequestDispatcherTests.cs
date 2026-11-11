@@ -34,13 +34,11 @@ public sealed class BookingRequestDispatcherTests
             _registry.GetName<BookingReservationReleaseRequested>(),
             _registry.GetName<BookingCancelled>(),
             _registry.GetName<BookingRejected>(),
-            _registry.GetName<BookingCreated>(),
-            _registry.GetName<BookingCancellationRequested>(),
             _registry.GetName<BookingConfirmed>()
         };
 
         _dispatcher.SupportedEventTypes.Should().BeEquivalentTo(expected);
-        _dispatcher.SupportedEventTypes.Should().HaveCount(7);
+        _dispatcher.SupportedEventTypes.Should().HaveCount(5);
     }
 
     [Fact]
@@ -186,71 +184,7 @@ public sealed class BookingRequestDispatcherTests
             Times.Once);
     }
 
-    [Fact]
-    public async Task DispatchAsync_BookingCreated_ShouldSendValidateBookingCommand()
-    {
-        // Arrange
-        var bookingId = Guid.NewGuid();
-        var eventId = Guid.NewGuid();
-        var userId = Guid.NewGuid();
-        var envelope = CreateEnvelope(_registry.GetName<BookingCreated>());
-        var @event = new BookingCreated
-        {
-            BookingId = bookingId,
-            EventId = eventId,
-            UserId = userId,
-            Seats = 5
-        };
-        var payload = JsonSerializer.Serialize(@event, IntegrationEventJsonOptions.Default);
-        using var cts = new CancellationTokenSource();
 
-        // Act
-        await _dispatcher.DispatchAsync(_registry.GetName<BookingCreated>(), payload, envelope, cts.Token);
-
-        // Assert
-        _mediatorMock.Verify(m => m.Send(
-            It.Is<ValidateBookingCommand>(c =>
-                c.BookingId == bookingId &&
-                c.EventId == eventId &&
-                c.Seats == 5 &&
-                c.Inbox == envelope),
-            cts.Token),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task DispatchAsync_BookingCancellationRequested_ShouldSendReleaseSeatsCommand()
-    {
-        // Arrange
-        var bookingId = Guid.NewGuid();
-        var eventId = Guid.NewGuid();
-        var userId = Guid.NewGuid();
-        var envelope = CreateEnvelope(_registry.GetName<BookingCancellationRequested>());
-        var @event = new BookingCancellationRequested
-        {
-            BookingId = bookingId,
-            EventId = eventId,
-            UserId = userId,
-            Seats = 3,
-            Reason = CancellationReason.UserCancelled,
-            CancelledAt = DateTimeOffset.UtcNow
-        };
-        var payload = JsonSerializer.Serialize(@event, IntegrationEventJsonOptions.Default);
-        using var cts = new CancellationTokenSource();
-
-        // Act
-        await _dispatcher.DispatchAsync(_registry.GetName<BookingCancellationRequested>(), payload, envelope, cts.Token);
-
-        // Assert
-        _mediatorMock.Verify(m => m.Send(
-            It.Is<ReleaseSeatsCommand>(c =>
-                c.BookingId == bookingId &&
-                c.EventId == eventId &&
-                c.Seats == 3 &&
-                c.Inbox == envelope),
-            cts.Token),
-            Times.Once);
-    }
 
     [Fact]
     public async Task DispatchAsync_BookingConfirmed_ShouldSendProcessNoOpInboxCommand()

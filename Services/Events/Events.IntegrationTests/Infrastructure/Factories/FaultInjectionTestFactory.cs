@@ -32,11 +32,9 @@ public class FaultInjectionTestFactory : IntegrationTestFactory
 
                 var innerRepository = (IEventRepository)ActivatorUtilities.CreateInstance(sp, implementationType);
 
-                var dbContext = sp.GetRequiredService<EventsDbContext>();
-
                 var state = sp.GetRequiredService<FaultInjectionState>();
 
-                return new FaultInjectingEventRepository(innerRepository, state, dbContext);
+                return new FaultInjectingEventRepository(innerRepository, state);
             });
 
             services.AddScoped(sp => (FaultInjectingEventRepository)sp.GetRequiredService<IEventRepository>());

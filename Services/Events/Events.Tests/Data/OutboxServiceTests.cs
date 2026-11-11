@@ -32,7 +32,7 @@ public sealed class OutboxServiceTests : IDisposable
         _dbContext = new EventsDbContext(options);
 
         _topicMapperMock.Setup(m => m.GetTopicFor<EventCreated>()).Returns(KafkaTopics.EventTopic);
-        _topicMapperMock.Setup(m => m.GetTopicFor<EventBookingCancellationCompleted>()).Returns(KafkaTopics.EventConfirmed);
+        _topicMapperMock.Setup(m => m.GetTopicFor<BookingReservationAccepted>()).Returns(KafkaTopics.EventTopic);
 
         _outboxService = new OutboxService(_dbContext, _topicMapperMock.Object, _registry, _correlationContextMock.Object);
     }

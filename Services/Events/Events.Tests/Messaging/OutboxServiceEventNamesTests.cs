@@ -26,7 +26,7 @@ public sealed class OutboxServiceEventNamesTests : IDisposable
         _dbContext = new EventsDbContext(options);
 
         _topicMapperMock = new Mock<IEventTopicMapper>();
-        _topicMapperMock.Setup(m => m.GetTopicFor<EventBookingCancellationCompleted>()).Returns("test-topic");
+        _topicMapperMock.Setup(m => m.GetTopicFor<BookingReservationReleased>()).Returns("test-topic");
 
         _correlationContextMock = new Mock<ICorrelationContext>();
         _correlationContextMock.Setup(c => c.CorrelationId).Returns(Guid.NewGuid());
@@ -37,14 +37,15 @@ public sealed class OutboxServiceEventNamesTests : IDisposable
     }
 
     [Fact]
-    public void AddIntegrationEvent_EventBookingCancellationCompleted_ShouldUseVersionedWireName()
+    public void AddIntegrationEvent_BookingReservationReleased_ShouldUseVersionedWireName()
     {
         // Arrange
-        var @event = new EventBookingCancellationCompleted
+        var @event = new BookingReservationReleased
         {
             BookingId = Guid.NewGuid(),
             EventId = Guid.NewGuid(),
-            SeatsReleased = true
+            Seats = 2,
+            ReleasedAt = DateTimeOffset.UtcNow
         };
 
         // Act
@@ -55,9 +56,9 @@ public sealed class OutboxServiceEventNamesTests : IDisposable
         message.Should().NotBeNull();
         if (message != null)
         {
-            var expectedWireName = _registry.GetName<EventBookingCancellationCompleted>();
+            var expectedWireName = _registry.GetName<BookingReservationReleased>();
             message.MessageType.Should().Be(expectedWireName);
-            message.MessageType.Should().Be("event.booking-cancellation-completed.v1");
+            message.MessageType.Should().Be("booking.reservation-released.v1");
             message.Topic.Should().Be("test-topic");
         }
     }

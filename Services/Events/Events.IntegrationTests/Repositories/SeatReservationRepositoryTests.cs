@@ -1,4 +1,5 @@
 using AwesomeAssertions;
+using Events.Application.Abstractions.Persistence;
 using Events.Application.Abstractions.Repositories;
 using Events.Domain.Entities;
 using Events.Domain.Enums;
@@ -33,8 +34,9 @@ public class SeatReservationRepositoryTests(ApiOnlyIntegrationTestFactory factor
         await ExecuteScopeAsync(async sp =>
         {
             var repo = sp.GetRequiredService<ISeatReservationRepository>();
+            var uow = sp.GetRequiredService<IUnitOfWork>();
             repo.Add(reservation);
-            await repo.SaveChangesAsync();
+            await uow.SaveChangesAsync(CancellationToken.None);
         });
 
         // Assert
@@ -73,8 +75,9 @@ public class SeatReservationRepositoryTests(ApiOnlyIntegrationTestFactory factor
         await ExecuteScopeAsync(async sp =>
         {
             var repo = sp.GetRequiredService<ISeatReservationRepository>();
+            var uow = sp.GetRequiredService<IUnitOfWork>();
             repo.Add(reservation);
-            await repo.SaveChangesAsync();
+            await uow.SaveChangesAsync(CancellationToken.None);
         });
 
         // Act
@@ -120,10 +123,11 @@ public class SeatReservationRepositoryTests(ApiOnlyIntegrationTestFactory factor
         await ExecuteScopeAsync(async sp =>
         {
             var repo = sp.GetRequiredService<ISeatReservationRepository>();
+            var uow = sp.GetRequiredService<IUnitOfWork>();
             repo.Add(res1);
             repo.Add(res2);
             repo.Add(resOther);
-            await repo.SaveChangesAsync();
+            await uow.SaveChangesAsync(CancellationToken.None);
         });
 
         // Act

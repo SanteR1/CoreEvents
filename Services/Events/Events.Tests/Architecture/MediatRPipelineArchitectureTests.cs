@@ -31,8 +31,8 @@ public class MediatRPipelineArchitectureTests
         implementationTypes.Distinct().Should().HaveCount(3, "Ни одно поведение не должно дублироваться в DI");
 
         // Проверяем строгий порядок (луковичная архитектура: Resilience -> Transaction -> Inbox)
-        implementationTypes[0].Should().Be(typeof(CqrsResilienceBehavior<,>),
-            "1-м внешним поведением должен быть CqrsResilienceBehavior (Polly), чтобы оборачивать транзакции снаружи");
+        implementationTypes[0].Should().Be(typeof(ResilienceBehavior<,>),
+            "1-м внешним поведением должен быть ResilienceBehavior (Polly), чтобы оборачивать транзакции снаружи");
         implementationTypes[1].Should().Be(typeof(TransactionBehavior<,>),
             "2-м поведением должен быть TransactionBehavior (UnitOfWork транзакционная граница)");
         implementationTypes[2].Should().Be(typeof(InboxBehavior<,>),
@@ -46,7 +46,7 @@ public class MediatRPipelineArchitectureTests
         var services = new ServiceCollection();
 
         // Act: регистрируем только пайплайны устойчивости
-        services.AddResiliencePipelines(typeof(CqrsResilienceBehavior<,>).Assembly);
+        services.AddResiliencePipelines(typeof(ResilienceBehavior<,>).Assembly);
 
         // Assert
         var behaviors = services.Where(sd => sd.ServiceType == typeof(IPipelineBehavior<,>)).ToList();
