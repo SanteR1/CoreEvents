@@ -12,9 +12,7 @@ internal sealed class EventTopicMapper : IEventTopicMapper
         { typeof(BookingReservationReleaseRequested), KafkaTopics.BookingTopic },
         { typeof(BookingConfirmed), KafkaTopics.BookingTopic },
         { typeof(BookingRejected), KafkaTopics.BookingTopic },
-        { typeof(BookingCancellationRequested), KafkaTopics.BookingTopic },
-        { typeof(BookingCancelled), KafkaTopics.BookingTopic },
-        { typeof(BookingCreated), KafkaTopics.BookingTopic }
+        { typeof(BookingCancelled), KafkaTopics.BookingTopic }
     };
 
     public string GetTopicFor<T>()

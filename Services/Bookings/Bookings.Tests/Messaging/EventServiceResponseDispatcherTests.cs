@@ -32,15 +32,13 @@ public class EventServiceResponseDispatcherTests
             _registry.GetName<BookingReservationAccepted>(),
             _registry.GetName<BookingReservationRejected>(),
             _registry.GetName<BookingReservationReleased>(),
-            _registry.GetName<EventBookingValidationCompleted>(),
-            _registry.GetName<EventBookingCancellationCompleted>(),
             _registry.GetName<EventCreated>(),
             _registry.GetName<EventUpdated>(),
             _registry.GetName<EventCancelled>()
         };
 
         _dispatcher.SupportedEventTypes.Should().BeEquivalentTo(expected);
-        _dispatcher.SupportedEventTypes.Should().HaveCount(8);
+        _dispatcher.SupportedEventTypes.Should().HaveCount(6);
     }
 
     [Fact]
@@ -254,7 +252,6 @@ public class EventServiceResponseDispatcherTests
         var @event = new EventCancelled
         {
             EventId = eventId,
-            Reason = "Отменено организатором",
             Version = 4L,
             CancelledAt = cancelledAt
         };
@@ -268,122 +265,13 @@ public class EventServiceResponseDispatcherTests
         _mediatorMock.Verify(m => m.Send(
             It.Is<SyncEventCancelledCommand>(c =>
                 c.EventId == eventId &&
-                c.Reason == "Отменено организатором" &&
                 c.Version == 4L &&
                 c.CancelledAt == cancelledAt),
             cts.Token),
             Times.Once);
     }
 
-    [Fact]
-    public async Task DispatchAsync_EventBookingValidationCompleted_WhenCanBeBookedTrue_ShouldSendConfirmBookingCommand()
-    {
-        // Arrange
-        var eventId = Guid.NewGuid();
-        var bookingId = Guid.NewGuid();
-        var @event = new EventBookingValidationCompleted
-        {
-            EventId = eventId,
-            BookingId = bookingId,
-            CanBeBooked = true,
-            FailureReason = null
-        };
-        var payload = JsonSerializer.Serialize(@event, IntegrationEventJsonOptions.Default);
-        using var cts = new CancellationTokenSource();
 
-        // Act
-        await _dispatcher.DispatchAsync(_registry.GetName<EventBookingValidationCompleted>(), payload, cts.Token);
-
-        // Assert
-        _mediatorMock.Verify(m => m.Send(
-            It.Is<ConfirmBookingCommand>(c =>
-                c.EventId == eventId &&
-                c.BookingId == bookingId),
-            cts.Token),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task DispatchAsync_EventBookingValidationCompleted_WhenCanBeBookedFalseWithReason_ShouldSendRejectBookingCommand()
-    {
-        // Arrange
-        var eventId = Guid.NewGuid();
-        var bookingId = Guid.NewGuid();
-        var @event = new EventBookingValidationCompleted
-        {
-            EventId = eventId,
-            BookingId = bookingId,
-            CanBeBooked = false,
-            FailureReason = ValidationFailureReason.EventAlreadyPassed
-        };
-        var payload = JsonSerializer.Serialize(@event, IntegrationEventJsonOptions.Default);
-        using var cts = new CancellationTokenSource();
-
-        // Act
-        await _dispatcher.DispatchAsync(_registry.GetName<EventBookingValidationCompleted>(), payload, cts.Token);
-
-        // Assert
-        _mediatorMock.Verify(m => m.Send(
-            It.Is<RejectBookingCommand>(c =>
-                c.BookingId == bookingId &&
-                c.Reason == ValidationFailureReason.EventAlreadyPassed),
-            cts.Token),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task DispatchAsync_EventBookingValidationCompleted_WhenCanBeBookedFalseWithNullReason_ShouldSendRejectBookingCommandWithDefaultReason()
-    {
-        // Arrange
-        var eventId = Guid.NewGuid();
-        var bookingId = Guid.NewGuid();
-        var @event = new EventBookingValidationCompleted
-        {
-            EventId = eventId,
-            BookingId = bookingId,
-            CanBeBooked = false,
-            FailureReason = null
-        };
-        var payload = JsonSerializer.Serialize(@event, IntegrationEventJsonOptions.Default);
-        using var cts = new CancellationTokenSource();
-
-        // Act
-        await _dispatcher.DispatchAsync(_registry.GetName<EventBookingValidationCompleted>(), payload, cts.Token);
-
-        // Assert
-        _mediatorMock.Verify(m => m.Send(
-            It.Is<RejectBookingCommand>(c =>
-                c.BookingId == bookingId &&
-                c.Reason == default(ValidationFailureReason)),
-            cts.Token),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task DispatchAsync_EventBookingCancellationCompleted_ShouldSendApplyBookingCancellationCommand()
-    {
-        // Arrange
-        var eventId = Guid.NewGuid();
-        var bookingId = Guid.NewGuid();
-        var @event = new EventBookingCancellationCompleted
-        {
-            EventId = eventId,
-            BookingId = bookingId,
-            SeatsReleased = true
-        };
-        var payload = JsonSerializer.Serialize(@event, IntegrationEventJsonOptions.Default);
-        using var cts = new CancellationTokenSource();
-
-        // Act
-        await _dispatcher.DispatchAsync(_registry.GetName<EventBookingCancellationCompleted>(), payload, cts.Token);
-
-        // Assert
-        _mediatorMock.Verify(m => m.Send(
-            It.Is<ApplyBookingCancellationCommand>(c =>
-                c.BookingId == bookingId),
-            cts.Token),
-            Times.Once);
-    }
 
     [Fact]
     public async Task DispatchAsync_UnknownEvent_ShouldThrowUnknownEventTypeException()

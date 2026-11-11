@@ -8,18 +8,14 @@ public class EventWireNameSnapshotTests
 {
     private static readonly string[] ExpectedWireNames =
     [
-        "booking.cancellation-requested.v1",
         "booking.cancelled.v1",
         "booking.confirmed.v1",
-        "booking.created.v1",
         "booking.rejected.v1",
         "booking.reservation-accepted.v1",
         "booking.reservation-rejected.v1",
         "booking.reservation-release-requested.v1",
         "booking.reservation-released.v1",
         "booking.reservation-requested.v1",
-        "event.booking-cancellation-completed.v1",
-        "event.booking-validation-completed.v1",
         "event.cancelled.v1",
         "event.created.v1",
         "event.updated.v1"

@@ -42,18 +42,7 @@ internal sealed class EventServiceResponseDispatcher : IIntegrationEventDispatch
         Register<BookingReservationReleased>((e, ct) =>
             mediator.Send(new ApplyBookingCancellationCommand(e.BookingId), ct));
 
-        Register<EventBookingValidationCompleted>((e, ct) =>
-        {
-            if (e.CanBeBooked)
-            {
-                return mediator.Send(new ConfirmBookingCommand(e.EventId, e.BookingId), ct);
-            }
-            var reason = e.FailureReason.GetValueOrDefault();
-            return mediator.Send(new RejectBookingCommand(e.BookingId, reason), ct);
-        });
 
-        Register<EventBookingCancellationCompleted>((e, ct) =>
-            mediator.Send(new ApplyBookingCancellationCommand(e.BookingId), ct));
     }
 
     private void RegisterEventLifecycleResponses(IMediator mediator)
@@ -87,7 +76,7 @@ internal sealed class EventServiceResponseDispatcher : IIntegrationEventDispatch
                 e.UpdatedAt), ct));
 
         Register<EventCancelled>((e, ct) =>
-            mediator.Send(new SyncEventCancelledCommand(e.EventId, e.Reason, e.Version, e.CancelledAt), ct));
+            mediator.Send(new SyncEventCancelledCommand(e.EventId, e.Version, e.CancelledAt), ct));
     }
 
     public IReadOnlyCollection<string> SupportedEventTypes => _handlers.Keys;

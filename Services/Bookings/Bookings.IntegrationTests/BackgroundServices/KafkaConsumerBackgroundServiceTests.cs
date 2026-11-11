@@ -18,7 +18,7 @@ public class KafkaConsumerBackgroundServiceTests(IntegrationTestFactory factory)
     private readonly IntegrationTestFactory _factory = factory;
 
     [Fact]
-    public async Task Consumer_ShouldProcessEventBookingValidationCompleted_AndSaveToInbox()
+    public async Task Consumer_ShouldProcessBookingReservationAccepted_AndSaveToInbox()
     {
         // Arrange
         var producerConfig = new ProducerConfig { BootstrapServers = _factory.ConnectionStringKafka };
@@ -30,12 +30,20 @@ public class KafkaConsumerBackgroundServiceTests(IntegrationTestFactory factory)
         var bookingId = Guid.NewGuid();
         var causationId = Guid.NewGuid();
 
-        var payload = JsonSerializer.Serialize(new
+        var @event = new BookingReservationAccepted
         {
             BookingId = bookingId,
             EventId = eventId,
-            CanBeBooked = true
-        });
+            Seats = 2,
+            UnitPrice = 1000m,
+            TotalPrice = 2000m,
+            Currency = "KZT",
+            DiscountAmount = 0m,
+            PriceVersion = 1L,
+            ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(15)
+        };
+
+        var payload = JsonSerializer.Serialize(@event);
 
         var headers = new Headers
         {
@@ -43,7 +51,7 @@ public class KafkaConsumerBackgroundServiceTests(IntegrationTestFactory factory)
             { "correlationId", Encoding.UTF8.GetBytes(correlationId.ToString()) },
             { "createdAt", Encoding.UTF8.GetBytes(DateTimeOffset.UtcNow.ToString("O")) },
             { "causationId", Encoding.UTF8.GetBytes(causationId.ToString()) },
-            { "eventType", Encoding.UTF8.GetBytes("event.booking-validation-completed.v1") }
+            { "eventType", Encoding.UTF8.GetBytes("booking.reservation-accepted.v1") }
         };
 
         var message = new Message<string, string>
@@ -84,12 +92,12 @@ public class KafkaConsumerBackgroundServiceTests(IntegrationTestFactory factory)
 
         inboxMessage.CorrelationId.Should().Be(correlationId);
         inboxMessage.CausationId.Should().Be(causationId);
-        inboxMessage.MessageType.Should().Be("event.booking-validation-completed.v1");
+        inboxMessage.MessageType.Should().Be("booking.reservation-accepted.v1");
         inboxMessage.Topic.Should().Be(KafkaTopics.EventConfirmed);
         inboxMessage.MessageKey.Should().Be(eventId.ToString());
 
-        var expectedDict = JsonSerializer.Deserialize<EventBookingValidationCompleted>(payload);
-        var actualDict = JsonSerializer.Deserialize<EventBookingValidationCompleted>(inboxMessage.Payload);
+        var expectedDict = JsonSerializer.Deserialize<BookingReservationAccepted>(payload);
+        var actualDict = JsonSerializer.Deserialize<BookingReservationAccepted>(inboxMessage.Payload);
         actualDict.Should().BeEquivalentTo(expectedDict);
 
         inboxMessage.ProcessedAt.Should().BeCloseTo(DateTimeOffset.UtcNow, TimeSpan.FromMinutes(1));

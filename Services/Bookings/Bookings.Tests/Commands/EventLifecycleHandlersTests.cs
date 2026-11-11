@@ -119,7 +119,7 @@ public class EventLifecycleHandlersTests
             .ReturnsAsync(new List<Booking> { booking1, booking2 })
             .ReturnsAsync(new List<Booking>());
 
-        var command = new SyncEventCancelledCommand(eventId, "Artist ill", 2L, DateTimeOffset.UtcNow);
+        var command = new SyncEventCancelledCommand(eventId, 2L, DateTimeOffset.UtcNow);
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);

@@ -10,12 +10,12 @@ using Xunit;
 public class IntegrationEventRegistryTests
 {
     [Fact]
-    public void Registry_Should_Resolve_All_15_Integration_Events_Bidirectionally()
+    public void Registry_Should_Resolve_All_11_Integration_Events_Bidirectionally()
     {
         var registry = new IntegrationEventRegistry();
         var types = ContractTypes.AllConcreteIntegrationEvents();
 
-        types.Should().HaveCount(15);
+        types.Should().HaveCount(11);
 
         foreach (var type in types)
         {

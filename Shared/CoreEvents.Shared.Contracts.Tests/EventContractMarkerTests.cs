@@ -14,10 +14,10 @@ public class EventContractMarkerTests
         TimeSpan.FromSeconds(1));
 
     [Fact]
-    public void All_Integration_Events_Should_Be_Exactly_15()
+    public void All_Integration_Events_Should_Be_Exactly_11()
     {
         var types = ContractTypes.AllConcreteIntegrationEvents();
-        types.Should().HaveCount(15);
+        types.Should().HaveCount(11);
     }
 
     [Fact]

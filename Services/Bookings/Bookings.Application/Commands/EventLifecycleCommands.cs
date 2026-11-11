@@ -41,7 +41,6 @@ public record SyncEventUpdatedCommand(
 [ResiliencePipeline(ResiliencePipelines.CommandConcurrency)]
 public record SyncEventCancelledCommand(
     Guid EventId,
-    string Reason,
     long Version,
     DateTimeOffset CancelledAt) : ICommand<Unit>;
 
