@@ -19,6 +19,9 @@ internal class BookingConfiguration : IEntityTypeConfiguration<Booking>
         builder
             .HasIndex(x => new { x.UserId, x.Status });
 
+        builder
+            .HasIndex(x => new { x.EventId, x.Status });
+
         builder.Property(b => b.Id)
             .HasColumnName("id")
             .ValueGeneratedNever();
@@ -38,7 +41,7 @@ internal class BookingConfiguration : IEntityTypeConfiguration<Booking>
             .HasColumnName("status")
             .IsRequired()
             .HasConversion<string>()
-            .HasMaxLength(20);
+            .HasMaxLength(30);
 
         builder.Property(b => b.EventId)
             .HasColumnName("event_id")
@@ -47,5 +50,41 @@ internal class BookingConfiguration : IEntityTypeConfiguration<Booking>
         builder.Property(b => b.UserId)
             .HasColumnName("user_id")
             .IsRequired();
+
+        builder.Property(b => b.TotalPrice)
+            .HasColumnName("total_price")
+            .HasPrecision(18, 2)
+            .HasDefaultValue(0.00m)
+            .IsRequired();
+
+        builder.Property(b => b.UnitPrice)
+            .HasColumnName("unit_price")
+            .HasPrecision(18, 2)
+            .HasDefaultValue(0.00m)
+            .IsRequired();
+
+        builder.Property(b => b.DiscountAmount)
+            .HasColumnName("discount_amount")
+            .HasPrecision(18, 2)
+            .HasDefaultValue(0.00m)
+            .IsRequired();
+
+        builder.Property(b => b.Currency)
+            .HasColumnName("currency")
+            .HasMaxLength(3)
+            .HasDefaultValue("KZT")
+            .IsRequired();
+
+        builder.Property(b => b.RejectionReason)
+            .HasColumnName("rejection_reason")
+            .HasMaxLength(200);
+
+        builder.Property(b => b.CancellationReason)
+            .HasColumnName("cancellation_reason")
+            .HasConversion<string>()
+            .HasMaxLength(50);
+
+        builder.Property(b => b.CancellationRequestedAt)
+            .HasColumnName("cancellation_requested_at");
     }
 }

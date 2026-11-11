@@ -1,7 +1,5 @@
 using System.Reflection;
 using Events.Infrastructure.Resilience.Abstractions;
-using Events.Infrastructure.Resilience.Behaviors;
-using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using Polly;
 
@@ -40,7 +38,6 @@ internal static class ResilienceExtensions
                 configurator?.Configure(builder, context);
             });
         }
-        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(CqrsResilienceBehavior<,>));
 
         return services;
     }

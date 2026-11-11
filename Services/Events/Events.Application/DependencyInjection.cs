@@ -1,4 +1,6 @@
 using Events.Application.Abstractions.Messaging;
+using Events.Application.Common.Dispatcher;
+using Events.Application.Extensions;
 using Events.Application.Services;
 
 namespace Microsoft.Extensions.DependencyInjection;
@@ -12,7 +14,12 @@ public static class DependencyInjection
             cfg.RegisterServicesFromAssemblyContaining<ICommand>();
         });
 
-        services.AddScoped<IEventService, EventService>();
+        // Регистрация диспетчера доменных событий
+        services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
+
+        // Автоматическая регистрация всех IPreCommitHandler и IPostCommitHandler
+        services.AddDomainEventHandlers(typeof(ICommand).Assembly);
+
         return services;
     }
 }

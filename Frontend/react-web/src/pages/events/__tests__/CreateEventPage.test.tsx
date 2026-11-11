@@ -46,6 +46,9 @@ describe('CreateEventPage', () => {
     endAt: new Date('2026-10-20T16:00:00Z'),
     totalSeats: 40,
     availableSeats: 40,
+    price: 1500,
+    currency: 'KZT',
+    isActive: true,
   };
 
   beforeEach(() => {
@@ -139,6 +142,27 @@ describe('CreateEventPage', () => {
           fieldErrors: {
             startAt: ['Некорректный формат даты начала'],
             endAt: ['Некорректный формат даты окончания'],
+          },
+        },
+      });
+    });
+
+    it('validates negative price and currency length exceeding 3 characters', async () => {
+      const args = createActionArgs({
+        title: 'Valid Title',
+        startAt: '2026-10-20T10:00',
+        endAt: '2026-10-20T12:00',
+        totalSeats: '30',
+        price: '-500',
+        currency: 'TOOLONG',
+      });
+      const result = await action(args);
+
+      expect(result).toMatchObject({
+        error: {
+          fieldErrors: {
+            price: ['Цена не может быть отрицательной'],
+            currency: ['Код валюты должен содержать максимум 3 символа'],
           },
         },
       });
@@ -421,6 +445,29 @@ describe('CreateEventPage', () => {
       expect(screen.getByText(mockCreatedEvent.title)).toBeInTheDocument();
       expect(screen.getByText(mockCreatedEvent.description!)).toBeInTheDocument();
       expect(screen.getByText('Всего мест:')).toBeInTheDocument();
+      expect(screen.getByText('1 500 ₸')).toBeInTheDocument();
+      expect(screen.getByText('Активно')).toBeInTheDocument();
+
+      const eventLink = screen.getByRole('link', { name: /Перейти к событию/i });
+      expect(eventLink).toHaveAttribute('href', `/events/${mockCreatedEvent.id}`);
+      expect(screen.getByRole('button', { name: /\+ Создать ещё одно/i })).toBeInTheDocument();
+    });
+
+    it('resets confirmation screen and shows form again when "+ Создать ещё одно" is clicked', async () => {
+      renderCreateEventPage({
+        event: mockCreatedEvent,
+      });
+
+      const submitBtn = await screen.findByRole('button', { name: 'Создать событие' });
+      fireEvent.submit(submitBtn.closest('form')!);
+
+      expect(await screen.findByRole('heading', { name: 'Событие создано!' })).toBeInTheDocument();
+
+      const createAnotherBtn = screen.getByRole('button', { name: /\+ Создать ещё одно/i });
+      fireEvent.click(createAnotherBtn);
+
+      expect(await screen.findByRole('heading', { name: 'Создание события' })).toBeInTheDocument();
+      expect(screen.getByLabelText('Название события')).toBeInTheDocument();
     });
 
     it('satisfies WCAG accessibility rules for form and confirmation view', async () => {

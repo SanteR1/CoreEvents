@@ -1,15 +1,19 @@
+using CoreEvents.Shared.Contracts.Events;
+
 namespace Events.Application.Abstractions;
 
 public interface IOutboxService
 {
     /// <summary>
-    /// Метод просто подготавливает сообщение к отправке (добавляет в DbSet)
+    /// Добавление строго типизированного контракта Integration Event в ChangeTracker для публикации в Kafka.
     /// </summary>
-    /// <param name="integrationEvent">Событие/результат для публикации.</param>
-    /// <param name="partitionKey">
-    /// Ключ партиционирования Kafka. Выбирается вызывающей стороной осознанно:
-    /// например, EventId — если важен строгий порядок в рамках сущности (резервация мест),
-    /// BookingId — если сущности независимы и важнее параллелизм (результат резервации).
-    /// </param>
-    void Publish<T>(T integrationEvent, string partitionKey);
+    void AddIntegrationEvent<TEvent>(
+        TEvent integrationEvent,
+        string partitionKey)
+        where TEvent : IIntegrationEvent;
+
+    /// <summary>
+    /// Добавление намерения инвалидации кэша события с дедупликацией в рамках текущего UoW.
+    /// </summary>
+    void AddCacheInvalidation(Guid eventId);
 }

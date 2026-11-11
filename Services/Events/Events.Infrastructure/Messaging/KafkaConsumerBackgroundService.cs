@@ -1,18 +1,12 @@
 using System.Globalization;
 using System.Text;
 using Confluent.Kafka;
-using CoreEvents.Shared.Contracts.Events;
+using CoreEvents.Shared.Contracts.Infrastructure;
 using Events.Application.Abstractions;
 using Events.Application.Abstractions.Messaging;
 using Events.Application.Abstractions.Resilience.Constants;
-using Events.Domain.DomainEvents;
-using Events.Domain.Entities;
-using Events.Infrastructure.Data;
-using Events.Infrastructure.Data.Entities;
 using Events.Infrastructure.Messaging.Kafka;
 using Events.Infrastructure.Messaging.Options;
-using MediatR;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -25,7 +19,6 @@ sealed class KafkaConsumerBackgroundService(
     IServiceScopeFactory scopeFactory,
     IOptions<KafkaOptions> kafkaOptions,
     ResiliencePipelineProvider<string> pipelineProvider,
-    ICorrelationContext correlationContext,
     ILogger<KafkaConsumerBackgroundService> logger)
     : BackgroundService
 {
@@ -68,7 +61,6 @@ sealed class KafkaConsumerBackgroundService(
         while (!stoppingToken.IsCancellationRequested)
         {
             ConsumeResult<string, string>? result = null;
-            List<IDomainEvent> domainEvents = [];
 
             try
             {
@@ -85,10 +77,7 @@ sealed class KafkaConsumerBackgroundService(
                     continue;
                 }
 
-                domainEvents = await ProcessResultAsync(result, options, stoppingToken);
-
-                // 4. Успех — фиксируем оффсет
-                consumer.Commit(result);
+                await ProcessMessageAsync(consumer, result, options, stoppingToken);
             }
             catch (OperationCanceledException ex)
             {
@@ -103,104 +92,37 @@ sealed class KafkaConsumerBackgroundService(
                     throw;
                 }
 
-                // 5. Пытаемся спасти сообщение через DLT
+                // Пытаемся спасти сообщение через DLT
                 await HandleFailureWithDltAsync(producer, consumer, result, ex);
             }
-
-            // 6. Публикация собранных доменных событий (инвалидация кэша)
-            await PublishDomainEventsAsync(domainEvents, stoppingToken);
         }
     }
 
-    private async Task<List<IDomainEvent>> ProcessResultAsync(
+    private async Task ProcessMessageAsync(
+        IConsumer<string, string> consumer,
         ConsumeResult<string, string> result,
         KafkaOptions options,
         CancellationToken stoppingToken)
     {
-        // 2. Метаданные — из headers, ДО парсинга payload
         var metadata = EventMetadataHeaderMapper.ParseMetadata(result.Message.Headers);
+        var envelope = CreateInboxEnvelope(result, metadata, options.GroupId);
 
-        if (metadata.CorrelationId == Guid.Empty)
-        {
-            logger.LogError(
-                "Сообщение {MessageId} из топика {Topic} пришло без CorrelationId в headers",
-                metadata.MessageId,
-                result.Topic);
-        }
-
-        correlationContext.SetCorrelationId(metadata.CorrelationId);
-        correlationContext.SetCausationId(metadata.MessageId);
-
-        // 3. Основной пайплайн (Infrastructure Resilience)
-        var infraPipeline = pipelineProvider.GetPipeline(ResiliencePipelines.GlobalTransient);
-
-        return await infraPipeline.ExecuteAsync(
-            async token => await ExecuteInboxTransactionAsync(result, metadata, options, token),
-            stoppingToken);
-    }
-
-    private async Task<List<IDomainEvent>> ExecuteInboxTransactionAsync(
-        ConsumeResult<string, string> result,
-        EventMetadata metadata,
-        KafkaOptions options,
-        CancellationToken token)
-    {
+        // 1. Создание нового изолированного scope на каждое сообщение
         using var scope = scopeFactory.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<EventsDbContext>();
+
+        // 2. Инициализация scoped-контекста трассировки для сообщений и Outbox
+        var correlationContext = scope.ServiceProvider.GetRequiredService<ICorrelationContext>();
+        correlationContext.SetCorrelationId(envelope.CorrelationId);
+        correlationContext.SetCausationId(envelope.MessageId); // Входящее сообщение является причиной для исходящих действий
+
+        // 3. Разрешение scoped-диспетчера (захватывает scoped IMediator и scoped DbContext/UnitOfWork)
         var dispatcher = scope.ServiceProvider.GetRequiredService<IIntegrationEventDispatcher>();
 
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(token);
-        try
-        {
-            // А) Idempotency Check (Inbox)
-            bool isProcessed = await dbContext.InboxMessages
-                .AnyAsync(m => m.Id == metadata.MessageId, token);
+        // 4. Диспетчеризация через MediatR Pipeline (Polly -> TransactionBehavior -> InboxBehavior -> Handler)
+        await dispatcher.DispatchAsync(metadata.EventType, result.Message.Value, envelope, stoppingToken);
 
-            if (!isProcessed)
-            {
-                await dispatcher.DispatchAsync(metadata.EventType, result.Message.Value, token);
-                dbContext.InboxMessages.Add(CreateInboxMessage(result, metadata, options.GroupId));
-            }
-
-            await dbContext.SaveChangesAsync(token);
-            await transaction.CommitAsync(token);
-
-            // Б) Сбор доменных событий сущности Event
-            return dbContext.ChangeTracker.Entries<Event>()
-                .SelectMany(x => x.Entity.PopDomainEvents())
-                .ToList();
-        }
-        catch (Exception)
-        {
-            await transaction.RollbackAsync(token);
-            throw; // Важно! Пробрасываем ошибку, чтобы Polly ее поймал и ретраил
-        }
-    }
-
-    private async Task PublishDomainEventsAsync(
-        List<IDomainEvent> domainEvents,
-        CancellationToken stoppingToken)
-    {
-        if (domainEvents.Count == 0)
-        {
-            return;
-        }
-
-        try
-        {
-            using var scope = scopeFactory.CreateScope();
-            var publisher = scope.ServiceProvider.GetRequiredService<IPublisher>();
-
-            foreach (var domainEvent in domainEvents)
-            {
-                var notification = new DomainEventNotification(domainEvent);
-                await publisher.Publish(notification, stoppingToken);
-            }
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Ошибка инвалидации: {Message}", ex.Message);
-        }
+        // 5. Оффсет фиксируется строго после успешного завершения пайплайна
+        consumer.Commit(result);
     }
 
     private async Task HandleFailureWithDltAsync(
@@ -222,7 +144,6 @@ sealed class KafkaConsumerBackgroundService(
         }
         catch (Exception dltEx)
         {
-            // Если даже DLT не сработал — Останавливаем весь сервис!
             logger.LogCritical(dltEx, "DLT Unavailable. Crashing to prevent data loss.");
             throw new InvalidOperationException("DLT Unavailable. Crashing to prevent data loss.", dltEx);
         }
@@ -234,7 +155,14 @@ sealed class KafkaConsumerBackgroundService(
         Exception exception,
         CancellationToken ct)
     {
-        logger.LogError(exception, "Message {Key} failed all retries. Moving to DLT.", result.Message.Key);
+        var category = exception switch
+        {
+            CoreEvents.Shared.Contracts.Exceptions.UnknownEventTypeException => "unknown_event",
+            CoreEvents.Shared.Contracts.Exceptions.DataIntegrityException => "integrity",
+            System.Text.Json.JsonException => "bad_payload",
+            _ => "processing_error"
+        };
+        logger.LogError(exception, "[DLT:{Category}] Message {Key} failed. Moving to DLT.", category, result.Message.Key);
 
         var dltMessage = CreateDeadLetterMessage(result, exception);
         await producer.ProduceAsync(KafkaTopics.BookingConfirmedDlt, dltMessage, ct);
@@ -259,32 +187,28 @@ sealed class KafkaConsumerBackgroundService(
         var producerConfig = new ProducerConfig
         {
             BootstrapServers = options.BootstrapServers,
-            Acks = Acks.All // Гарантируем, что брокер точно сохранил сообщение в DLT
+            Acks = Acks.All
         };
 
         return new ProducerBuilder<string, string>(producerConfig).Build();
     }
 
-    private static InboxMessage CreateInboxMessage(
+    private static InboxEnvelope CreateInboxEnvelope(
         ConsumeResult<string, string> result,
         EventMetadata metadata,
-        string consumerGroup) => new()
-        {
-            Id = metadata.MessageId,
-            CorrelationId = metadata.CorrelationId,
-            CausationId = metadata.CausationId,
-            ConsumerName = consumerGroup,
-            Topic = result.Topic,
-            Partition = result.Partition.Value,
-            Offset = result.Offset.Value,
-            MessageKey = result.Message.Key ?? string.Empty,
-            MessageType = metadata.EventType,
-            Payload = result.Message.Value,
-            Headers = EventMetadataHeaderMapper.SerializeHeaders(result.Message.Headers),
-            ReceivedAt = DateTimeOffset.UtcNow,
-            ProcessedAt = DateTimeOffset.UtcNow,
-            LastError = null
-        };
+        string consumerGroup) => new(
+            MessageId: metadata.MessageId,
+            CorrelationId: metadata.CorrelationId,
+            CausationId: metadata.CausationId,
+            ConsumerName: consumerGroup,
+            Topic: result.Topic,
+            Partition: result.Partition.Value,
+            Offset: result.Offset.Value,
+            MessageKey: result.Message.Key ?? string.Empty,
+            MessageType: metadata.EventType,
+            Payload: result.Message.Value,
+            Headers: EventMetadataHeaderMapper.SerializeHeaders(result.Message.Headers),
+            ReceivedAt: DateTimeOffset.UtcNow);
 
     private static Message<string, string> CreateDeadLetterMessage(
         ConsumeResult<string, string> result,
@@ -293,9 +217,9 @@ sealed class KafkaConsumerBackgroundService(
         var dltReason = $"Error: {exception.Message}";
         var dltMessage = new Message<string, string>
         {
-            Key = result.Message.Key, // Сохраняем оригинальный ключ партиционирования
-            Value = result.Message.Value, // Оригинальный JSON
-            Headers = result.Message.Headers // Оригинальные Headers
+            Key = result.Message.Key,
+            Value = result.Message.Value,
+            Headers = result.Message.Headers
         };
 
         dltMessage.Headers.Add("error-Reason", Encoding.UTF8.GetBytes(dltReason));

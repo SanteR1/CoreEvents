@@ -30,14 +30,21 @@ export const Header = () => {
           Топовые события
         </NavLink>
 
-        {/* 2. Административные ссылки */}
+        {/* 2. Пользовательские ссылки */}
+        {isAuthenticated && (
+          <NavLink to="/bookings" className={navLinkClass}>
+            Мои бронирования
+          </NavLink>
+        )}
+
+        {/* 3. Административные ссылки */}
         {isAdmin && (
           <NavLink to="/events/create" className={navLinkClass}>
             Создать событие
           </NavLink>
         )}
 
-        {/* 3. Блок профиля, индикатор загрузки и переключатель тем */}
+        {/* 4. Блок профиля, индикатор загрузки и переключатель тем */}
         <div className="ml-auto flex items-center gap-4">
           {isLoading && <span className="animate-pulse text-xs text-(--accent)">Загрузка...</span>}
 

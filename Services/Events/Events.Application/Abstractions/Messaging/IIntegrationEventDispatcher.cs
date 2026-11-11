@@ -2,5 +2,6 @@ namespace Events.Application.Abstractions.Messaging;
 
 public interface IIntegrationEventDispatcher
 {
-    Task DispatchAsync(string eventType, string payload, CancellationToken ct);
+    IReadOnlyCollection<string> SupportedEventTypes { get; }
+    Task DispatchAsync(string eventType, string payload, InboxEnvelope env, CancellationToken ct);
 }

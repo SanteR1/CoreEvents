@@ -22,7 +22,13 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["CreateBookingRequestDto"];
+                    "text/json": null | components["schemas"]["CreateBookingRequestDto"];
+                    "application/*+json": null | components["schemas"]["CreateBookingRequestDto"];
+                };
+            };
             responses: {
                 /** @description Accepted */
                 202: {
@@ -96,15 +102,21 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["CancelBookingRequestDto"];
+                    "text/json": null | components["schemas"]["CancelBookingRequestDto"];
+                    "application/*+json": null | components["schemas"]["CancelBookingRequestDto"];
+                };
+            };
             responses: {
-                /** @description No Content */
-                204: {
+                /** @description Accepted */
+                202: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": unknown;
+                        "application/json": components["schemas"]["BookingResponseDto"];
                     };
                 };
                 /** @description Unauthorized */
@@ -134,8 +146,66 @@ export interface paths {
                         "application/json": components["schemas"]["ProblemDetails"];
                     };
                 };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
             };
         };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/bookings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    Status?: components["schemas"]["BookingStatus"];
+                    UserId?: string;
+                    Page?: number | string;
+                    PageSize?: number | string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PaginatedResultOfBookingResponseDto"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -150,14 +220,52 @@ export interface components {
             id: string;
             /** Format: uuid */
             eventId: string;
+            /** Format: uuid */
+            userId: string;
+            /** Format: int32 */
+            seats: number | string;
             status: components["schemas"]["BookingStatus"];
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
             processedAt: null | string;
+            /** Format: double */
+            totalPrice: number | string;
+            /** Format: double */
+            unitPrice: number | string;
+            /** Format: double */
+            discountAmount: number | string;
+            currency: string;
+            rejectionReason: null | string;
+            cancellationReason: null | components["schemas"]["CancellationReason"];
+            /** Format: date-time */
+            cancellationRequestedAt: null | string;
         };
         /** @enum {unknown} */
-        BookingStatus: "Pending" | "Confirmed" | "Rejected" | "Cancelled";
+        BookingStatus: "Pending" | "Confirmed" | "Rejected" | "Cancelled" | "CancellationPending";
+        CancelBookingRequestDto: {
+            reason?: null | components["schemas"]["CancellationReason"];
+        };
+        /** @enum {unknown} */
+        CancellationReason: "UserCancelled" | "EventCancelled" | "AdminCancelled" | "EventRescheduled" | "Timeout" | null;
+        CreateBookingRequestDto: {
+            /**
+             * Format: int32
+             * @default 1
+             */
+            seats: null | number | string;
+        };
+        PaginatedResultOfBookingResponseDto: {
+            /** Format: int32 */
+            totalCount: number | string;
+            items: components["schemas"]["BookingResponseDto"][];
+            /** Format: int32 */
+            currentPage: number | string;
+            /** Format: int32 */
+            pageSize: number | string;
+            /** Format: int32 */
+            totalPages?: number | string;
+        };
         ProblemDetails: {
             type?: null | string;
             title?: null | string;

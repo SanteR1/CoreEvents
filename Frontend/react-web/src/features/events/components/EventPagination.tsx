@@ -9,6 +9,8 @@ interface EventPaginationProps {
     title?: string;
     from?: string;
     to?: string;
+    minPrice?: string;
+    maxPrice?: string;
   };
 }
 
@@ -36,6 +38,12 @@ export const EventPagination = ({
     }
     if (filters.to) {
       params.set('to', filters.to);
+    }
+    if (filters.minPrice) {
+      params.set('minPrice', filters.minPrice);
+    }
+    if (filters.maxPrice) {
+      params.set('maxPrice', filters.maxPrice);
     }
 
     const query = params.toString();

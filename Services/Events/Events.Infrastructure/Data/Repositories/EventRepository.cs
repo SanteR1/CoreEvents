@@ -1,7 +1,6 @@
 using Events.Application.Abstractions.Repositories;
 using Events.Application.DTOs;
 using Events.Domain.Entities;
-using Events.Domain.Exceptions;
 using Microsoft.EntityFrameworkCore;
 
 namespace Events.Infrastructure.Data.Repositories;
@@ -16,36 +15,7 @@ internal sealed class EventRepository : IEventRepository
     }
     public async Task<PaginatedResult<Event>> GetAllAsync(EventFilter eventFilter, CancellationToken ct = default)
     {
-        var entity = _context.Events
-            .AsQueryable()
-            .AsNoTracking();
-
-        if (!string.IsNullOrWhiteSpace(eventFilter.Title))
-        {
-            if (_context.Database.IsNpgsql())
-            {
-                entity = entity.Where(e => EF.Functions.ILike(e.Title, $"%{eventFilter.Title}%"));
-            }
-            else
-            {
-                var titleLower = eventFilter.Title.ToLowerInvariant();
-#pragma warning disable CA1862, CA1304, CA1311, RCS1155, MA0011 // EF Core expression tree does not translate StringComparison overloads
-                entity = entity.Where(e => e.Title.ToLower().Contains(titleLower));
-#pragma warning restore CA1862, CA1304, CA1311, RCS1155, MA0011
-            }
-        }
-
-        if (eventFilter.From is not null)
-        {
-            entity = entity.Where(e => e.StartAt >= eventFilter.From.Value);
-        }
-
-        if (eventFilter.To is not null)
-        {
-            // Сервис передает в параметр "To" ИСКЛЮЧИТЕЛЬНУЮ (Exclusive) границу.
-            // По этому использую строгое неравенство (<), а не (<=)
-            entity = entity.Where(e => e.EndAt < eventFilter.To.Value);
-        }
+        var entity = ApplyFilters(_context.Events.AsNoTracking(), eventFilter, _context.Database.IsNpgsql());
 
         var totalEvents = await entity.CountAsync(ct);
 
@@ -64,6 +34,7 @@ internal sealed class EventRepository : IEventRepository
             .OrderByDescending(e => e.StartAt)
             .Skip((eventFilter.Page - 1) * eventFilter.PageSize)
             .Take(eventFilter.PageSize)
+            .AsNoTracking()
             .ToListAsync(ct);
 
         return new PaginatedResult<Event>()
@@ -85,20 +56,8 @@ internal sealed class EventRepository : IEventRepository
         return await _context.Events
                              .OrderByDescending(x => (double)(x.TotalSeats - x.AvailableSeats) / x.TotalSeats)
                              .Take(take)
+                             .AsNoTracking()
                              .ToListAsync(ct);
-    }
-
-    public async Task<int> SaveChangesAsync(CancellationToken ct = default)
-    {
-        try
-        {
-            return await _context.SaveChangesAsync(ct);
-        }
-        catch (DbUpdateConcurrencyException ex)
-        {
-            // Пробрасываем доменное исключение в слой Application
-            throw new ConcurrencyException("Обнаружена конкурентная модификация данных.", ex);
-        }
     }
 
     public void Add(Event entity)
@@ -114,5 +73,55 @@ internal sealed class EventRepository : IEventRepository
     public void Delete(Event entity)
     {
         _context.Events.Remove(entity);
+    }
+
+    private static IQueryable<Event> ApplyFilters(IQueryable<Event> query, EventFilter eventFilter, bool isNpgsql)
+    {
+        if (!string.IsNullOrWhiteSpace(eventFilter.Title))
+        {
+            if (isNpgsql)
+            {
+                query = query.Where(e => EF.Functions.ILike(e.Title, $"%{eventFilter.Title}%"));
+            }
+            else
+            {
+                var titleLower = eventFilter.Title.ToLowerInvariant();
+#pragma warning disable CA1862, CA1304, CA1311, RCS1155, MA0011
+                query = query.Where(e => e.Title.ToLower().Contains(titleLower));
+#pragma warning restore CA1862, CA1304, CA1311, RCS1155, MA0011
+            }
+        }
+
+        if (eventFilter.From is not null)
+        {
+            query = query.Where(e => e.StartAt >= eventFilter.From.Value);
+        }
+
+        if (eventFilter.To is not null)
+        {
+            query = query.Where(e => e.EndAt < eventFilter.To.Value);
+        }
+
+        if (eventFilter.MinPrice is not null)
+        {
+            query = query.Where(e => e.Price >= eventFilter.MinPrice.Value);
+        }
+
+        if (eventFilter.MaxPrice is not null)
+        {
+            query = query.Where(e => e.Price <= eventFilter.MaxPrice.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(eventFilter.Currency))
+        {
+            query = query.Where(e => e.Currency == eventFilter.Currency);
+        }
+
+        if (eventFilter.IsActive is not null)
+        {
+            query = query.Where(e => e.IsActive == eventFilter.IsActive.Value);
+        }
+
+        return query;
     }
 }

@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { Form, Link } from 'react-router';
 import { type FormActionError } from '@/shared/api/errors';
+import { formatPrice } from '@/shared/lib/format/price';
 
 interface BookingCreateFormProps {
   eventId: string;
   isSubmitting: boolean;
   error?: FormActionError | null;
   availableSeats: number;
+  unitPrice?: number;
+  currency?: string;
 }
 
 export const BookingCreateForm = ({
@@ -14,11 +17,12 @@ export const BookingCreateForm = ({
   availableSeats,
   isSubmitting,
   error,
+  unitPrice = 0,
+  currency = 'KZT',
 }: BookingCreateFormProps) => {
-  // Позволяем состоянию быть пустой строкой для комфортного редактирования
   const [seats, setSeats] = useState<number | ''>(1);
 
-  // 2. НЕТ МЕСТ
+  // 1. НЕТ МЕСТ
   if (availableSeats <= 0) {
     return (
       <div className="space-y-4 rounded-xl border border-(--border) bg-(--bg) p-8 text-center shadow-sm">
@@ -48,8 +52,9 @@ export const BookingCreateForm = ({
     );
   }
 
-  // 3. ФОРМА ВВОДА
+  // 2. ФОРМА ВВОДА
   const currentSeats = seats === '' ? 1 : seats;
+  const totalPrice = currentSeats * unitPrice;
 
   const handleDecrement = () => {
     setSeats(Math.max(1, currentSeats - 1));
@@ -62,7 +67,7 @@ export const BookingCreateForm = ({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     if (value === '') {
-      setSeats(''); // Позволяем инпуту быть временно пустым
+      setSeats('');
       return;
     }
 
@@ -72,7 +77,6 @@ export const BookingCreateForm = ({
     }
   };
 
-  // Возвращаем фокус на 1, если пользователь оставил поле пустым и нажал
   const handleBlur = () => {
     if (seats === '') setSeats(1);
   };
@@ -80,7 +84,7 @@ export const BookingCreateForm = ({
   return (
     <Form
       method="post"
-      className="space-y-6 rounded-2xl border border-(--border) bg-(--bg) p-6 shadow-sm"
+      className="space-y-6 rounded-2xl border border-(--border) bg-(--bg) p-6 text-left shadow-sm"
     >
       {error && (
         <div
@@ -103,7 +107,7 @@ export const BookingCreateForm = ({
 
       <input type="hidden" name="eventId" value={eventId} />
 
-      <div className="space-y-2">
+      <div className="space-y-3">
         <label htmlFor="seats" className="block text-sm font-medium text-(--text)">
           Количество мест
         </label>
@@ -128,8 +132,8 @@ export const BookingCreateForm = ({
             onChange={handleInputChange}
             onBlur={handleBlur}
             disabled={isSubmitting}
-            className="h-10 w-20 rounded-lg border border-(--border) bg-(--bg) text-center font-semibold text-(--text-h) focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
-          ></input>
+            className="h-10 w-24 rounded-lg border border-(--border) bg-(--bg) text-center font-semibold text-(--text-h) focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+          />
 
           <button
             type="button"
@@ -141,9 +145,23 @@ export const BookingCreateForm = ({
             +
           </button>
         </div>
-        <p className="text-xs text-(--text) opacity-75">
+        <p className="text-center text-xs text-(--text) opacity-75">
           Доступно для выбора: до {availableSeats} мест
         </p>
+      </div>
+
+      {/* Финансовый расчет */}
+      <div className="space-y-2 rounded-xl bg-(--code-bg) p-4 text-sm text-(--text)">
+        <div className="flex items-center justify-between">
+          <span>Цена за 1 место:</span>
+          <span className="font-semibold text-(--text-h)">{formatPrice(unitPrice, currency)}</span>
+        </div>
+        <div className="flex items-center justify-between border-t border-(--border)/50 pt-2 text-base font-bold text-(--text-h)">
+          <span>Итого к оплате:</span>
+          <span className="text-indigo-600 dark:text-indigo-400">
+            {formatPrice(totalPrice, currency)}
+          </span>
+        </div>
       </div>
 
       <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">

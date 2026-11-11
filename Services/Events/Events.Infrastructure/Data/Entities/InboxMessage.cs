@@ -20,5 +20,4 @@ public sealed class InboxMessage
     public DateTimeOffset ReceivedAt { get; init; }
     public DateTimeOffset? ProcessedAt { get; set; }
     public string? LastError { get; set; }
-
 }

@@ -4,6 +4,8 @@ interface EventFiltersProps {
   initialTitle?: string;
   initialFrom?: string;
   initialTo?: string;
+  initialMinPrice?: string;
+  initialMaxPrice?: string;
   pageSize?: number;
 }
 
@@ -11,12 +13,16 @@ export const EventFilters = ({
   initialTitle = '',
   initialFrom = '',
   initialTo = '',
+  initialMinPrice = '',
+  initialMaxPrice = '',
   pageSize = 6,
 }: EventFiltersProps) => {
   const navigation = useNavigation();
   const isSearching = navigation.state === 'loading' && Boolean(navigation.location.search);
 
-  const hasActiveFilters = Boolean(initialTitle || initialFrom || initialTo);
+  const hasActiveFilters = Boolean(
+    initialTitle || initialFrom || initialTo || initialMinPrice || initialMaxPrice,
+  );
 
   return (
     <div className="rounded-xl border border-(--border) bg-(--bg) p-5 text-left shadow-sm">
@@ -26,7 +32,7 @@ export const EventFilters = ({
         {/* При смене фильтров сбрасываем на 1-ю страницу */}
         <input type="hidden" name="page" value={1} />
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
           {/* Поиск по названию */}
           <div className="space-y-1 sm:col-span-2 lg:col-span-2">
             <label
@@ -48,7 +54,7 @@ export const EventFilters = ({
           </div>
 
           {/* Дата от */}
-          <div className="space-y-1">
+          <div className="space-y-1 lg:col-span-1">
             <label
               htmlFor="from"
               className="block text-xs font-semibold tracking-wider text-(--text) uppercase"
@@ -65,7 +71,7 @@ export const EventFilters = ({
           </div>
 
           {/* Дата по */}
-          <div className="space-y-1">
+          <div className="space-y-1 lg:col-span-1">
             <label
               htmlFor="to"
               className="block text-xs font-semibold tracking-wider text-(--text) uppercase"
@@ -78,6 +84,46 @@ export const EventFilters = ({
               name="to"
               defaultValue={initialTo}
               className="w-full rounded-lg border border-(--border) bg-(--bg) px-3.5 py-2 text-sm text-(--text-h) focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+            />
+          </div>
+
+          {/* Цена от */}
+          <div className="space-y-1 lg:col-span-1">
+            <label
+              htmlFor="minPrice"
+              className="block text-xs font-semibold tracking-wider text-(--text) uppercase"
+            >
+              Цена от (₸)
+            </label>
+            <input
+              type="number"
+              id="minPrice"
+              name="minPrice"
+              min="0"
+              step="any"
+              defaultValue={initialMinPrice}
+              placeholder="0"
+              className="w-full rounded-lg border border-(--border) bg-(--bg) px-3.5 py-2 text-sm text-(--text-h) placeholder:text-(--text)/60 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+            />
+          </div>
+
+          {/* Цена до */}
+          <div className="space-y-1 lg:col-span-1">
+            <label
+              htmlFor="maxPrice"
+              className="block text-xs font-semibold tracking-wider text-(--text) uppercase"
+            >
+              Цена до (₸)
+            </label>
+            <input
+              type="number"
+              id="maxPrice"
+              name="maxPrice"
+              min="0"
+              step="any"
+              defaultValue={initialMaxPrice}
+              placeholder="10000"
+              className="w-full rounded-lg border border-(--border) bg-(--bg) px-3.5 py-2 text-sm text-(--text-h) placeholder:text-(--text)/60 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
             />
           </div>
         </div>

@@ -1,4 +1,5 @@
 using AwesomeAssertions;
+using Events.Application.Abstractions.Persistence;
 using Events.Application.Abstractions.Repositories;
 using Events.Application.DTOs;
 using Events.Domain.Entities;
@@ -17,14 +18,15 @@ public class EventRepositoryTests(ApiOnlyIntegrationTestFactory factory) : ApiOn
     public async Task AddAndSave_ViaRepository_ShouldPersistEvent()
     {
         // Arrange
-        var newEvent = Event.Create("Real Test", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(1).AddHours(1), 10);
+        var newEvent = Event.Create("Real Test", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(1).AddHours(1), DateTimeOffset.UtcNow, 10);
 
         // Act
-        await ExecuteScopeAsync(sp =>
+        await ExecuteScopeAsync(async sp =>
         {
             var repo = sp.GetRequiredService<IEventRepository>();
+            var uow = sp.GetRequiredService<IUnitOfWork>();
             repo.Add(newEvent);
-            return repo.SaveChangesAsync();
+            await uow.SaveChangesAsync(CancellationToken.None);
         });
 
         // Assert
@@ -68,7 +70,7 @@ public class EventRepositoryTests(ApiOnlyIntegrationTestFactory factory) : ApiOn
         // Arrange
         var id = await ExecuteDbContextAsync(async ctx =>
         {
-            var e = Event.Create("To Delete", DateTime.UtcNow, DateTime.UtcNow.AddHours(1), 5);
+            var e = Event.Create("To Delete", DateTime.UtcNow, DateTime.UtcNow.AddHours(1), DateTimeOffset.UtcNow, 5);
             ctx.Events.Add(e);
             await ctx.SaveChangesAsync();
             return e.Id;
@@ -78,9 +80,10 @@ public class EventRepositoryTests(ApiOnlyIntegrationTestFactory factory) : ApiOn
         await ExecuteScopeAsync(async sp =>
         {
             var repo = sp.GetRequiredService<IEventRepository>();
+            var uow = sp.GetRequiredService<IUnitOfWork>();
             var existing = await repo.GetByIdAsync(id, CancellationToken.None);
             repo.Delete(existing!);
-            await repo.SaveChangesAsync(CancellationToken.None);
+            await uow.SaveChangesAsync(CancellationToken.None);
         });
 
         // Assert
@@ -97,7 +100,7 @@ public class EventRepositoryTests(ApiOnlyIntegrationTestFactory factory) : ApiOn
         // Arrange
         await ExecuteDbContextAsync(async ctx =>
         {
-            var e = Event.Create("NoTrack", DateTime.UtcNow, DateTime.UtcNow.AddHours(1), 5);
+            var e = Event.Create("NoTrack", DateTime.UtcNow, DateTime.UtcNow.AddHours(1), DateTimeOffset.UtcNow, 5);
             ctx.Events.Add(e);
             await ctx.SaveChangesAsync();
         });
@@ -128,7 +131,7 @@ public class EventRepositoryTests(ApiOnlyIntegrationTestFactory factory) : ApiOn
             List<Event> events = new List<Event>(20);
             for (int i = 0; i < 20; i++)
             {
-                events.Add(Event.Create("Event " + i, fromDate, toDate, 10));
+                events.Add(Event.Create("Event " + i, fromDate, toDate, DateTimeOffset.UtcNow, 10));
             }
             ctx.Events.AddRange(events);
             await ctx.SaveChangesAsync();
@@ -170,7 +173,7 @@ public class EventRepositoryTests(ApiOnlyIntegrationTestFactory factory) : ApiOn
             List<Event> events = new List<Event>(27);
             for (int i = 0; i < 27; i++)
             {
-                events.Add(Event.Create("Event " + i, fromDate, toDate, 10));
+                events.Add(Event.Create("Event " + i, fromDate, toDate, DateTimeOffset.UtcNow, 10));
             }
             ctx.Events.AddRange(events);
             await ctx.SaveChangesAsync();
@@ -198,7 +201,7 @@ public class EventRepositoryTests(ApiOnlyIntegrationTestFactory factory) : ApiOn
         // Arrange
         var id = await ExecuteDbContextAsync(async ctx =>
         {
-            var e = Event.Create("Event Test", DateTime.UtcNow, DateTime.UtcNow.AddHours(1), 5);
+            var e = Event.Create("Event Test", DateTime.UtcNow, DateTime.UtcNow.AddHours(1), DateTimeOffset.UtcNow, 5);
             ctx.Events.Add(e);
             await ctx.SaveChangesAsync();
             return e.Id;
@@ -238,7 +241,7 @@ public class EventRepositoryTests(ApiOnlyIntegrationTestFactory factory) : ApiOn
         var dateEndAtUpdate = DateTime.UtcNow.AddDays(2);
         var id = await ExecuteDbContextAsync(async ctx =>
         {
-            var e = Event.Create("Old Title", DateTime.UtcNow, DateTime.UtcNow.AddHours(1), 5);
+            var e = Event.Create("Old Title", DateTime.UtcNow, DateTime.UtcNow.AddHours(1), DateTimeOffset.UtcNow, 5);
             ctx.Events.Add(e);
             await ctx.SaveChangesAsync();
             return e.Id;
@@ -254,11 +257,13 @@ public class EventRepositoryTests(ApiOnlyIntegrationTestFactory factory) : ApiOn
                 title: "Updated Title",
                 startAt: dateStartAtUpdate,
                 endAt: dateEndAtUpdate,
+                DateTimeOffset.Now,
                 description: "Updated description"
                 );
 
             repo.Update(existing!);
-            await repo.SaveChangesAsync(CancellationToken.None);
+            var uow = sp.GetRequiredService<IUnitOfWork>();
+            await uow.SaveChangesAsync(CancellationToken.None);
             return existing;
         });
 

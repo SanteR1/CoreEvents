@@ -46,6 +46,7 @@
   </Folder>
   <Folder Name="/Shared/">
     <Project Path="Shared/CoreEvents.Shared.Contracts/CoreEvents.Shared.Contracts.csproj" Id="7da9e648-ed62-42b1-91c3-b690b63b8b98" />
+    <Project Path="Shared/CoreEvents.Shared.Contracts.Tests/CoreEvents.Shared.Contracts.Tests.csproj" />
   </Folder>
   <Folder Name="/Элементы решения/">
     <File Path=".editorconfig" />

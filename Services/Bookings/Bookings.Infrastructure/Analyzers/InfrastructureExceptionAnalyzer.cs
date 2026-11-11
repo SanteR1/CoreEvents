@@ -1,6 +1,8 @@
 using System.Net.Sockets;
+using System.Text.Json;
 using Bookings.Application.Abstractions.Persistence;
 using Confluent.Kafka;
+using CoreEvents.Shared.Contracts.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
@@ -10,7 +12,12 @@ public sealed class InfrastructureExceptionAnalyzer : IExceptionAnalyzer
 {
     public bool IsTransient(Exception exception)
     {
+        if (exception is NonRetryableException or JsonException)
+            return false;
+
         var rootCause = exception.GetBaseException();
+        if (rootCause is NonRetryableException or JsonException)
+            return false;
 
         // 1. Ошибки PostgreSQL
         if (rootCause is NpgsqlException { IsTransient: true })

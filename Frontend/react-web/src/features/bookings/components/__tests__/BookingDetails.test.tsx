@@ -41,6 +41,14 @@ describe('BookingDetails.tsx', () => {
     status: 'Confirmed',
     createdAt: new Date('2026-06-15T10:30:00Z'),
     processedAt: new Date('2026-06-15T10:35:00Z'),
+    seats: 2,
+    unitPrice: 1500,
+    totalPrice: 3000,
+    discountAmount: 0,
+    currency: 'KZT',
+    rejectionReason: null,
+    cancellationReason: null,
+    cancellationRequestedAt: null,
   };
 
   beforeEach(() => {
@@ -78,6 +86,12 @@ describe('BookingDetails.tsx', () => {
       expect(badges.length).toBeGreaterThanOrEqual(1);
     });
 
+    it('renders "Отмена в процессе..." badge for CancellationPending status', () => {
+      renderBookingDetails({ booking: { ...baseBooking, status: 'CancellationPending' } });
+      const badges = screen.getAllByText('Отмена в процессе...');
+      expect(badges.length).toBeGreaterThanOrEqual(1);
+    });
+
     it('renders fallback badge for unknown custom status', () => {
       // @ts-expect-error testing unusual status string
       renderBookingDetails({ booking: { ...baseBooking, status: 'CustomWaitlist' } });
@@ -96,6 +110,45 @@ describe('BookingDetails.tsx', () => {
   });
 
   describe('Date formatting', () => {
+    it('displays discount amount when discountAmount > 0', () => {
+      renderBookingDetails({
+        booking: {
+          ...baseBooking,
+          discountAmount: 500,
+        },
+      });
+
+      expect(screen.getByText('Скидка: 500 ₸')).toBeInTheDocument();
+    });
+
+    it('displays rejection reason for Rejected booking', () => {
+      renderBookingDetails({
+        booking: {
+          ...baseBooking,
+          status: 'Rejected',
+          rejectionReason: 'Все места распроданы организатором',
+        },
+      });
+
+      expect(screen.getByText(/Причина отклонения:/)).toBeInTheDocument();
+      expect(screen.getByText('Все места распроданы организатором')).toBeInTheDocument();
+    });
+
+    it('displays cancellation reason and cancellationRequestedAt for Cancelled booking', () => {
+      renderBookingDetails({
+        booking: {
+          ...baseBooking,
+          status: 'Cancelled',
+          cancellationReason: 'UserCancelled',
+          cancellationRequestedAt: new Date('2026-06-16T12:00:00Z'),
+        },
+      });
+
+      expect(screen.getByText(/Причина отмены:/)).toBeInTheDocument();
+      expect(screen.getByText('UserCancelled')).toBeInTheDocument();
+      expect(screen.getByText(/Запрос на отмену:/)).toBeInTheDocument();
+    });
+
     it('formats createdAt and processedAt dates when present', () => {
       renderBookingDetails({ booking: baseBooking });
       const createdFormatted = new Date('2026-06-15T10:30:00Z').toLocaleString('ru-RU');
@@ -117,9 +170,17 @@ describe('BookingDetails.tsx', () => {
   });
 
   describe('Cancellation Logic & Confirmation Dialog', () => {
-    it('displays cancel button for Pending and Confirmed bookings', () => {
-      renderBookingDetails({ booking: { ...baseBooking, status: 'Confirmed' } });
+    it('displays cancel button for Confirmed bookings and hides for Pending', () => {
+      const { unmount } = renderBookingDetails({
+        booking: { ...baseBooking, status: 'Confirmed' },
+      });
       expect(screen.getByRole('button', { name: /отменить бронирование/i })).toBeInTheDocument();
+      unmount();
+
+      renderBookingDetails({ booking: { ...baseBooking, status: 'Pending' } });
+      expect(
+        screen.queryByRole('button', { name: /отменить бронирование/i }),
+      ).not.toBeInTheDocument();
     });
 
     it('hides cancel button for Cancelled and Rejected bookings', () => {
@@ -153,7 +214,7 @@ describe('BookingDetails.tsx', () => {
       const user = userEvent.setup();
       const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValueOnce(false);
 
-      renderBookingDetails({ booking: { ...baseBooking, status: 'Pending' } });
+      renderBookingDetails({ booking: { ...baseBooking, status: 'Confirmed' } });
 
       const cancelBtn = screen.getByRole('button', { name: /отменить бронирование/i });
       await user.click(cancelBtn);
@@ -165,7 +226,7 @@ describe('BookingDetails.tsx', () => {
       const user = userEvent.setup();
       const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValueOnce(true);
 
-      renderBookingDetails({ booking: { ...baseBooking, status: 'Pending' } });
+      renderBookingDetails({ booking: { ...baseBooking, status: 'Confirmed' } });
 
       const cancelBtn = screen.getByRole('button', { name: /отменить бронирование/i });
       await user.click(cancelBtn);
@@ -176,7 +237,7 @@ describe('BookingDetails.tsx', () => {
     it('displays cancel button when user is admin even if not booking owner', () => {
       setUser({ id: 'admin_user', userName: 'admin', role: 'Admin' });
       renderBookingDetails({
-        booking: { ...baseBooking, userId: 'other_user', status: 'Pending' },
+        booking: { ...baseBooking, userId: 'other_user', status: 'Confirmed' },
       });
       expect(screen.getByRole('button', { name: /отменить бронирование/i })).toBeInTheDocument();
     });
@@ -184,7 +245,7 @@ describe('BookingDetails.tsx', () => {
     it('hides cancel button when user is neither booking owner nor admin', () => {
       setUser({ id: 'stranger_user', userName: 'stranger', role: 'User' });
       renderBookingDetails({
-        booking: { ...baseBooking, userId: 'other_user', status: 'Pending' },
+        booking: { ...baseBooking, userId: 'other_user', status: 'Confirmed' },
       });
       expect(
         screen.queryByRole('button', { name: /отменить бронирование/i }),
@@ -194,7 +255,7 @@ describe('BookingDetails.tsx', () => {
     it('hides cancel button when user is unauthenticated', () => {
       clearUser();
       renderBookingDetails({
-        booking: { ...baseBooking, status: 'Pending' },
+        booking: { ...baseBooking, status: 'Confirmed' },
       });
       expect(
         screen.queryByRole('button', { name: /отменить бронирование/i }),
@@ -204,9 +265,19 @@ describe('BookingDetails.tsx', () => {
     it('displays cancel button for legacy booking without userId when authenticated', () => {
       setUser({ id: 'user_123', userName: 'testuser', role: 'User' });
       renderBookingDetails({
-        booking: { ...baseBooking, userId: undefined, status: 'Pending' },
+        booking: { ...baseBooking, userId: undefined, status: 'Confirmed' },
       });
       expect(screen.getByRole('button', { name: /отменить бронирование/i })).toBeInTheDocument();
+    });
+
+    it('hides cancel button when booking status is Pending', () => {
+      setUser({ id: 'user_123', userName: 'testuser', role: 'User' });
+      renderBookingDetails({
+        booking: { ...baseBooking, status: 'Pending' },
+      });
+      expect(
+        screen.queryByRole('button', { name: /отменить бронирование/i }),
+      ).not.toBeInTheDocument();
     });
 
     it('shows submitting indicator when cancellation is in flight', async () => {
@@ -217,7 +288,10 @@ describe('BookingDetails.tsx', () => {
         resolveAction = resolve;
       });
 
-      renderBookingDetails({ booking: { ...baseBooking, status: 'Pending' } }, () => actionPromise);
+      renderBookingDetails(
+        { booking: { ...baseBooking, status: 'Confirmed' } },
+        () => actionPromise,
+      );
 
       const cancelBtn = screen.getByRole('button', { name: /отменить бронирование/i });
       await user.click(cancelBtn);

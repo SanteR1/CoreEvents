@@ -71,6 +71,17 @@ export async function action({ request, params }: ActionFunctionArgs) {
   const descriptionRaw = typeof rawDesc === 'string' ? rawDesc.trim() : '';
   const description = descriptionRaw ? descriptionRaw : null;
 
+  const rawPrice = formData.get('price');
+  const priceParsed =
+    typeof rawPrice === 'string' && rawPrice.trim() !== '' ? parseFloat(rawPrice) : undefined;
+  const price = priceParsed !== undefined && !isNaN(priceParsed) ? priceParsed : undefined;
+
+  const rawCurrency = formData.get('currency');
+  const currency =
+    typeof rawCurrency === 'string' && rawCurrency.trim() !== ''
+      ? rawCurrency.trim().toUpperCase()
+      : undefined;
+
   const fieldErrors: FieldErrors = {};
   if (!title) {
     fieldErrors.title = ['Название события обязательно для заполнения'];
@@ -80,6 +91,12 @@ export async function action({ request, params }: ActionFunctionArgs) {
   }
   if (!endAtRaw) {
     fieldErrors.endAt = ['Укажите дату и время окончания'];
+  }
+  if (price !== undefined && price < 0) {
+    fieldErrors.price = ['Цена не может быть отрицательной'];
+  }
+  if (currency && currency.length > 3) {
+    fieldErrors.currency = ['Код валюты должен содержать максимум 3 символа'];
   }
 
   const startDate = new Date(startAtRaw);
@@ -112,6 +129,8 @@ export async function action({ request, params }: ActionFunctionArgs) {
       startAt: startDate,
       endAt: endDate,
       description,
+      price,
+      currency,
     };
 
     const res = await updateEventById(eventId, payload);

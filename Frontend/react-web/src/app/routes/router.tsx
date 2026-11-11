@@ -1,5 +1,5 @@
 import { createBrowserRouter } from 'react-router';
-import { requireAdminLoader, anonymousOnlyLoader, rootLoader } from '@/shared/lib/auth';
+import { anonymousOnlyLoader, rootLoader } from '@/shared/lib/auth';
 import App from '@/app/App';
 import { RootErrorBoundary } from '@/shared/ui/error/RootErrorBoundary';
 import { RootFallback } from './RootFallback';
@@ -56,15 +56,14 @@ export const router = createBrowserRouter([
       // 3. Административные маршруты событий
       {
         path: 'events/create',
-        loader: requireAdminLoader,
         lazy: async () => {
-          const { CreateEventPage, action } = await import('@/pages/events/CreateEventPage');
-          return { Component: CreateEventPage, action };
+          const { CreateEventPage, loader, action } =
+            await import('@/pages/events/CreateEventPage');
+          return { Component: CreateEventPage, loader, action };
         },
       },
       {
         path: 'events/:id/edit',
-        loader: requireAdminLoader,
         lazy: async () => {
           const { EditEventPage, loader, action } = await import('@/pages/events/EditEventPage');
           return { Component: EditEventPage, loader, action };
@@ -75,6 +74,13 @@ export const router = createBrowserRouter([
       {
         path: 'bookings',
         children: [
+          {
+            index: true,
+            lazy: async () => {
+              const { MyBookingsPage, loader } = await import('@/pages/bookings/MyBookingsPage');
+              return { Component: MyBookingsPage, loader };
+            },
+          },
           {
             path: 'create/:eventId',
             lazy: async () => {

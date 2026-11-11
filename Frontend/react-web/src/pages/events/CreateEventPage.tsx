@@ -1,4 +1,4 @@
-// src/pages/events/CreateEventPage.tsx
+import { useState } from 'react';
 import {
   useActionData,
   useNavigation,
@@ -44,6 +44,17 @@ export async function action({ request }: ActionFunctionArgs) {
   const rawDesc = formData.get('description');
   const description = typeof rawDesc === 'string' ? rawDesc.trim() : '';
 
+  const rawPrice = formData.get('price');
+  const priceParsed =
+    typeof rawPrice === 'string' && rawPrice.trim() !== '' ? parseFloat(rawPrice) : 0;
+  const price = Number.isNaN(priceParsed) ? 0 : priceParsed;
+
+  const rawCurrency = formData.get('currency');
+  const currency =
+    typeof rawCurrency === 'string' && rawCurrency.trim() !== ''
+      ? rawCurrency.trim().toUpperCase()
+      : 'KZT';
+
   const fieldErrors: FieldErrors = {};
   if (!title) {
     fieldErrors.title = ['Название события обязательно для заполнения'];
@@ -56,6 +67,12 @@ export async function action({ request }: ActionFunctionArgs) {
   }
   if (totalSeats <= 0) {
     fieldErrors.totalSeats = ['Количество мест должно быть больше 0'];
+  }
+  if (price < 0) {
+    fieldErrors.price = ['Цена не может быть отрицательной'];
+  }
+  if (currency.length > 3) {
+    fieldErrors.currency = ['Код валюты должен содержать максимум 3 символа'];
   }
 
   // Проверка логики дат
@@ -83,9 +100,6 @@ export async function action({ request }: ActionFunctionArgs) {
     };
   }
 
-  // =========================================================================
-  // 2. ОТПРАВКА НА WEB API И ПРИЁМ ОШИБОК С БЭКЕНДА
-  // =========================================================================
   try {
     const payload: EventCreate = {
       title,
@@ -93,18 +107,18 @@ export async function action({ request }: ActionFunctionArgs) {
       endAt: endDate,
       totalSeats,
       description,
+      price,
+      currency,
     };
 
     const res = await createEvent(payload);
 
-    // Если бэкенд вернул 400 Bad Request (ValidationProblemDetails), 401, 403 или сеть упала
     if (!res.success) {
       return {
-        error: res.error, // res.error уже обработан в eventsApi через toFormError
+        error: res.error,
       };
     }
 
-    // Успех
     return {
       event: res.event,
     };
@@ -123,32 +137,33 @@ export async function action({ request }: ActionFunctionArgs) {
 // 2. Компонент страницы
 export const CreateEventPage = () => {
   const actionData = useActionData<typeof action>();
+  const [dismissedEventId, setDismissedEventId] = useState<string | null>(null);
 
   const navigation = useNavigation();
   const isSubmitting = navigation.state === 'submitting';
 
-  // Если есть event, значит создание прошло успешно
-  if (actionData?.event) {
+  if (actionData?.event && actionData.event.id !== dismissedEventId) {
     return (
-      <div className="mx-auto max-w-3xl space-y-8 p-6">
+      <div className="mx-auto max-w-3xl space-y-8 p-6 text-left">
         <div>
           <h1 className="text-2xl font-bold">Событие создано!</h1>
           <p className="text-sm text-gray-500">Событие успешно опубликовано</p>
         </div>
-        <EventResponseForm event={actionData.event} />
+        <EventResponseForm
+          event={actionData.event}
+          onCreateAnother={() => setDismissedEventId(actionData.event.id)}
+        />
       </div>
     );
   }
 
-  // В противном случае рендерим форму (первый заход или попытка с ошибкой)
   return (
-    <div className="mx-auto max-w-3xl space-y-8 p-6">
+    <div className="mx-auto max-w-3xl space-y-8 p-6 text-left">
       <div>
         <h1 className="text-2xl font-bold">Создание события</h1>
         <p className="text-sm text-gray-500">Заполните данные для публикации нового события</p>
       </div>
 
-      {/* Передаем готовую ошибку напрямую. actionData?.error уже является FormActionError */}
       <EventRequestForm error={actionData?.error} isSubmitting={isSubmitting} />
     </div>
   );

@@ -21,6 +21,9 @@ describe('TopEvents', () => {
     endAt: new Date('2026-10-15T18:00:00Z'),
     totalSeats: 200,
     availableSeats: 50,
+    price: 1500,
+    currency: 'KZT',
+    isActive: true,
   };
 
   const mockTopEvent2: EventResponse = {
@@ -31,6 +34,9 @@ describe('TopEvents', () => {
     endAt: new Date('2026-10-16T14:00:00Z'),
     totalSeats: 30,
     availableSeats: 0,
+    price: 0,
+    currency: 'KZT',
+    isActive: true,
   };
 
   beforeEach(() => {
@@ -169,6 +175,9 @@ describe('TopEvents', () => {
         endAt: null as unknown as Date,
         totalSeats: 10,
         availableSeats: 5,
+        price: 0,
+        currency: 'KZT',
+        isActive: true,
       };
 
       render(<TopEventsForm events={[fallbackEvent]} />);
@@ -177,6 +186,21 @@ describe('TopEvents', () => {
       expect(screen.getByText('Описание отсутствует')).toBeInTheDocument();
       const notSpecified = screen.getAllByText('Не указано');
       expect(notSpecified.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('renders cancelled badge and disabled button for inactive event', () => {
+      const cancelledEvent: EventResponse = {
+        ...mockTopEvent1,
+        id: 'top-cancelled',
+        isActive: false,
+      };
+
+      render(<TopEventsForm events={[cancelledEvent]} />);
+
+      const cancelledElements = screen.getAllByText('Отменено');
+      expect(cancelledElements.length).toBeGreaterThanOrEqual(1);
+      const button = screen.getByRole('button', { name: 'Отменено' });
+      expect(button).toBeDisabled();
     });
 
     it('handles button click when onBookClick is undefined without errors', async () => {

@@ -31,6 +31,9 @@ describe('HomePage', () => {
     endAt: new Date('2026-10-15T18:00:00Z'),
     totalSeats: 100,
     availableSeats: 50,
+    price: 1500,
+    currency: 'KZT',
+    isActive: true,
   };
 
   const mockEvent2: EventResponse = {
@@ -41,6 +44,9 @@ describe('HomePage', () => {
     endAt: new Date('2026-11-01T14:00:00Z'),
     totalSeats: 20,
     availableSeats: 0,
+    price: 0,
+    currency: 'KZT',
+    isActive: true,
   };
 
   const mockSuccessResult: PaginatedResult = {
@@ -73,11 +79,21 @@ describe('HomePage', () => {
 
       const res = await loader(createLoaderArgs('http://localhost/'));
 
-      expect(getAllEvents).toHaveBeenCalledWith(undefined, undefined, undefined, 1, 6);
+      expect(getAllEvents).toHaveBeenCalledWith(
+        undefined,
+        undefined,
+        undefined,
+        1,
+        6,
+        undefined,
+        undefined,
+      );
       expect(res.filters).toEqual({
         title: '',
         from: '',
         to: '',
+        minPrice: '',
+        maxPrice: '',
         page: 1,
         pageSize: 6,
       });
@@ -88,10 +104,26 @@ describe('HomePage', () => {
       vi.mocked(getAllEvents).mockResolvedValueOnce(mockSuccessResult);
 
       await loader(createLoaderArgs('http://localhost/?page=-5&pageSize=0'));
-      expect(getAllEvents).toHaveBeenCalledWith(undefined, undefined, undefined, 1, 6);
+      expect(getAllEvents).toHaveBeenCalledWith(
+        undefined,
+        undefined,
+        undefined,
+        1,
+        6,
+        undefined,
+        undefined,
+      );
 
       await loader(createLoaderArgs('http://localhost/?page=abc&pageSize=xyz'));
-      expect(getAllEvents).toHaveBeenCalledWith(undefined, undefined, undefined, 1, 6);
+      expect(getAllEvents).toHaveBeenCalledWith(
+        undefined,
+        undefined,
+        undefined,
+        1,
+        6,
+        undefined,
+        undefined,
+      );
     });
 
     it('parses valid page, pageSize and trims title parameter', async () => {
@@ -103,7 +135,15 @@ describe('HomePage', () => {
         ),
       );
 
-      expect(getAllEvents).toHaveBeenCalledWith('Tech Conference', undefined, undefined, 3, 12);
+      expect(getAllEvents).toHaveBeenCalledWith(
+        'Tech Conference',
+        undefined,
+        undefined,
+        3,
+        12,
+        undefined,
+        undefined,
+      );
       expect(res.filters.title).toBe('Tech Conference');
       expect(res.filters.page).toBe(3);
       expect(res.filters.pageSize).toBe(12);
@@ -117,7 +157,15 @@ describe('HomePage', () => {
       const expectedFrom = new Date('2026-08-01T00:00:00').toISOString();
       const expectedTo = new Date('2026-08-10T23:59:59.999').toISOString();
 
-      expect(getAllEvents).toHaveBeenCalledWith(undefined, expectedFrom, expectedTo, 1, 6);
+      expect(getAllEvents).toHaveBeenCalledWith(
+        undefined,
+        expectedFrom,
+        expectedTo,
+        1,
+        6,
+        undefined,
+        undefined,
+      );
     });
 
     it('handles invalid date strings gracefully without passing corrupt ISO to API', async () => {
@@ -125,14 +173,40 @@ describe('HomePage', () => {
 
       await loader(createLoaderArgs('http://localhost/?from=not-a-date&to=invalid-date'));
 
-      expect(getAllEvents).toHaveBeenCalledWith(undefined, undefined, undefined, 1, 6);
+      expect(getAllEvents).toHaveBeenCalledWith(
+        undefined,
+        undefined,
+        undefined,
+        1,
+        6,
+        undefined,
+        undefined,
+      );
+    });
+
+    it('parses valid minPrice and maxPrice query parameters', async () => {
+      vi.mocked(getAllEvents).mockResolvedValueOnce(mockSuccessResult);
+
+      const res = await loader(createLoaderArgs('http://localhost/?minPrice=500&maxPrice=5000'));
+
+      expect(getAllEvents).toHaveBeenCalledWith(undefined, undefined, undefined, 1, 6, 500, 5000);
+      expect(res.filters.minPrice).toBe('500');
+      expect(res.filters.maxPrice).toBe('5000');
     });
   });
 
   describe('HomePage Component Rendering', () => {
     function renderHomePage(
       resultData = mockSuccessResult,
-      filtersData = { title: '', from: '', to: '', page: 1, pageSize: 6 },
+      filtersData = {
+        title: '',
+        from: '',
+        to: '',
+        minPrice: '',
+        maxPrice: '',
+        page: 1,
+        pageSize: 6,
+      },
     ) {
       const router = createMemoryRouter(
         [
@@ -245,6 +319,8 @@ describe('HomePage', () => {
         title: 'Non-existent Event',
         from: '2026-01-01',
         to: '',
+        minPrice: '',
+        maxPrice: '',
         page: 1,
         pageSize: 6,
       });

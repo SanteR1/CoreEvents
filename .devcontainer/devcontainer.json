@@ -23,7 +23,7 @@
       "moby": "true"
     },
     // ДОБАВЛЯЕМ NODE.JS:
-    "ghcr.io/devcontainers/features/node:1": {
+    "ghcr.io/devcontainers/features/node:2": {
       "version": "26.8.1", //
       "nodeGypDependencies": true
     }
@@ -44,6 +44,7 @@
       ],
       "settings": {
         "dotnet.cli.telemetryOptOut": true,
+        "antigravity.serverPort": 43333,
         "editor.formatOnSave": true,
         // Четкое разделение форматтеров, чтобы Prettier не ломал C# код
         "[typescript]": {
@@ -64,12 +65,12 @@
     "coreevents-grafana:3000",
     "coreevents-jaeger:16686",
     "coreevents-prometheus:9090",
-    5173
+    5173,
+    43333
   ],
   "portsAttributes": {
     "coreevents-gateway-api:5000": {
-      "label": "API Gateway (Swagger & Scalar)",
-      "onAutoForward": "openBrowser"
+      "label": "API Gateway (Swagger & Scalar)"
     },
     "coreevents-grafana:3000": {
       "label": "Grafana Dashboards"
@@ -81,7 +82,11 @@
       "label": "Prometheus Metrics"
     },
     "5173": {
-      "label": "React Web Frontend"
+      "label": "React Web Frontend",
+      "onAutoForward": "notify"
+    },
+    "43333": {
+      "label": "Antigravity Backend"
     }
   },
   "remoteUser": "vscode",

@@ -2,5 +2,6 @@ using MediatR;
 
 namespace Events.Application.Abstractions.Messaging;
 
-public interface ICommand<out TResponse> : IRequest<TResponse> { }
-public interface ICommand : IRequest<Unit> { } // Для команд без возвращаемого значения
+public interface IBaseCommand { }
+public interface ICommand<out TResponse> : IRequest<TResponse>, IBaseCommand { }
+public interface ICommand : IRequest<Unit>, IBaseCommand { }

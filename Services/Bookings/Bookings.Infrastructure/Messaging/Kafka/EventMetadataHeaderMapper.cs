@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using Confluent.Kafka;
 using CoreEvents.Shared.Contracts.Events;
+using CoreEvents.Shared.Contracts.Infrastructure;
 using CoreEvents.Shared.Contracts.Serialization;
 
 namespace Bookings.Infrastructure.Messaging.Kafka;

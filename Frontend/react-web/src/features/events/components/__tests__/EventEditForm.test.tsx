@@ -30,6 +30,9 @@ describe('EventEditForm', () => {
     endAt: new Date('2026-10-15T17:45:00Z'),
     totalSeats: 100,
     availableSeats: 45,
+    price: 2500,
+    currency: 'KZT',
+    isActive: true,
   };
 
   beforeEach(() => {
@@ -111,6 +114,8 @@ describe('EventEditForm', () => {
             startAt: ['Некорректная дата начала'],
             endAt: ['Дата окончания должна быть позже даты начала'],
             description: ['Описание не должно превышать 1000 символов'],
+            price: ['Цена не может быть отрицательной'],
+            currency: ['Код валюты должен содержать максимум 3 символа'],
           },
         },
       });
@@ -120,6 +125,10 @@ describe('EventEditForm', () => {
       expect(screen.getByText('Некорректная дата начала')).toBeInTheDocument();
       expect(screen.getByText('Дата окончания должна быть позже даты начала')).toBeInTheDocument();
       expect(screen.getByText('Описание не должно превышать 1000 символов')).toBeInTheDocument();
+      expect(screen.getByText('Цена не может быть отрицательной')).toBeInTheDocument();
+      expect(
+        screen.getByText('Код валюты должен содержать максимум 3 символа'),
+      ).toBeInTheDocument();
     });
   });
 

@@ -9,6 +9,7 @@ internal sealed class BookingsDbContext : DbContext
     public BookingsDbContext(DbContextOptions<BookingsDbContext> options) : base(options) { }
 
     public DbSet<Booking> Bookings => Set<Booking>();
+    public DbSet<EventProjection> EventProjections => Set<EventProjection>();
     public DbSet<InboxMessage> InboxMessages => Set<InboxMessage>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 

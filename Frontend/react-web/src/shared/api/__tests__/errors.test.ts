@@ -148,6 +148,12 @@ describe('errors.ts', () => {
       });
     });
 
+    it('translates network error message inside problem details object', () => {
+      const problem = { detail: 'Failed to fetch' };
+      const res = toFormError(problem);
+      expect(res?.message).toContain('Сервер временно недоступен');
+    });
+
     it('falls back to defaultMessage for unknown primitives', () => {
       const res = toFormError(404, { defaultMessage: 'Ресурс не найден' });
       expect(res).toEqual({

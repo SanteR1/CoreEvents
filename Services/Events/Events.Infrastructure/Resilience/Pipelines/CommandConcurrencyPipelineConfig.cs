@@ -1,5 +1,5 @@
+using Events.Application.Abstractions.Persistence;
 using Events.Application.Abstractions.Resilience.Constants;
-using Events.Domain.Exceptions;
 using Events.Infrastructure.Resilience.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -16,28 +16,25 @@ public sealed class CommandConcurrencyPipelineConfig : IResiliencePipelineConfig
     public void Configure(ResiliencePipelineBuilder builder, AddResiliencePipelineContext<string> context)
     {
         var logger = context.ServiceProvider.GetRequiredService<ILogger<CommandConcurrencyPipelineConfig>>();
+        var exceptionAnalyzer = context.ServiceProvider.GetRequiredService<IExceptionAnalyzer>();
 
-        builder
-            //.AddTimeout(TimeSpan.FromSeconds(10)) // outer most
-            .AddRetry(new RetryStrategyOptions
+        builder.AddRetry(new RetryStrategyOptions
+        {
+            ShouldHandle = new PredicateBuilder().Handle<Exception>(exceptionAnalyzer.IsConcurrency),
+            MaxRetryAttempts = 3,
+            BackoffType = DelayBackoffType.Exponential,
+            UseJitter = true,
+            Delay = TimeSpan.FromMilliseconds(150),
+            OnRetry = args =>
             {
-                ShouldHandle = new PredicateBuilder().Handle<ConcurrencyException>(),
-                MaxRetryAttempts = 3,
-                BackoffType = DelayBackoffType.Exponential,
-                UseJitter = true, // Размываем пики, чтобы потоки не штурмовали Postgres одновременно
-                // BaseDelay = TimeSpan.FromMilliseconds(150),
-                Delay = TimeSpan.FromMilliseconds(150),
-                OnRetry = args =>
-                {
-                    var exceptionMessage = args.Outcome.Exception?.Message ?? "Неизвестная ошибка";
-                    logger.LogWarning(
-                        args.Outcome.Exception, // Передаем сам Exception для записи StackTrace в лог
-                        "[Concurrency] Конфликт версий данных. Попытка повтора #{Attempt}. Причина: {Message}",
-                        args.AttemptNumber + 1,
-                        exceptionMessage);
-                    return ValueTask.CompletedTask;
-                }
-            });
-        //.AddTimeout(TimeSpan.FromSeconds(1)); // inner most
+                var exceptionMessage = args.Outcome.Exception?.Message ?? "Неизвестная ошибка";
+                logger.LogWarning(
+                    args.Outcome.Exception,
+                    "[Concurrency] Конфликт версий данных. Попытка повтора #{Attempt}. Причина: {Message}",
+                    args.AttemptNumber + 1,
+                    exceptionMessage);
+                return ValueTask.CompletedTask;
+            }
+        });
     }
 }

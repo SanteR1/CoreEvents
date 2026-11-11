@@ -7,4 +7,18 @@
     <NoWarn>$(NoWarn);MA0004</NoWarn>
   </PropertyGroup>
 
+  <!-- Автоматическая установка Husky.Net при dotnet restore для всей команды -->
+  <Target Name="Husky" 
+          AfterTargets="Restore;_GenerateProjectRestoreGraph" 
+          Condition="'$(CI)' != 'true' and '$(HUSKY)' != 0 and Exists('$(MSBuildThisFileDirectory).git/objects') and '$(MSBuildProjectName)' == 'Gateway.Api'"
+          Inputs="$(MSBuildThisFileDirectory).config/dotnet-tools.json" 
+          Outputs="$(MSBuildThisFileDirectory).husky/_/install.stamp">
+    <Exec Command="dotnet tool restore" WorkingDirectory="$(MSBuildThisFileDirectory)" StandardOutputImportance="Low" ContinueOnError="WarnAndContinue" />
+    <Exec Command="dotnet husky install" WorkingDirectory="$(MSBuildThisFileDirectory)" StandardOutputImportance="Low" ContinueOnError="WarnAndContinue" />
+    <Touch Files="$(MSBuildThisFileDirectory).husky/_/install.stamp" AlwaysCreate="true" Condition="Exists('$(MSBuildThisFileDirectory).husky/_')" />
+    <ItemGroup>
+      <FileWrites Include="$(MSBuildThisFileDirectory).husky/_/install.stamp" />
+    </ItemGroup>
+  </Target>
+
 </Project>

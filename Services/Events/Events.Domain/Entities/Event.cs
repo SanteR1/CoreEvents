@@ -1,4 +1,5 @@
 using Events.Domain.DomainEvents;
+using Events.Domain.Enums;
 using Events.Domain.Exceptions;
 
 namespace Events.Domain.Entities;
@@ -12,6 +13,11 @@ public sealed class Event
     public DateTime EndAt { get; private set; }
     public int TotalSeats { get; private set; }
     public int AvailableSeats { get; private set; }
+    public decimal Price { get; private set; } = 0.00m;
+    public string Currency { get; private set; } = "KZT";
+    public long PriceVersion { get; private set; } = 1;
+    public bool IsActive { get; private set; } = true;
+    public long Version { get; private set; } = 1;
     public uint RowVersion { get; private set; }
 
     // Приватный конструктор, чтобы никто не создал объект в обход метода Create
@@ -25,7 +31,9 @@ public sealed class Event
         DateTime startAt,
         DateTime endAt,
         int totalSeats,
-        string? description = null)
+        string? description = null,
+        decimal price = 0.00m,
+        string currency = "KZT")
     {
         Id = id;
         Title = title;
@@ -34,55 +42,130 @@ public sealed class Event
         TotalSeats = totalSeats;
         AvailableSeats = totalSeats;
         Description = description;
+        Price = price;
+        Currency = string.IsNullOrWhiteSpace(currency) ? "KZT" : currency.Trim().ToUpperInvariant();
+        PriceVersion = 1;
+        IsActive = true;
+        Version = 1;
     }
 
     public static Event Create(
         string? title,
         DateTime? startAt,
         DateTime? endAt,
+        DateTimeOffset now,
         int? totalSeats = null,
-        string? description = null)
+        string? description = null,
+        decimal price = 0.00m,
+        string currency = "KZT")
     {
-        ThrowIfNotValid(title, startAt, endAt, totalSeats);
+        ThrowIfNotValid(title, startAt, endAt, totalSeats, price);
 
-        return new Event(
+        var @event = new Event(
             id: Guid.NewGuid(),
             title: title!.Trim(),
             startAt: startAt!.Value,
             endAt: endAt!.Value,
             totalSeats: totalSeats!.Value,
-            description: description);
+            description: description,
+            price: price,
+            currency: currency);
+
+        @event.RaiseDomainEvent(new EventCreatedDomainEvent(
+        @event.Id,
+        @event.Title,
+        @event.Description,
+        @event.StartAt,
+        @event.EndAt,
+        @event.Price,
+        @event.Currency,
+        @event.PriceVersion,
+        @event.TotalSeats,
+        @event.IsActive,
+        @event.Version,
+        now));
+
+        return @event;
     }
 
     public void Update(
         string? title,
         DateTime? startAt,
         DateTime? endAt,
-        string? description = null)
+        DateTimeOffset now,
+        string? description = null,
+        decimal? price = null,
+        string? currency = null)
     {
-        ThrowIfNotValid(title, startAt, endAt, TotalSeats);
+        var targetPrice = price ?? Price;
+        ThrowIfNotValid(title, startAt, endAt, TotalSeats, targetPrice);
 
         Title = title!;
         StartAt = startAt!.Value;
         EndAt = endAt!.Value;
         Description = description;
+
+        var priceOrCurrencyChanged = (price.HasValue && price.Value != Price)
+            || (!string.IsNullOrWhiteSpace(currency) && !string.Equals(currency.Trim(), Currency, StringComparison.OrdinalIgnoreCase));
+
+        if (priceOrCurrencyChanged)
+        {
+            Price = targetPrice;
+            if (!string.IsNullOrWhiteSpace(currency))
+            {
+                Currency = currency.Trim().ToUpperInvariant();
+            }
+            PriceVersion++;
+        }
+
+        Version++;
+
+        RaiseDomainEvent(new EventUpdatedDomainEvent(
+        Id,
+        Title,
+        Description,
+        StartAt,
+        EndAt,
+        Price,
+        Currency,
+        PriceVersion,
+        TotalSeats,
+        IsActive,
+        Version,
+        now
+        ));
     }
 
-    public bool TryReserveSeats(int count = 1)
+    public void Cancel(DateTimeOffset now)
+    {
+        if (!IsActive) return;
+        IsActive = false;
+        Version++;
+
+        RaiseDomainEvent(new EventCancelledDomainEvent(Id, Version, now));
+    }
+
+    public ReserveSeatsResult TryReserveSeats(Guid bookingId, int count, DateTimeOffset now)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(count);
+        if (bookingId == Guid.Empty)
+            throw new ArgumentException("BookingId обязателен.", nameof(bookingId));
 
-        if (AvailableSeats < count) return false;
+        if (!IsActive) return ReserveSeatsResult.EventInactive;
+        if (AvailableSeats < count) return ReserveSeatsResult.InsufficientSeats;
+
         AvailableSeats -= count;
 
-        RaiseDomainEvent(new SeatsReserved(Id));
+        RaiseDomainEvent(new SeatsReservedDomainEvent(Id, bookingId, count, Price, Currency, now));
 
-        return true;
+        return ReserveSeatsResult.Reserved;
     }
 
-    public bool ReleaseSeats(int count = 1)
+    public bool ReleaseSeats(Guid bookingId, int count, DateTimeOffset now)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(count);
+        if (bookingId == Guid.Empty)
+            throw new ArgumentException("BookingId обязателен.", nameof(bookingId));
 
         if (AvailableSeats + count > TotalSeats)
         {
@@ -91,12 +174,11 @@ public sealed class Event
 
         AvailableSeats += count;
 
-        RaiseDomainEvent(new SeatsReleased(Id));
-
+        RaiseDomainEvent(new SeatsReleasedDomainEvent(Id, bookingId, count, now));
         return true;
     }
 
-    private static void ThrowIfNotValid(string? title, DateTime? startAt, DateTime? endAt, int? totalSeats)
+    private static void ThrowIfNotValid(string? title, DateTime? startAt, DateTime? endAt, int? totalSeats, decimal? price = null)
     {
         var errors = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
 
@@ -129,6 +211,9 @@ public sealed class Event
 
         if (!totalSeats.HasValue || totalSeats.Value <= 0)
             AddError(nameof(totalSeats), "Количество мест должно быть больше 0.");
+
+        if (price.HasValue && price.Value < 0)
+            AddError("price", "Цена не может быть отрицательной.");
 
         if (errors.Count > 0)
         {

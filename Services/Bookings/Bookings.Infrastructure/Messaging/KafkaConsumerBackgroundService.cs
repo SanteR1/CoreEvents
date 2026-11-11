@@ -9,6 +9,7 @@ using Bookings.Infrastructure.Messaging.Kafka;
 using Bookings.Infrastructure.Messaging.Options;
 using Confluent.Kafka;
 using CoreEvents.Shared.Contracts.Events;
+using CoreEvents.Shared.Contracts.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -196,7 +197,14 @@ sealed class KafkaConsumerBackgroundService(
         Exception exception,
         CancellationToken ct)
     {
-        logger.LogError(exception, "Message {Key} failed all retries. Moving to DLT.", result.Message.Key);
+        var category = exception switch
+        {
+            CoreEvents.Shared.Contracts.Exceptions.UnknownEventTypeException => "unknown_event",
+            CoreEvents.Shared.Contracts.Exceptions.DataIntegrityException => "integrity",
+            System.Text.Json.JsonException => "bad_payload",
+            _ => "processing_error"
+        };
+        logger.LogError(exception, "[DLT:{Category}] Message {Key} failed. Moving to DLT.", category, result.Message.Key);
 
         var dltMessage = CreateDeadLetterMessage(result, exception);
         await producer.ProduceAsync(KafkaTopics.EventConfirmedDlt, dltMessage, ct);

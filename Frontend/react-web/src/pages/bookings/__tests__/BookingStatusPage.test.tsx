@@ -56,6 +56,14 @@ describe('BookingStatusPage', () => {
     status: 'Pending',
     createdAt: new Date('2026-08-01T12:00:00Z'),
     processedAt: null,
+    seats: 1,
+    unitPrice: 1500,
+    totalPrice: 1500,
+    discountAmount: 0,
+    currency: 'KZT',
+    rejectionReason: null,
+    cancellationReason: null,
+    cancellationRequestedAt: null,
   };
 
   beforeEach(() => {
@@ -236,7 +244,7 @@ describe('BookingStatusPage', () => {
       expect(result).toEqual({
         error: { message: 'Нельзя отменить уже завершенное бронирование' },
       });
-      expect(deleteBookingById).toHaveBeenCalledWith('bk-123');
+      expect(deleteBookingById).toHaveBeenCalledWith('bk-123', 'UserCancelled');
     });
 
     it('returns success message when deleteBookingById succeeds', async () => {
@@ -253,7 +261,7 @@ describe('BookingStatusPage', () => {
         success: true,
         message: 'Заявка на отмену бронирования принята',
       });
-      expect(deleteBookingById).toHaveBeenCalledWith('bk-123');
+      expect(deleteBookingById).toHaveBeenCalledWith('bk-123', 'UserCancelled');
     });
 
     it('returns null for unhandled intent', async () => {
@@ -432,7 +440,7 @@ describe('BookingStatusPage', () => {
           {
             path: '/bookings/:bookingId',
             element: <GetBookingPage />,
-            loader: () => ({ booking: mockBooking }),
+            loader: () => ({ booking: { ...mockBooking, status: 'Confirmed' } }),
             action: () => ({ error: { message: 'Ошибка при отмене' } }),
             HydrateFallback: () => null,
           },
@@ -462,7 +470,7 @@ describe('BookingStatusPage', () => {
               if (callCount > 1) {
                 return { booking: { ...mockBooking, status: 'Cancelled' } };
               }
-              return { booking: mockBooking };
+              return { booking: { ...mockBooking, status: 'Confirmed' } };
             },
             action: () => ({ success: true, message: 'Бронирование успешно отменено' }),
             HydrateFallback: () => null,
@@ -525,7 +533,7 @@ describe('BookingStatusPage', () => {
           {
             path: '/bookings/:bookingId',
             element: <GetBookingPage />,
-            loader: () => ({ booking: mockBooking }),
+            loader: () => ({ booking: { ...mockBooking, status: 'Confirmed' } }),
             action: () => ({ success: true }),
             HydrateFallback: () => null,
           },

@@ -1,7 +1,9 @@
 using System.Text.Json;
+using Events.Application.Abstractions.Caching;
 using Events.Application.Abstractions.Messaging;
 using Events.Application.Abstractions.Persistence;
 using Events.Infrastructure.Data;
+using Events.Infrastructure.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -65,47 +67,67 @@ internal sealed class OutboxBackgroundWorker : BackgroundService
 
         foreach (var message in messages)
         {
-            try
-            {
-                var headers = string.IsNullOrWhiteSpace(message.Headers)
-                    ? null
-                    : JsonSerializer.Deserialize<Dictionary<string, string>>(message.Headers);
-
-                await _messageProducer.ProduceAsync(
-                    topic: message.Topic,
-                    key: message.Key, // В будущем можем быть пустым для round-robin
-                    payload: message.Payload,
-                    headers: headers,
-                    cancellationToken: ct);
-
-                message.PublishedAt = DateTimeOffset.UtcNow;
-            }
-            catch (Exception ex) when (_exceptionAnalyzer.IsTransient(ex))
-            {
-                // Временная ошибка (сеть, брокер недоступен, таймаут)
-                _logger.LogWarning(ex, "Ошибка Kafka при отправке сообщения {Id}", message.Id);
-                message.NextRetryAt = DateTimeOffset.UtcNow.AddSeconds(5);
-                break;// весь батч на любой transient-ошибке
-            }
-            catch (Exception ex)
-            {
-                // Ошибка десериализации заголовков или бизнес-логики
-                _logger.LogError(ex, "Ошибка обработки Outbox сообщения {Id}", message.Id);
-                message.RetryCount++;
-                message.LastError = $"Внутренняя ошибка: {ex.Message}";
-                if (message.RetryCount >= _maxRetryCount)
-                {
-                    _logger.LogCritical(ex, "Outbox сообщение {Id} превысило лимит попыток, требует ручного вмешательства", message.Id);
-                    message.IsDeadLettered = true;
-                }
-                else
-                {
-                    var delaySeconds = Math.Pow(2, message.RetryCount);
-                    message.NextRetryAt = DateTimeOffset.UtcNow.AddSeconds(delaySeconds);
-                }
-            }
+            var shouldContinue = await TryProcessMessageAsync(scope, message, ct);
+            if (!shouldContinue)
+                break;
         }
 
         await dbContext.SaveChangesAsync(ct);
+    }
+
+    private async Task<bool> TryProcessMessageAsync(IServiceScope scope, OutboxMessage message, CancellationToken ct)
+    {
+        try
+        {
+            if (string.Equals(message.MessageType, OutboxService.CacheInvalidationMessageType, StringComparison.Ordinal))
+            {
+                var cacheService = scope.ServiceProvider.GetRequiredService<ICacheService>();
+                await cacheService.DeleteAsync(message.Key, ct);
+                message.PublishedAt = DateTimeOffset.UtcNow;
+                return true;
+            }
+
+            var headers = string.IsNullOrWhiteSpace(message.Headers)
+                ? null
+                : JsonSerializer.Deserialize<Dictionary<string, string>>(message.Headers);
+
+            await _messageProducer.ProduceAsync(
+                topic: message.Topic,
+                key: message.Key,
+                payload: message.Payload,
+                headers: headers,
+                cancellationToken: ct);
+
+            message.PublishedAt = DateTimeOffset.UtcNow;
+            return true;
+        }
+        catch (Exception ex) when (_exceptionAnalyzer.IsTransient(ex))
+        {
+            _logger.LogWarning(ex, "Ошибка Kafka при отправке сообщения {Id}", message.Id);
+            message.NextRetryAt = DateTimeOffset.UtcNow.AddSeconds(5);
+            return false;
+        }
+        catch (Exception ex)
+        {
+            HandleMessageFailure(message, ex);
+            return true;
+        }
+    }
+
+    private void HandleMessageFailure(OutboxMessage message, Exception ex)
+    {
+        _logger.LogError(ex, "Ошибка обработки Outbox сообщения {Id}", message.Id);
+        message.RetryCount++;
+        message.LastError = $"Внутренняя ошибка: {ex.Message}";
+        if (message.RetryCount >= _maxRetryCount)
+        {
+            _logger.LogCritical(ex, "Outbox сообщение {Id} превысило лимит попыток, требует ручного вмешательства", message.Id);
+            message.IsDeadLettered = true;
+        }
+        else
+        {
+            var delaySeconds = Math.Pow(2, message.RetryCount);
+            message.NextRetryAt = DateTimeOffset.UtcNow.AddSeconds(delaySeconds);
+        }
     }
 }

@@ -34,6 +34,7 @@ try
     builder.Services.AddApplicationServices();
 
     builder.Services.AddInfrastructureServices(builder.Configuration, builder.Environment);
+    builder.Services.AddEventsCqrsPipeline();
 
     var app = builder.Build();
 
